@@ -24,4 +24,4 @@ No libraries, no canvas — just pure **HTML + JavaScript + DOM**.
 
 ---
 
-Made with ❤️ by [Peter M. Lugha](https://github.com/funebra)
+Made with ❤️ by [funebra](https://github.com/funebra)
