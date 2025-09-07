@@ -1,4 +1,4 @@
-<script>
+
 /* ========= GLOBALS ========= */
 let eurXVals = [], eurYVals = [], ready = false;
 
@@ -148,4 +148,4 @@ function heart3D_z(o, steps, scale=0.30, U=140, V=96){
 
 /* ========= OPTIONAL: kick off EUR fetch on click or load ========= */
 // window.addEventListener('load', () => { initEURWave().catch(console.error); });
-</script>
+
