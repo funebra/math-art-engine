@@ -102,8 +102,8 @@ async function initEURWave(){
 
   // Optional preview
   const out = data.slice(0, 20).map((d,i)=>`(${eurXVals[i].toFixed(1)}, ${eurYVals[i].toFixed(1)}) = ${d.rate}`).join("\n");
-  const el = document.getElementById("bn1");
-  if(el) el.textContent = out;
+  //const el = document.getElementById("bn1");
+ // if(el) el.textContent = out;
 }
 
 /* Public readers for your plotter */
