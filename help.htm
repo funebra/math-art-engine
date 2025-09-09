@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>Funebra Help Panel</title>
+<meta name="description" content="Funebra is a points-first math-art engine where equations become living 3D figures. Explore its evolution from 2022 to 2025.">
+<meta name="keywords" content="Funebra, math art engine, parametric art, 3D engine, generative geometry, plabsfill, Peter Lugha">
+<meta name="author" content="Peter M. Lugha">
+
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://plabsfill.com/" />
+<meta property="og:title" content="Funebra – A Custom 3D Math-Art Engine" />
+<meta property="og:description" content="Funebra transforms points, angles, and equations into expressive 3D figures. Explore its evolution from 2022 to 2025." />
+<meta property="og:image" content="https://plabsfill.com/bluetooth/logo/star.png" />
+<meta property="og:site_name" content="plabsfill.com" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Funebra – A Custom 3D Math-Art Engine" />
+<meta name="twitter:description" content="A points-first math-art studio. From 2022–2025, Funebra evolved from simple waves to complex 3D figures." />
+<meta name="twitter:image" content="https://plabsfill.com/bluetooth/logo/star.png" />
+
+<meta name="robots" content="index, follow">
+
+
+<style>
+  :root{--bg:#0e1020;--panel:#13162a;--muted:#a6b0c3;--text:#eef3ff;--accent:#40d79e;--accent2:#6ec2ff}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 16px 64px}
+  h1{font-size:1.6rem;margin:0 0 12px}
+  h2{font-size:1.15rem;margin:20px 0 10px;color:var(--accent2)}
+  p,li{line-height:1.5}
+  .panel{background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;margin:12px 0}
+  .kbd{background:#1b2040;border:1px solid rgba(255,255,255,.12);padding:.1rem .35rem;border-radius:6px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  code{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  pre{background:#0b0d1a;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px;overflow:auto}
+  .grid{display:grid;gap:12px}
+  @media (min-width:720px){.grid{grid-template-columns:1fr 1fr}}
+  details{background:#0b0e1d;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px}
+  details>summary{cursor:pointer;color:var(--accent)}
+  .pill{display:inline-block;background:#112a23;border:1px solid #174c3f;color:#8ef5c5;padding:.15rem .5rem;border-radius:999px;font-size:.86rem}
+  .muted{color:var(--muted)}
+  .callout{border-left:3px solid var(--accent);padding:10px 12px;background:#0b1420;border-radius:8px}
+  .btn{display:inline-flex;align-items:center;gap:.4rem;background:linear-gradient(135deg,#1a8147,#2f9f66);border:none;color:#fff;padding:.5rem .7rem;border-radius:10px;font-weight:600;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Funebra – One‑Page Help</h1>
+    <p class="muted">A quick guide for anyone to draw with formulas in the browser. No canvas. No installs. Just <span class="kbd">x</span>, <span class="kbd">y</span>, and <span class="kbd">color</span>.</p>
+
+    <div class="panel">
+      <h2>What this is</h2>
+      <p><strong>Funebra</strong> is a browser plotter. It loops over <em>steps</em> and, for each step <span class="kbd">o</span>, computes your formulas for <span class="kbd">x</span>, <span class="kbd">y</span>, and <span class="kbd">color</span>. It then places a tiny HTML element at <span class="kbd">(x, y)</span> with that color. Thousands of points become lines, waves, and shapes.</p>
+      <div class="callout"><strong>Mental model:</strong> treat <span class="kbd">o</span> like a clock tick. Convert ticks to angles with division (e.g. <span class="kbd">o/60</span>) and use <span class="kbd">sin</span>/<span class="kbd">cos</span>. Scale with <span class="kbd">* radius</span>, then position using <span class="kbd">+ center</span>.</div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Controls you’ll see</h2>
+        <ul>
+          <li><span class="pill">Steps</span> – start, end, and stride determine how many points are drawn and how fast <span class="kbd">o</span> advances.</li>
+          <li><span class="pill">:x</span> – formula for the horizontal position.</li>
+          <li><span class="pill">:y</span> – formula for the vertical position.</li>
+          <li><span class="pill">:Color</span> – any CSS color: <span class="kbd">"#22aa44"</span>, <span class="kbd">"red"</span>, or <span class="kbd">"rgb(r,g,b)"</span>. Can be dynamic.</li>
+          <li><span class="pill">:iText</span> – optional label you can place or animate.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>Variables you can use</h2>
+        <ul>
+          <li><span class="kbd">o</span> – current step (0,1,2,…).</li>
+          <li><span class="kbd">cda</span> – angle helper derived from <span class="kbd">o</span> (if present in your build). Use like <span class="kbd">sin(cda/…)</span>.</li>
+          <li><span class="kbd">iu</span>, <span class="kbd">cz</span> – time/cursor/zoom style numbers depending on version. They’re safe to use inside math.</li>
+          <li><span class="kbd">width</span>, <span class="kbd">height</span> – stage size (when exposed).</li>
+        </ul>
+        <p class="muted">If a name isn’t available in your build, substitute with <span class="kbd">o</span> and adjust the scaling (divisors) until it looks right.</p>
+      </div>
+    </div>
+
+    <h2>Quick recipes (copy & paste)</h2>
+    <details open>
+      <summary><strong>Circle</strong> – essential building block</summary>
+      <pre><code>:x   cos(o/60) * 120 + 320
+:y   sin(o/60) * 120 + 320
+:Color  "mediumseagreen"</code></pre>
+    </details>
+    <details>
+      <summary><strong>Lissajous</strong> – figure‑eight style</summary>
+      <pre><code>:x   cos(o/45) * 140 + 320
+:y   sin(o/30) * 140 + 320
+:Color  "rgb(40,180,120)"</code></pre>
+    </details>
+    <details>
+      <summary><strong>Rose / Petal</strong> – k‑leaf pattern</summary>
+      <pre><code>:x   cos(o/50) * (120 * cos(3*o/50)) + 320
+:y   sin(o/50) * (120 * cos(3*o/50)) + 320
+:Color  "#22aa44"</code></pre>
+    </details>
+    <details>
+      <summary><strong>Leaf (like the screenshot)</strong></summary>
+      <pre><code>:x   (o/1800*100) * 120 + 210
+:y   sin(o/1270*100) * 120 + 830
+:Color  "#22aa44"</code></pre>
+      <p class="muted">If your build exposes <span class="kbd">cda</span>, replace <span class="kbd">o</span> with <span class="kbd">cda</span> for finer control.</p>
+    </details>
+    <details>
+      <summary><strong>Animated color</strong> – cycling RGB</summary>
+      <pre><code>:Color  "rgb(" + (128 + 127*cos(o/50)) + "," + (128 + 127*cos(o/70)) + "," + (128 + 127*cos(o/90)) + ")"</code></pre>
+    </details>
+
+    <h2>Troubleshooting</h2>
+    <ul class="panel">
+      <li><strong>Nothing shows:</strong> try <code>:x o</code>, <code>:y 100</code> to verify plotting. Then add <code>sin</code>/<code>cos</code>.</li>
+      <li><strong>Off‑screen:</strong> add a center offset (e.g. <code>+ 320</code>) and reduce amplitude.</li>
+      <li><strong>Too jagged / slow:</strong> lower the end step, or increase the divisors (e.g. use <code>o/80</code> instead of <code>o/20</code>).</li>
+      <li><strong>Mobile typing pain:</strong> rotate to landscape; keep a small preset library to paste.</li>
+    </ul>
+
+    <h2>Cheat sheet</h2>
+    <div class="panel">
+      <p><span class="kbd">sin</span>/<span class="kbd">cos</span> expect radians. Dividing by 30–120 turns steps into smooth angles. Example: <span class="kbd">θ = o/60</span>.</p>
+      <ul>
+        <li><strong>Scale:</strong> <span class="kbd">value * radius</span></li>
+        <li><strong>Center:</strong> <span class="kbd">value + cx</span>, <span class="kbd">value + cy</span></li>
+        <li><strong>Phase shift:</strong> <span class="kbd">sin(o/60 + φ)</span></li>
+        <li><strong>Rotate 2D:</strong> <span class="kbd">x' = cx + (x-cx)cosα - (y-cy)sinα</span>, <span class="kbd">y' = cy + (x-cx)sinα + (y-cy)cosα</span></li>
+      </ul>
+    </div>
+
+
+
+    <button class="btn" id="copyBtn" title="Copy all examples to clipboard">📋 Copy Examples</button>
+  </div>
+<script>
+  // Copies all <pre><code> blocks to clipboard as a single snippet
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const blocks = Array.from(document.querySelectorAll('pre code')).map(b=>b.textContent.trim());
+    const joined = blocks.join('\n\n');
+    try {
+      await navigator.clipboard.writeText(joined);
+      const btn = document.getElementById('copyBtn');
+      const old = btn.textContent; btn.textContent = '✅ Copied';
+      setTimeout(()=> btn.textContent = old, 1200);
+    } catch(e){
+      alert('Copy failed: ' + e.message);
+    }
+  });
+</script>
+</body>
+</html>
