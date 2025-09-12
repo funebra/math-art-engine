@@ -1,0 +1,132 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>v x, y, y → OBJ / glTF</title>
+<style>
+  body{font:14px system-ui,Segoe UI,Roboto;margin:20px}
+  textarea{width:100%;height:220px}
+  .row{display:flex;gap:8px;align-items:center;margin:8px 0}
+  input[type=number]{width:100px}
+  button{padding:6px 10px;border-radius:8px;border:1px solid #ccc;background:#fafafa;cursor:pointer}
+</style>
+<h3>Paste your lines (format: <code>v x, y, y</code>)</h3>
+<textarea id="src"></textarea>
+<div class="row">
+  <label>Thickness:</label><input id="th" type="number" value="20" step="1">
+  <label>Triangulation:</label>
+  <select id="tri">
+    <option value="earclip" selected>Ear-clip (safe)</option>
+    <option value="fan">Fan (convex)</option>
+  </select>
+  <button id="toOBJ">Export OBJ</button>
+  <button id="toGLTF">Export glTF</button>
+</div>
+<pre id="msg"></pre>
+<script>
+const TAU=Math.PI*2;
+function dl(name,text){const b=new Blob([text],{type:"text/plain"}),u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+
+function parseList(txt){
+  const pts=[];
+  for (const line of txt.split(/\r?\n/)){
+    const m = line.match(/^v\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)/i);
+    if (!m) continue;
+    const x=+m[1], y=+m[2];
+    pts.push({x,y});
+  }
+  return pts;
+}
+
+// orientation helpers
+function doubleArea(pts){let a=0;for(let i=0;i<pts.length;i++){const j=(i+1)%pts.length;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}return a;}
+function ensureCCW(pts){return doubleArea(pts)<0?[...pts].reverse():pts;}
+
+// ear-clip
+function isConvex(a,b,c){return ((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))>0;}
+function pInTri(p,a,b,c){const v0={x:c.x-a.x,y:c.y-a.y},v1={x:b.x-a.x,y:b.y-a.y},v2={x:p.x-a.x,y:p.y-a.y};
+  const d00=v0.x*v0.x+v0.y*v0.y,d01=v0.x*v1.x+v0.y*v1.y,d02=v0.x*v2.x+v0.y*v2.y,d11=v1.x*v1.x+v1.y*v1.y,d12=v1.x*v2.x+v1.y*v2.y;
+  const inv=1/(d00*d11-d01*d01||1); const u=(d11*d02-d01*d12)*inv, v=(d00*d12-d01*d02)*inv; return u>=0&&v>=0&&u+v<=1;}
+function earclip(poly){const n=poly.length,V=Array.from({length:n},(_,i)=>i),tris=[];let guard=0;
+  while(V.length>2 && guard++<10000){let done=false;for(let i=0;i<V.length;i++){const ia=V[(i-1+V.length)%V.length],ib=V[i],ic=V[(i+1)%V.length];
+    const A=poly[ia],B=poly[ib],C=poly[ic]; if(!isConvex(A,B,C))continue; let inside=false;
+    for(let k=0;k<V.length;k++){const idx=V[k]; if(idx===ia||idx===ib||idx===ic)continue; if(pInTri(poly[idx],A,B,C)){inside=true;break;}}
+    if(inside)continue; tris.push([ia,ib,ic]); V.splice(i,1); done=true; break;} if(!done) break;}
+  return tris;
+}
+
+function prismFromPolygon(points,{z0=-10,z1=10,tri="earclip"}={}){
+  const poly=ensureCCW(points), n=poly.length;
+  const pos=[], nor=[], idx=[]; const cx=poly.reduce((s,p)=>s+p.x,0)/n, cy=poly.reduce((s,p)=>s+p.y,0)/n;
+
+  // top
+  const topC=pos.length/3; pos.push(cx,cy,z1); nor.push(0,0,1);
+  const topStart=pos.length/3; for(const p of poly){pos.push(p.x,p.y,z1); nor.push(0,0,1);}
+  if(tri==="fan"){for(let i=0;i<n;i++){idx.push(topC, topStart+i, topStart+((i+1)%n));}}
+  else {for(const [a,b,c] of earclip(poly)) idx.push(topStart+a, topStart+b, topStart+c);}
+
+  // bottom
+  const botC=pos.length/3; pos.push(cx,cy,z0); nor.push(0,0,-1);
+  const botStart=pos.length/3; for(const p of poly){pos.push(p.x,p.y,z0); nor.push(0,0,-1);}
+  if(tri==="fan"){for(let i=0;i<n;i++){idx.push(botC, botStart+((i+1)%n), botStart+i);}}
+  else {for(const [a,b,c] of earclip(poly)) idx.push(botStart+c, botStart+b, botStart+a);}
+
+  // sides
+  for(let i=0;i<n;i++){
+    const a=poly[i], b=poly[(i+1)%n]; const ex=b.x-a.x, ey=b.y-a.y, L=Math.hypot(ex,ey)||1; const nx=ey/L, ny=-ex/L;
+    const ta=pos.length/3; pos.push(a.x,a.y,z1); nor.push(nx,ny,0);
+    const tb=pos.length/3; pos.push(b.x,b.y,z1); nor.push(nx,ny,0);
+    const bb=pos.length/3; pos.push(b.x,b.y,z0); nor.push(nx,ny,0);
+    const ba=pos.length/3; pos.push(a.x,a.y,z0); nor.push(nx,ny,0);
+    idx.push(ta,tb,bb,  ta,bb,ba);
+  }
+  return {positions:new Float32Array(pos), normals:new Float32Array(nor), indices:new Uint32Array(idx)};
+}
+
+function toOBJ(mesh){
+  const {positions,indices}=mesh, v=[], f=[];
+  for(let i=0;i<positions.length;i+=3) v.push(`v ${positions[i]} ${positions[i+1]} ${positions[i+2]}`);
+  for(let i=0;i<indices.length;i+=3)   f.push(`f ${indices[i]+1} ${indices[i+1]+1} ${indices[i+2]+1}`);
+  return `# OBJ from converter\n${v.join('\n')}\n${f.join('\n')}\n`;
+}
+
+function toBase64(ab){let s='';const b=new Uint8Array(ab);for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
+function minMax3(a){const mn=[+1/0,+1/0,+1/0],mx=[-1/0,-1/0,-1/0];for(let i=0;i<a.length;i+=3){mn[0]=Math.min(mn[0],a[i]);mx[0]=Math.max(mx[0],a[i]);mn[1]=Math.min(mn[1],a[i+1]);mx[1]=Math.max(mx[1],a[i+1]);mn[2]=Math.min(mn[2],a[i+2]);mx[2]=Math.max(mx[2],a[i+2]);}return{min:mn,max:mx};}
+function toGLTF(mesh){
+  const {positions,normals,indices}=mesh;
+  const posB=positions.byteLength, norB=normals.byteLength, idxB=indices.byteLength;
+  const buf=new Uint8Array(posB+norB+idxB);
+  buf.set(new Uint8Array(positions.buffer),0);
+  buf.set(new Uint8Array(normals.buffer),posB);
+  buf.set(new Uint8Array(indices.buffer),posB+norB);
+  const uri=`data:application/octet-stream;base64,${toBase64(buf.buffer)}`;
+  const mm=minMax3(positions);
+  return JSON.stringify({
+    asset:{version:"2.0",generator:"converter"},
+    buffers:[{byteLength:buf.byteLength,uri}],
+    bufferViews:[
+      {buffer:0,byteOffset:0,byteLength:posB,target:34962},
+      {buffer:0,byteOffset:posB,byteLength:norB,target:34962},
+      {buffer:0,byteOffset:posB+norB,byteLength:idxB,target:34963}
+    ],
+    accessors:[
+      {bufferView:0,byteOffset:0,componentType:5126,count:positions.length/3,type:"VEC3",min:mm.min,max:mm.max},
+      {bufferView:1,byteOffset:0,componentType:5126,count:normals.length/3,type:"VEC3"},
+      {bufferView:2,byteOffset:0,componentType:5125,count:indices.length,type:"SCALAR"}
+    ],
+    meshes:[{primitives:[{attributes:{POSITION:0,NORMAL:1},indices:2}]}],
+    nodes:[{mesh:0,name:"Prism"}],
+    scenes:[{nodes:[0]}],scene:0
+  });
+}
+
+const src=document.getElementById('src'), th=document.getElementById('th'), tri=document.getElementById('tri'), msg=document.getElementById('msg');
+document.getElementById('toOBJ').onclick=()=>{
+  const pts=parseList(src.value); if(!pts.length){msg.textContent='No points parsed.';return;}
+  const h=+th.value||20; const mesh=prismFromPolygon(pts,{z0:-h/2,z1:h/2,tri:tri.value});
+  dl('shape.obj', toOBJ(mesh)); msg.textContent=`OBJ exported with ${pts.length} outline vertices.`;
+};
+document.getElementById('toGLTF').onclick=()=>{
+  const pts=parseList(src.value); if(!pts.length){msg.textContent='No points parsed.';return;}
+  const h=+th.value||20; const mesh=prismFromPolygon(pts,{z0:-h/2,z1:h/2,tri:tri.value});
+  dl('shape.gltf', toGLTF(mesh)); msg.textContent=`glTF exported with ${pts.length} outline vertices.`;
+};
+</script>
