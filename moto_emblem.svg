@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+  <!-- Background -->
+  <rect width="800" height="400" fill="#0e1020" rx="20" ry="20"/>
+
+  <!-- Left: FunebraGPT Logo -->
+  <circle cx="200" cy="200" r="160" fill="#0e1020" stroke="#6a1b9a" stroke-width="4"/>
+  <path d="M200 200 m0 -130 a130 130 0 1 1 -0.1 0
+           m0 -40 a90 90 0 1 0 0.1 0
+           m0 -30 a60 60 0 1 1 -0.1 0"
+        fill="none" stroke="#39d2ff" stroke-width="3" opacity="0.85"/>
+  <text x="200" y="185" text-anchor="middle"
+        font-family="Segoe UI, Arial, sans-serif"
+        font-size="34" fill="#ffffff" font-weight="700">Funebra</text>
+  <text x="200" y="225" text-anchor="middle"
+        font-family="Segoe UI, Arial, sans-serif"
+        font-size="28" fill="#ff39d2" font-weight="600" letter-spacing="3">GPT</text>
+  <polygon points="250,90 230,140 270,140 240,190"
+           fill="#ffd739" stroke="#000" stroke-width="2"/>
+
+  <!-- Right: M-O-T-O-R emblem -->
+  <circle cx="600" cy="200" r="160" fill="#0e1020" stroke="#6a1b9a" stroke-width="4"/>
+  <line x1="600" y1="200" x2="600" y2="70" stroke="#39d2ff" stroke-width="3" stroke-dasharray="8,6"/>
+  <line x1="600" y1="200" x2="700" y2="120" stroke="#ffd739" stroke-width="3"/>
+  <line x1="600" y1="200" x2="500" y2="120" stroke="#ff39d2" stroke-width="3"/>
+  <line x1="600" y1="200" x2="520" y2="300" stroke="#6a1b9a" stroke-width="3"/>
+  <line x1="600" y1="200" x2="680" y2="300" stroke="#39ff8a" stroke-width="3"/>
+  <circle cx="600" cy="200" r="10" fill="#ffffff"/>
+  <circle cx="600" cy="70" r="8" fill="#39d2ff"/>
+  <circle cx="700" cy="120" r="8" fill="#ffd739"/>
+  <circle cx="500" cy="120" r="8" fill="#ff39d2"/>
+  <circle cx="520" cy="300" r="8" fill="#6a1b9a"/>
+  <circle cx="680" cy="300" r="8" fill="#39ff8a"/>
+  <text x="600" y="190" text-anchor="middle"
+        font-family="Segoe UI, Arial, sans-serif"
+        font-size="32" fill="#ffffff" font-weight="700">M-O-T-O-R</text>
+  <text x="600" y="240" text-anchor="middle"
+        font-family="Segoe UI, Arial, sans-serif"
+        font-size="18" fill="#a6b0c3">Minds On Their Own Road</text>
+
+  <!-- Divider line -->
+  <line x1="400" y1="40" x2="400" y2="360" stroke="#222" stroke-width="2" stroke-dasharray="6,6"/>
+</svg>
