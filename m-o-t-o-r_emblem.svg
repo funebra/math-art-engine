@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300">
+  <!-- Background -->
+  <rect width="500" height="300" fill="#0e1020" rx="20" ry="20"/>
+
+  <!-- Central Road Line -->
+  <line x1="250" y1="40" x2="250" y2="260" stroke="#39d2ff" stroke-width="4" stroke-dasharray="10,6"/>
+
+  <!-- Branching Roads -->
+  <line x1="250" y1="100" x2="150" y2="180" stroke="#ff39d2" stroke-width="3"/>
+  <line x1="250" y1="100" x2="350" y2="180" stroke="#ffd739" stroke-width="3"/>
+  <line x1="250" y1="180" x2="120" y2="240" stroke="#6a1b9a" stroke-width="3"/>
+  <line x1="250" y1="180" x2="380" y2="240" stroke="#39ff8a" stroke-width="3"/>
+
+  <!-- Points (Minds) -->
+  <circle cx="250" cy="40" r="8" fill="#39d2ff"/>
+  <circle cx="250" cy="100" r="8" fill="#ff39d2"/>
+  <circle cx="250" cy="180" r="8" fill="#ffd739"/>
+  <circle cx="250" cy="260" r="8" fill="#39ff8a"/>
+
+  <circle cx="150" cy="180" r="6" fill="#ff39d2"/>
+  <circle cx="350" cy="180" r="6" fill="#ffd739"/>
+  <circle cx="120" cy="240" r="6" fill="#6a1b9a"/>
+  <circle cx="380" cy="240" r="6" fill="#39ff8a"/>
+
+  <!-- Title -->
+  <text x="50%" y="25" text-anchor="middle"
+    font-family="Segoe UI, Arial, sans-serif"
+    font-size="22" fill="#ffffff" font-weight="700">
+    M-O-T-O-R
+  </text>
+
+  <!-- Subtitle -->
+  <text x="50%" y="290" text-anchor="middle"
+    font-family="Segoe UI, Arial, sans-serif"
+    font-size="16" fill="#a6b0c3">
+    Minds On Their Own Road
+  </text>
+</svg>
