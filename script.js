@@ -149,3 +149,92 @@ function heart3D_z(o, steps, scale=0.30, U=140, V=96){
 /* ========= OPTIONAL: kick off EUR fetch on click or load ========= */
 // window.addEventListener('load', () => { initEURWave().catch(console.error); });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// === Latin (Catholic) cross outline, traced as a 12-vertex polygon ===
+// Center (cx,cy), total height H, stem width stemW,
+// crossbar total width barW, crossbar thickness barT,
+// bar center Y (relative to center; default = -H/6), rotation theta (radians).
+function latinCrossVertices(
+  cx = 300, cy = 360,
+  H = 240, stemW = 60,
+  barW = 200, barT = 60,
+  barCenterY = -H/6, theta = 0
+){
+  const H2 = H/2, s = stemW/2, b = barW/2, th = barT/2, yb = barCenterY;
+  const raw = [
+    [-s, -H2], [ s, -H2],           // top edge of stem
+    [ s,  yb - th],                 // down to bar top
+    [ b,  yb - th],                 // bar right top
+    [ b,  yb + th],                 // bar right bottom
+    [ s,  yb + th],                 // back to stem right
+    [ s,  H2],                      // down to bottom
+    [-s,  H2],                      // bottom left
+    [-s,  yb + th],                 // up to bar bottom
+    [-b,  yb + th],                 // bar left bottom
+    [-b,  yb - th],                 // bar left top
+    [-s,  yb - th],                 // back to stem left
+  ];
+  const c = Math.cos(theta), sn = Math.sin(theta);
+  return raw.map(([x,y]) => [ cx + x*c - y*sn, cy + x*sn + y*c ]);
+}
+
+// LERP along edges (like your polygonX/Y)
+function crossX(o, stepsPerEdge = 30, ...cfg){
+  const v = latinCrossVertices(...cfg), n = v.length;
+  const edge = Math.floor(o / stepsPerEdge) % n;
+  const t = (o % stepsPerEdge) / stepsPerEdge;
+  const [x1] = v[edge], [x2] = v[(edge+1) % n];
+  return (1 - t) * x1 + t * x2;
+}
+function crossY(o, stepsPerEdge = 30, ...cfg){
+  const v = latinCrossVertices(...cfg), n = v.length;
+  const edge = Math.floor(o / stepsPerEdge) % n;
+  const t = (o % stepsPerEdge) / stepsPerEdge;
+  const [,y1] = v[edge], [,y2] = v[(edge+1) % n];
+  return (1 - t) * y1 + t * y2;
+}
+
+/* Example (outline, rotated 22.5°):
+for (let o = 0; o < 12 * 30; o++) {
+  plot(
+    crossX(o, 30, 300,360, 240,60, 200,60, -240/6, Math.PI/8),
+    crossY(o, 30, 300,360, 240,60, 200,60, -240/6, Math.PI/8)
+  );
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
