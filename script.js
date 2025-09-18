@@ -238,3 +238,127 @@ for (let o = 0; o < 12 * 30; o++) {
 
 
 
+// === Square Pyramid (wireframe) — step/edge LERP like your polygons ===
+// Edges: base square (4) + sides to apex (4) = 8 edges total.
+
+function _pyramidProjectedPoint(o, stepsPerEdge = 40,
+  cx = 300, cy = 360,              // screen center
+  base = 220, height = 220,        // base width & pyramid height
+  rx = -0.3, ry = 0.6, rz = 0.0,   // rotations (radians)
+  dist = 700, scale = 1            // perspective & scale
+){
+  // --- 3D vertices (Y up; apex above base) ---
+  const b = base / 2;
+  const V = [
+    [-b, 0, -b],  // 0 base
+    [ b, 0, -b],  // 1
+    [ b, 0,  b],  // 2
+    [-b, 0,  b],  // 3
+    [ 0, -height, 0], // 4 apex (negative Y = up on screen)
+  ];
+  // --- edges (pairs of vertex indices) ---
+  const E = [
+    [0,1],[1,2],[2,3],[3,0], // base
+    [4,0],[4,1],[4,2],[4,3], // sides
+  ];
+  const nE = E.length;
+
+  // which edge & how far along it
+  const edge = Math.floor(o / stepsPerEdge) % nE;
+  const t = (o % stepsPerEdge) / stepsPerEdge;
+
+  const [i1, i2] = E[edge];
+  const [x1,y1,z1] = V[i1];
+  const [x2,y2,z2] = V[i2];
+
+  // LERP in 3D along the current edge
+  let x = (1-t)*x1 + t*x2;
+  let y = (1-t)*y1 + t*y2;
+  let z = (1-t)*z1 + t*z2;
+
+  // --- rotate (Rx → Ry → Rz) ---
+  const cxX = Math.cos(rx), sxX = Math.sin(rx);
+  let yx =  y*cxX - z*sxX;
+  let zx =  y*sxX + z*cxX;
+  y = yx; z = zx;
+
+  const cxY = Math.cos(ry), sxY = Math.sin(ry);
+  let xy =  x*cxY + z*sxY;
+  let zy = -x*sxY + z*cxY;
+  x = xy; z = zy;
+
+  const cxZ = Math.cos(rz), sxZ = Math.sin(rz);
+  let xz = x*cxZ - y*sxZ;
+  let yz = x*sxZ + y*cxZ;
+  x = xz; y = yz;
+
+  // --- weak perspective projection ---
+  const k = dist / (z + dist);
+  const X = cx + x * k * scale;
+  const Y = cy + y * k * scale;
+
+  return [X, Y];
+}
+
+function pyramidX(o, stepsPerEdge = 40, ...cfg){
+  return _pyramidProjectedPoint(o, stepsPerEdge, ...cfg)[0];
+}
+function pyramidY(o, stepsPerEdge = 40, ...cfg){
+  return _pyramidProjectedPoint(o, stepsPerEdge, ...cfg)[1];
+}
+
+/* Usage (wireframe outline):
+const edges = 8, stepsPerEdge = 40;
+for (let o = 0; o < edges * stepsPerEdge; o++) {
+  plot(
+    pyramidX(o, stepsPerEdge, 300,360, 220,220, -0.3,0.7,0.0, 700,1.1),
+    pyramidY(o, stepsPerEdge, 300,360, 220,220, -0.3,0.7,0.0, 700,1.1)
+  );
+}
+*/
+
+// To animate spin, increment rx/ry/rz over time (e.g., ry += 0.01).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function pyramid2DVertices(cx=300, cy=360, base=240, top=60, height=200, theta=0){
+  const b = base/2, t = top/2, h = height/2;
+  const raw = [
+    [-b,  h], [ b,  h],   // bottom
+    [ t,  0],             // right shoulder
+    [ 0, -h],             // apex
+    [-t,  0],             // left shoulder
+  ];
+  const c = Math.cos(theta), s = Math.sin(theta);
+  return raw.map(([x,y]) => [cx + x*c - y*s, cy + x*s + y*c]);
+}
+
+function pyramid2DX(o, stepsPerEdge=30, ...cfg){
+  const v = pyramid2DVertices(...cfg), n=v.length;
+  const e = Math.floor(o/stepsPerEdge)%n, t=(o%stepsPerEdge)/stepsPerEdge;
+  const [x1,y1]=v[e], [x2,y2]=v[(e+1)%n];
+  return (1-t)*x1 + t*x2;
+}
+function pyramid2DY(o, stepsPerEdge=30, ...cfg){
+  const v = pyramid2DVertices(...cfg), n=v.length;
+  const e = Math.floor(o/stepsPerEdge)%n, t=(o%stepsPerEdge)/stepsPerEdge;
+  const [x1,y1]=v[e], [x2,y2]=v[(e+1)%n];
+  return (1-t)*y1 + t*y2;
+}
