@@ -218,6 +218,44 @@ for (let o = 0; o < 12 * 30; o++) {
   );
 }
 */
+const TAU = Math.PI * 2;
+
+/**
+ * Z for the Latin cross outline.
+ * Signature mirrors crossX/crossY so your existing calls still work.
+ *
+ * @param {number} o        step index
+ * @param {number} steps    total steps
+ * @param {number} cx, cy   (kept for parity; not used in Z)
+ * @param {number} hLen,hThick   horizontal arm (parity)
+ * @param {number} vLen,vThick   vertical arm (parity)
+ * @param {number} amp      sinus amplitude in Z
+ * @param {number} phase    sinus phase (radians)
+ * @param {number} zCenter  Z offset (default 0)
+ * @param {number} pitch    helical pitch per full loop (ΔZ per 2π), default 0
+ */
+function crossZ(
+  o, steps,
+  cx, cy,
+  hLen, hThick,
+  vLen, vThick,
+  amp = 0, phase = 0,
+  zCenter = 0, pitch = 0
+){
+  const t = (o / steps) * TAU;
+  // sinusoidal “breathing” + optional linear helix
+  return zCenter + amp * Math.sin(t + phase) + pitch * (t / TAU);
+}
+
+// Flat/outline version (always Z=0) if you need it:
+const crossZFlat = () => 0;
+
+
+
+
+
+
+
 
 
 
