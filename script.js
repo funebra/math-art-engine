@@ -356,7 +356,7 @@ for (let o = 0; o < edges * stepsPerEdge; o++) {
 */
 
 // To animate spin, increment rx/ry/rz over time (e.g., ry += 0.01).
-const TAU = Math.PI * 2;
+//const TAU = Math.PI * 2;
 
 /**
  * Height field for a (possibly rotated/sheared) square pyramid.
