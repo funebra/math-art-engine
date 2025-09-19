@@ -21,6 +21,8 @@
   <meta name="twitter:image" content="https://funebra.github.io/math-art-engine/compatibility092025.png" />
 
 <style>
+  .row{display:flex;gap:.5rem;align-items:center;margin:.35rem 0}
+  .row label{white-space:nowrap}
   body{font:14px system-ui,Segoe UI,Roboto;margin:20px}
   textarea{width:100%;height:220px}
   .row{display:flex;gap:8px;align-items:center;margin:8px 0}
@@ -39,6 +41,17 @@
   <button id="toOBJ">Export OBJ</button>
   <button id="toGLTF">Export glTF</button>
 </div>
+<div class="row">
+  <label><input id="closeLoop" type="checkbox"> Close loop</label>
+  <label><input id="swapYZ" type="checkbox"> Swap Y/Z</label>
+  <label><input id="invertY" type="checkbox"> Invert Y</label>
+</div>
+<div class="row">
+  <button id="btnOBJpoints">Export OBJ (Points)</button>
+  <button id="btnOBJwire">Export OBJ (Wireframe)</button>
+  <!-- your existing Export OBJ / Export glTF buttons can stay -->
+</div>
+<pre id="convMsg" style="opacity:.8"></pre>
 <pre id="msg"></pre>
 <script>
 const TAU=Math.PI*2;
@@ -148,4 +161,235 @@ document.getElementById('toGLTF').onclick=()=>{
   const h=+th.value||20; const mesh=prismFromPolygon(pts,{z0:-h/2,z1:h/2,tri:tri.value});
   dl('shape.gltf', toGLTF(mesh)); msg.textContent=`glTF exported with ${pts.length} outline vertices.`;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ---------- Robust parser: accepts "v x, y, z" or "x, y, z" or spaced ---------- */
+function parseXYZ(text){
+  const pts=[];
+  const lines = text.split(/\r?\n/);
+  for (let line of lines){
+    line = line.trim();
+    if (!line) continue;
+    line = line.replace(/^[vV]\s+/, '');     // drop optional leading 'v'
+    line = line.replace(/[,;]+/g, ' ');      // commas/semicolons -> spaces
+    const nums = line.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/g);
+    if (!nums || nums.length < 2) continue;
+    const x = +nums[0], y = +nums[1], z = (nums[2]!==undefined) ? +nums[2] : 0;
+    pts.push([x,y,z]);
+  }
+  return pts;
+}
+
+/* ---------- Optional transforms ---------- */
+function applyTransforms(pts, opts){
+  const out = [];
+  for (const p of pts){
+    let [x,y,z]=p;
+    if (opts.swapYZ){ [y,z] = [z,y]; }
+    if (opts.invertY){ y = -y; }
+    out.push([x,y,z]);
+  }
+  return out;
+}
+
+/* ---------- OBJ exporters ---------- */
+function objPoints(pts){
+  let s = '# funebra points\no funebra_points\n';
+  s += pts.map(p=>`v ${p[0]} ${p[1]} ${p[2]}`).join('\n')+'\n';
+  s += 'p '+ pts.map((_,i)=>i+1).join(' ') + '\n';
+  return s;
+}
+function objWirePolyline(pts, closeLoop){
+  let s = '# funebra wireframe (polyline)\no funebra_lines\n';
+  s += pts.map(p=>`v ${p[0]} ${p[1]} ${p[2]}`).join('\n')+'\n';
+  s += 'l ' + pts.map((_,i)=>i+1).join(' ') + (closeLoop ? ` 1` : '') + '\n';
+  return s;
+}
+
+/* ---------- Thick ribbon (mesh) from 2D outline + triangulation ---------- */
+/* Keep your existing “Thickness” + “Triangulation” if you already have them.
+   If not, here’s a compact version you can wire in. */
+function buildRibbonMesh2D(pts, thickness=20, closeLoop=true){
+  // treat z constant; offset in XY plane
+  const n = pts.length;
+  if (n<2) return {V:[],F:[]};
+  // compute vertex normals (polyline)
+  const norm = new Array(n).fill(0).map(_=>[0,0]);
+  function addNorm(i, dx,dy){
+    const len = Math.hypot(dx,dy)||1;
+    const nx = -dy/len, ny = dx/len; // left normal
+    norm[i][0]+=nx; norm[i][1]+=ny;
+  }
+  for(let i=0;i<n-1;i++){
+    const [x1,y1]=pts[i], [x2,y2]=pts[i+1];
+    addNorm(i, x2-x1, y2-y1);
+    addNorm(i+1, x2-x1, y2-y1);
+  }
+  if (closeLoop){
+    const [x1,y1]=pts[n-1], [x2,y2]=pts[0];
+    addNorm(n-1, x2-x1, y2-y1);
+    addNorm(0,      x2-x1, y2-y1);
+  }
+  // build two rails L/R
+  const h = thickness/2;
+  const L=[], R=[];
+  for(let i=0;i<n;i++){
+    let [x,y,z]=pts[i];
+    const nx=norm[i][0], ny=norm[i][1];
+    const nl = Math.hypot(nx,ny)||1;
+    const ux=nx/nl, uy=ny/nl;
+    L.push([x+ux*h, y+uy*h, z]);
+    R.push([x-ux*h, y-uy*h, z]);
+  }
+  // vertices: all L then all R
+  const V = L.concat(R);
+  const F = [];
+  const m = n-1;
+  const wrap = (i, N)=> (i%N+N)%N;
+  const last = closeLoop ? n : n-1;
+  for(let i=0;i<last-1+ (closeLoop?1:0); i++){
+    const a = i, b = wrap(i+1,n);
+    const a2 = a+n, b2 = b+n;
+    // quad (a,a2,b2,b) -> two tris
+    F.push([a,a2,b2], [a,b2,b]);
+  }
+  return {V,F};
+}
+function objMesh(V,F){
+  let s = '# funebra mesh\no funebra_mesh\n';
+  s += V.map(v=>`v ${v[0]} ${v[1]} ${v[2]}`).join('\n')+'\n';
+  s += F.map(f=>`f ${f[0]+1} ${f[1]+1} ${f[2]+1}`).join('\n')+'\n';
+  return s;
+}
+
+/* ---------- Minimal ear-clip (simple polygon, no holes) ---------- */
+function earclipTriangulate2D(poly){ // poly: [ [x,y,z], ... ]
+  // project to XY
+  const P = poly.map(p=>[p[0],p[1]]);
+  const n = P.length; if (n<3) return [];
+  const V = [...Array(n).keys()];
+  // orientation
+  function area(){ let a=0; for(let i=0;i<n;i++){const j=(i+1)%n; a+=P[i][0]*P[j][1]-P[j][0]*P[i][1];} return a/2; }
+  const ccw = area()>0;
+  if (!ccw){ V.reverse(); }
+  function triArea(a,b,c){return (P[b][0]-P[a][0])*(P[c][1]-P[a][1])-(P[c][0]-P[a][0])*(P[b][1]-P[a][1]);}
+  function insideTri(ax,ay,bx,by,cx,cy,px,py){
+    const v0x=cx-ax, v0y=cy-ay, v1x=bx-ax, v1y=by-ay, v2x=px-ax, v2y=py-ay;
+    const dot00=v0x*v0x+v0y*v0y, dot01=v0x*v1x+v0y*v1y, dot02=v0x*v2x+v0y*v2y;
+    const dot11=v1x*v1x+v1y*v1y, dot12=v1x*v2x+v1y*v2y;
+    const inv = 1/((dot00*dot11)-(dot01*dot01));
+    const u = ((dot11*dot02)-(dot01*dot12))*inv;
+    const v = ((dot00*dot12)-(dot01*dot02))*inv;
+    return u>=0 && v>=0 && (u+v)<=1;
+  }
+  const tris=[];
+  let cnt = 0;
+  while (V.length>2 && cnt<10000){
+    cnt++;
+    let earFound=false;
+    for(let i=0;i<V.length;i++){
+      const i0 = V[(i+V.length-1)%V.length], i1 = V[i], i2 = V[(i+1)%V.length];
+      if (triArea(i0,i1,i2) <= 0) continue; // reflex or degenerate
+      let anyInside=false;
+      for (let k=0;k<V.length;k++){
+        const ik = V[k];
+        if (ik===i0||ik===i1||ik===i2) continue;
+        if (insideTri(P[i0][0],P[i0][1], P[i1][0],P[i1][1], P[i2][0],P[i2][1], P[ik][0],P[ik][1])){ anyInside=true; break; }
+      }
+      if (anyInside) continue;
+      // ear!
+      tris.push([i0,i1,i2]);
+      V.splice(i,1);
+      earFound=true;
+      break;
+    }
+    if (!earFound) break; // probably self-intersecting
+  }
+  // map back to original indices
+  return tris;
+}
+
+/* ---------- Wire up UI ---------- */
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const src = document.querySelector('textarea, #src, #in, #input'); // be flexible
+  const msg = $('#convMsg');
+
+  function readPts(){
+    const raw = src.value || '';
+    const pts = parseXYZ(raw);
+    const opts = {
+      swapYZ: $('#swapYZ')?.checked,
+      invertY: $('#invertY')?.checked
+    };
+    return applyTransforms(pts, opts);
+  }
+
+  function save(name, text, mime='text/plain'){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], {type:mime}));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  $('#btnOBJpoints')?.addEventListener('click', () => {
+    const pts = readPts();
+    if (!pts.length){ msg.textContent='No points parsed.'; return; }
+    save('funebra_points.obj', objPoints(pts));
+    msg.textContent = `OBJ exported as points (${pts.length} vertices).`;
+  });
+
+  $('#btnOBJwire')?.addEventListener('click', () => {
+    const pts = readPts();
+    if (!pts.length){ msg.textContent='No points parsed.'; return; }
+    const closeLoop = $('#closeLoop')?.checked;
+    save('funebra_wire.obj', objWirePolyline(pts, closeLoop));
+    msg.textContent = `OBJ exported as wireframe polyline (${pts.length} vertices${closeLoop?', closed':''}).`;
+  });
+
+  // OPTIONAL: if you want a thick ribbon mesh using your existing UI:
+  // 1) read thickness from your #thickness input
+  // 2) triangulate with ear-clip or fan
+  window.funebraExportRibbonOBJ = function(thickness=20, triangulation='ear', closeLoop=true){
+    const pts = readPts();
+    if (triangulation==='fan'){
+      // simple convex fan around centroid
+      const cx = pts.reduce((a,p)=>a+p[0],0)/pts.length;
+      const cy = pts.reduce((a,p)=>a+p[1],0)/pts.length;
+      const cz = pts[0]?.[2]||0;
+      const center = [cx,cy,cz];
+      const V = [center].concat(pts);
+      const F = [];
+      for(let i=0;i<pts.length-1;i++) F.push([0,i+1,i+2]);
+      if (closeLoop) F.push([0,pts.length,1]);
+      save('funebra_fan.obj', objMesh(V,F));
+      msg.textContent = `OBJ mesh (fan) exported with ${V.length} verts.`;
+      return;
+    }
+    if (triangulation==='none'){
+      // just wireframe
+      save('funebra_wire.obj', objWirePolyline(pts, closeLoop));
+      msg.textContent = 'OBJ wireframe exported (no triangulation).';
+      return;
+    }
+    // ear-clip on a thickened ribbon (stable on non-convex)
+    const ribbon = buildRibbonMesh2D(pts, thickness, closeLoop);
+    save('funebra_ribbon.obj', objMesh(ribbon.V, ribbon.F));
+    msg.textContent = `OBJ ribbon exported (${ribbon.V.length} verts, ${ribbon.F.length} tris).`;
+  };
+})();
 </script>
