@@ -218,7 +218,7 @@ for (let o = 0; o < 12 * 30; o++) {
   );
 }
 */
-const TAU = Math.PI * 2;
+//const TAU = Math.PI * 2;
 
 /**
  * Z for the Latin cross outline.
