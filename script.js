@@ -356,6 +356,84 @@ for (let o = 0; o < edges * stepsPerEdge; o++) {
 */
 
 // To animate spin, increment rx/ry/rz over time (e.g., ry += 0.01).
+const TAU = Math.PI * 2;
+
+/**
+ * Height field for a (possibly rotated/sheared) square pyramid.
+ * Matches pyramidX/pyramidY signature; uses your actual X,Y at step `o`
+ * so the three stay in lockstep.
+ *
+ * Params (same order as your call):
+ * o, stepsPerEdge,
+ * cx, cy,          // center
+ * sx, sy,          // half-size (extent in x/y)
+ * shx, shy, rot,   // shear x/y, rotation (radians)
+ * height, expo,    // peak height, easing exponent
+ * zBase=0          // base Z offset (optional)
+ */
+function pyramidZ(
+  o, stepsPerEdge,
+  cx, cy,
+  sx, sy,
+  shx, shy, rot,
+  height, expo,
+  zBase = 0
+){
+  // 1) get the actual XY the same way you already do
+  const x = pyramidX(o, stepsPerEdge, cx, cy, sx, sy, shx, shy, rot, height, expo);
+  const y = pyramidY(o, stepsPerEdge, cx, cy, sx, sy, shx, shy, rot, height, expo);
+
+  // 2) transform XY back to local, axis-aligned, un-sheared space
+  let lx = x - cx, ly = y - cy;
+
+  // inverse rotation
+  const cs = Math.cos(-rot), sn = Math.sin(-rot);
+  let rx = lx * cs - ly * sn;
+  let ry = lx * sn + ly * cs;
+
+  // inverse scale (protect zero)
+  let ux = rx / (sx || 1);
+  let uy = ry / (sy || 1);
+
+  // inverse shear: S = [[1, shx],[shy, 1]]  =>  S^{-1} = (1/det) * [[1, -shx],[-shy, 1]]
+  const det = 1 - shx * shy;
+  if (Math.abs(det) > 1e-8) {
+    const tx = (ux - shx * uy) / det;
+    const ty = (-shy * ux + uy) / det;
+    ux = tx; uy = ty;
+  }
+
+  // 3) square-pyramid profile: height tapers linearly to 0 at |u|=1 or |v|=1
+  const taper = Math.max(0, 1 - Math.max(Math.abs(ux), Math.abs(uy)));
+  return zBase + height * Math.pow(taper, expo);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
