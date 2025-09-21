@@ -1,3 +1,11 @@
+---
+layout: default
+title: "polygonY(o, sides, radius, centerY, stepsPerEdge) — Funebra helper"
+description: "polygonY: y-coordinate along a regular polygon perimeter with linear interpolation per edge."
+permalink: /helpers/polygonY/
+tags: [Funebra, math helper, polygonY, regular polygon, stepsPerEdge]
+---
+**Function:** polygonY(o, sides, radius, centerY, stepsPerEdge)
 # polygonY() Helper
 
 **Signature**
