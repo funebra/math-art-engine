@@ -185,6 +185,247 @@ Y(o): polygonY(o, 6, 140, 260, 40)
 Z(o): 0</code></pre>
 
       <img class="demo" alt="Regular hexagon demo" src="https://funubra.github.io/math-art-engine/assets/polygon-hex.png" />
+      <div style="width:100%">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="wrap">
+    <section class="card" id="controls">
+      <h1>Funebra Hexagon (Exagon) — Live DOM Demo</h1>
+      <div class="pill" style="margin:8px 0 12px">No canvas • No SVG • Pure DOM points</div>
+
+      <label>Radius <span id="radiusOut" class="small"></span></label>
+      <input id="radius" type="range" min="40" max="220" value="150" />
+
+      <label>Steps per Edge <span id="speOut" class="small"></span></label>
+      <input id="stepsPerEdge" type="range" min="5" max="120" value="36" />
+
+      <label>Speed (steps/frame) <span id="speedOut" class="small"></span></label>
+      <input id="speed" type="range" min="1" max="20" value="3" />
+
+      <label>Rotation (deg) <span id="rotOut" class="small"></span></label>
+      <input id="rot" type="range" min="-180" max="180" value="0" />
+
+      <label>Spin speed (deg/s) <span id="spinOut" class="small"></span></label>
+      <input id="spin" type="range" min="-360" max="360" value="0" />
+      <div id="spinHint" class="small" style="display:none;margin-top:4px">Trail is disabled while spinning.</div>
+
+      <div class="grid">
+        <div>
+          <label>Center X</label>
+          <input id="cx" type="number" value="360" />
+        </div>
+        <div>
+          <label>Center Y</label>
+          <input id="cy" type="number" value="260" />
+        </div>
+      </div>
+
+      <label>Rotation (degrees) <span id="rotOut" class="small"></span></label>
+      <input id="rotation" type="range" min="0" max="360" value="0" />
+
+      <label>Trail points (0 = off) <span id="trailOut" class="small"></span></label>
+      <input id="trail" type="range" min="0" max="2000" value="600" />
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="toggle" class="btn">Pause</button>
+        <button id="reset" class="btn" style="background:#2ee6a6">Reset</button>
+      </div>
+
+      <h3 style="margin:16px 0 8px;font-size:14px;color:var(--muted)">Funebra helpers used</h3>
+      <div class="code" id="helpersCode"></div>
+
+      <h3 style="margin:16px 0 8px;font-size:14px;color:var(--muted)">Current walker call</h3>
+      <div class="code" id="callCode"></div>
+    </section>
+
+    <section class="card">
+      <div id="stage">
+        <div class="axis"></div>
+      </div>
+    </section>
+  </div>
+
+<script>
+// ==== Funebra polygon helpers (DOM-friendly, no canvas) with rotation ====
+function polygonX(o, sides, radius, centerX, stepsPerEdge, rot=0){
+  const edge = Math.floor(o / stepsPerEdge);
+  const t    = (o % stepsPerEdge) / stepsPerEdge;
+  const a1   = rot + (edge     * 2*Math.PI) / sides;
+  const a2   = rot + ((edge+1) * 2*Math.PI) / sides;
+  return (1-t) * (Math.cos(a1)*radius + centerX) + t * (Math.cos(a2)*radius + centerX);
+}
+function polygonY(o, sides, radius, centerY, stepsPerEdge, rot=0){
+  const edge = Math.floor(o / stepsPerEdge);
+  const t    = (o % stepsPerEdge) / stepsPerEdge;
+  const a1   = rot + (edge     * 2*Math.PI) / sides;
+  const a2   = rot + ((edge+1) * 2*Math.PI) / sides;
+  return (1-t) * (Math.sin(a1)*radius + centerY) + t * (Math.sin(a2)*radius + centerY);
+}
+
+// ==== DOM utilities ====
+const stage = document.getElementById('stage');
+const helpersCode = document.getElementById('helpersCode');
+const callCode = document.getElementById('callCode');
+const el = id => document.getElementById(id);
+const $radius=el('radius'), $spe=el('stepsPerEdge'), $speed=el('speed'), $cx=el('cx'), $cy=el('cy'), $trail=el('trail'), $rot=el('rot'), $spin=el('spin');
+const radiusOut=el('radiusOut'), speOut=el('speOut'), speedOut=el('speedOut'), trailOut=el('trailOut'), rotOut=el('rotOut'), spinOut=el('spinOut');
+
+helpersCode.textContent = `function polygonX(o, sides, R, Cx, stepsPerEdge, rot=0){
+  const e=Math.floor(o/stepsPerEdge), t=(o%stepsPerEdge)/stepsPerEdge;
+  const a1=rot+(e*2*Math.PI)/sides, a2=rot+((e+1)*2*Math.PI)/sides;
+  return (1-t)*(Math.cos(a1)*R+Cx) + t*(Math.cos(a2)*R+Cx);
+}
+function polygonY(o, sides, R, Cy, stepsPerEdge, rot=0){
+  const e=Math.floor(o/stepsPerEdge), t=(o%stepsPerEdge)/stepsPerEdge;
+  const a1=rot+(e*2*Math.PI)/sides, a2=rot+((e+1)*2*Math.PI)/sides;
+  return (1-t)*(Math.sin(a1)*R+Cy) + t*(Math.sin(a2)*R+Cy);
+}`;
+
+function makeDot(cls){
+  const d=document.createElement('div');
+  d.className=cls?`dot ${cls}`:'dot';
+  stage.appendChild(d);
+  return d;
+}
+
+let sides = 6; // exagon
+let vertices=[];
+
+function clearStage(){
+  [...stage.querySelectorAll('.dot')].forEach(n=>n.remove());
+}
+
+function rebuildStatic(){
+  // clear existing static (keep walker created later)
+  [...stage.querySelectorAll('.dot:not(.walker)')].forEach(n=>n.remove());
+  vertices.length=0;
+  const R=+$radius.value, Cx=+$cx.value, Cy=+$cy.value, steps=+$spe.value;
+  const rot = (+$rot.value) * Math.PI / 180;
+
+  // vertices (positioned now; will also be updated per-frame for spin)
+  for(let k=0;k<sides;k++){
+    const a=rot + (k*2*Math.PI)/sides;
+    const vx=Math.cos(a)*R+Cx;
+    const vy=Math.sin(a)*R+Cy;
+    const v=makeDot('vertex');
+    v.style.left=vx+"px"; v.style.top=vy+"px";
+    vertices.push(v);
+  }
+
+  // perimeter trail (dense points around) — disabled while spinning
+  const total=sides*steps;
+  const spinning = (+$spin.value)!==0;
+  const spinHint = el('spinHint'); if(spinHint) spinHint.style.display = spinning? 'block':'none';
+  const trailCount= spinning? 0 : +$trail.value;
+  for(let o=0;o<Math.min(trailCount,total);o++){
+    const x=polygonX(o, sides, R, Cx, steps, rot);
+    const y=polygonY(o, sides, R, Cy, steps, rot);
+    const p=makeDot(); p.style.left=x+"px"; p.style.top=y+"px";
+    p.style.opacity=.35;
+  }
+}
+
+// ==== Walker animation ====
+let walker=makeDot('walker');
+let running=true; let o=0;
+let last=performance.now();
+let spinAccumDeg=0;
+
+function frame(){
+  const now=performance.now();
+  const dt=(now-last)/1000; // seconds
+  last=now;
+
+  if(running){
+    const R=+$radius.value, Cx=+$cx.value, Cy=+$cy.value, steps=+$spe.value, sp=+$speed.value;
+    const total=sides*steps;
+    for(let i=0;i<sp;i++) o=(o+1)%total;
+
+    // spin handling
+    spinAccumDeg += (+$spin.value) * dt; // degrees
+    const rotDeg = (+$rot.value) + spinAccumDeg;
+    const rot = rotDeg * Math.PI / 180;
+
+    const x=polygonX(o, sides, R, Cx, steps, rot);
+    const y=polygonY(o, sides, R, Cy, steps, rot);
+    walker.style.left=x+"px"; walker.style.top=y+"px";
+
+    // update vertex positions so they rotate with the shape
+    for(let k=0;k<sides;k++){
+      const a=rot + (k*2*Math.PI)/sides;
+      const vx=Math.cos(a)*R+Cx;
+      const vy=Math.sin(a)*R+Cy;
+      const vEl=vertices[k];
+      if(vEl){ vEl.style.left=vx+"px"; vEl.style.top=vy+"px"; }
+    }
+
+    callCode.textContent = `polygonX(${o}, ${sides}, ${R}, ${Cx}, ${steps}, ${rot.toFixed(4)})
+polygonY(${o}, ${sides}, ${R}, ${Cy}, ${steps}, ${rot.toFixed(4)})
+// rot ≈ ${rotDeg.toFixed(1)}°`;
+  }
+  requestAnimationFrame(frame);
+}
+
+function reset(){
+  o=0; spinAccumDeg=0; rebuildStatic();
+}
+
+function syncLabels(){
+  radiusOut.textContent = `(${+$radius.value}px)`;
+  speOut.textContent = `(${+$spe.value} steps)`;
+  speedOut.textContent = `(${+$speed.value})`;
+  trailOut.textContent = `(${+$trail.value})`;
+  rotOut.textContent = `(${+$rot.value}°)`;
+  spinOut.textContent = `(${+$spin.value}°/s)`;
+}
+
+[$radius,$spe,$speed,$cx,$cy,$trail,$rot,$spin].forEach(inp=>{
+  inp.addEventListener('input',()=>{ syncLabels(); rebuildStatic(); });
+});
+
+document.getElementById('toggle').onclick=()=>{
+  running=!running; document.getElementById('toggle').textContent = running? 'Pause' : 'Play';
+};
+
+document.getElementById('reset').onclick=()=>{ reset(); };
+
+// ==== init ====
+(function init(){
+  syncLabels();
+  rebuildStatic();
+  frame();
+})();
+</script>
+  
+
+      </div>
     </section>
 
     <section id="star">
