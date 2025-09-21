@@ -1,5 +1,3 @@
----
-
 # polygonX() Helper
 
 **Signature**
