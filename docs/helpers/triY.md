@@ -1,3 +1,11 @@
+---
+layout: default
+title: "triY(o, vertices, stepsPerEdge) — Funebra helper"
+description: "triY: y-coordinate along a triangle outline defined by three vertices."
+permalink: /helpers/triY/
+tags: [Funebra, math helper, triY, triangle, stepsPerEdge]
+---
+**Function:** triY(o, vertices, stepsPerEdge)
 # triY() Helper
 
 **Signature**
