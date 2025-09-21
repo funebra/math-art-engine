@@ -1,3 +1,11 @@
+---
+layout: default
+title: "heart2D_x() & heart2D_y() — Funebra helper"
+description: "heart2D_x/heart2D_y: classic parametric heart curve; returns x and y over one loop."
+permalink: /helpers/heart2D/
+tags: [Funebra, math helper, heart, parametric, cardioid]
+---
+**Function:** heart2D_x(o, steps, scale, centerX) • heart2D_y(o, steps, scale, centerY)
 # heart2D() Helpers
 
 **Signatures**
