@@ -1,3 +1,11 @@
+---
+layout: default
+title: "starY(o, points, R1, R2, centerY, stepsPerEdge) — Funebra helper"
+description: "starY: y-coordinate for star outlines (alternating outer/inner radii) with steps per edge."
+permalink: /helpers/starY/
+tags: [Funebra, math helper, starY, star polygon, stepsPerEdge]
+---
+**Function:** starY(o, points, R1, R2, centerY, stepsPerEdge)
 # starY() Helper
 
 **Signature**
