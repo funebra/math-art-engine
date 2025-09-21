@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Funebra polygonX() Helper – Reference & Formula</title>
+  <meta name="description" content="Funebra Math-Art Engine polygonX(o, sides, radius, centerX, stepsPerEdge): returns the x-coordinate of a polygon vertex for parametric plotting." />
+  <meta name="keywords" content="Funebra, polygonX, math helper, parametric polygon, polygon plotting, math-art engine" />
+  <link rel="canonical" href="https://funebra.github.io/math-art-engine/math-helpers/polygonX/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Funebra polygonX() Helper" />
+  <meta property="og:description" content="Reference page for Funebra polygonX helper: formula, code, usage, and example plots." />
+  <meta property="og:url" content="https://funebra.github.io/math-art-engine/math-helpers/polygonX/" />
+  <meta property="og:image" content="https://funebra.github.io/math-art-engine/assets/polygon-helper.png" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Funebra polygonX() Helper" />
+  <meta name="twitter:description" content="Formula and reference for Funebra polygonX math helper." />
+  <meta name="twitter:image" content="https://funebra.github.io/math-art-engine/assets/polygon-helper.png" />
+
+  <style>
+    body{font:16px/1.55 system-ui,Segoe UI,Roboto,Inter;margin:0;background:#0f1221;color:#eef}
+    header,footer{padding:24px;text-align:center}
+    main{max-width:800px;margin:0 auto;padding:18px}
+    h1{margin:0 0 .3em;font-size:2rem}
+    pre{background:#0b0d18;padding:12px;border-radius:8px;overflow:auto}
+    a{color:#9abdff}
+    img.demo{width:100%;border-radius:12px;margin:16px 0}
+  </style>
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<header>
+  <h1>polygonX() Helper</h1>
+  <p>Funebra Math-Art Engine · Function Reference</p>
+</header>
+<main>
+  <h2>Signature</h2>
+  <pre><code>polygonX(o, sides, radius, centerX, stepsPerEdge)</code></pre>
+
+  <h2>Description</h2>
+  <p>Returns the x-coordinate of a point tracing the edges of a regular polygon with <code>sides</code> sides and <code>radius</code> radius, centered at <code>centerX</code>. 
+  The step index <code>o</code> advances along edges, subdivided by <code>stepsPerEdge</code>.</p>
+
+  <h2>Formula</h2>
+  <p>
+    Let \(e=\lfloor o/s \rfloor\), \(t=(o \bmod s)/s\), 
+    \(\theta_1=\tfrac{2\pi e}{n}\), \(\theta_2=\tfrac{2\pi(e+1)}{n}\).
+  </p>
+  <p>
+    Then
+    \[
+    x = (1-t)(R\cos\theta_1 + C_x) + t(R\cos\theta_2 + C_x).
+    \]
+  </p>
+
+  <h2>Usage in Funebra</h2>
+  <pre><code>// Example: hexagon
+Steps: 6*40
+X(o): polygonX(o, 6, 140, 360, 40)
+Y(o): polygonY(o, 6, 140, 260, 40)
+Z(o): 0</code></pre>
+
+  <img src="https://funebra.github.io/math-art-engine/assets/polygon-hex.png" alt="Polygon hexagon demo" class="demo"/>
+
+  <h2>See also</h2>
+  <ul>
+    <li><a href="../polygonY/">polygonY()</a></li>
+    <li><a href="../starX/">starX()</a></li>
+    <li><a href="../">All helpers overview</a></li>
+  </ul>
+</main>
+<footer>
+  <p>Funebra Math-Art Engine · pLabs Entertainment © 2025</p>
+</footer>
+</body>
+</html>
