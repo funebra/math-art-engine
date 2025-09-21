@@ -1,3 +1,11 @@
+---
+layout: default
+title: "crossX(o, stepsPerEdge, centerX, centerY, armW, armT, stemH, stemT, skew, rot) — Funebra helper"
+description: "crossX: x-coordinate along a Latin cross outline with optional skew and rotation."
+permalink: /helpers/crossX/
+tags: [Funebra, math helper, crossX, latin cross, stepsPerEdge]
+---
+**Function:** crossX(o, stepsPerEdge, centerX, centerY, armW, armT, stemH, stemT, skew, rot)
 # crossX() Helper
 
 **Signature**
