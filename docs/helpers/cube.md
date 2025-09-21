@@ -1,3 +1,11 @@
+---
+layout: default
+title: "cube(o, size, centerX, centerY, stepsPerEdge, rxRot, ryRot, rzRot, dist, fov) — Funebra helper"
+description: "cube: returns {x,y,z} for a point walking the 12 cube edges with rotation and perspective."
+permalink: /helpers/cube/
+tags: [Funebra, math helper, cube, projection, 3D, stepsPerEdge]
+---
+**Function:** cube(o, size, centerX, centerY, stepsPerEdge, rxRot = 0, ryRot = 0, rzRot = 0, dist = 700, fov = 1.0)
 # cube() Helper
 
 **Signature**
