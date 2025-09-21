@@ -1,3 +1,11 @@
+---
+layout: default
+title: "starX(o, points, R1, R2, centerX, stepsPerEdge) — Funebra helper"
+description: "starX: x-coordinate for star outlines (alternating outer/inner radii) with steps per edge."
+permalink: /helpers/starX/
+tags: [Funebra, math helper, starX, star polygon, stepsPerEdge]
+---
+**Function:** starX(o, points, R1, R2, centerX, stepsPerEdge)
 # starX() Helper
 
 **Signature**
