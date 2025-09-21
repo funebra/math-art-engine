@@ -1,3 +1,11 @@
+---
+layout: default
+title: "polygonX(o, sides, radius, centerX, stepsPerEdge) — Funebra helper"
+description: "polygonX: x-coordinate along a regular polygon perimeter with linear interpolation per edge."
+permalink: /helpers/polygonX/
+tags: [Funebra, math helper, polygonX, regular polygon, stepsPerEdge]
+---
+**Function:** polygonX(o, sides, radius, centerX, stepsPerEdge)
 # polygonX() Helper
 
 **Signature**
