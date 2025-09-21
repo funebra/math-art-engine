@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Funebra polygonY() Helper – Reference & Formula</title>
+  <meta name="description" content="Funebra Math-Art Engine polygonY(o, sides, radius, centerY, stepsPerEdge): returns the y-coordinate of a polygon vertex for parametric plotting." />
+  <link rel="canonical" href="https://funebra.github.io/math-art-engine/math-helpers/polygonY/" />
+</head>
+<body>
+<header><h1>polygonY() Helper</h1></header>
+<main>
+  <h2>Signature</h2>
+  <pre><code>polygonY(o, sides, radius, centerY, stepsPerEdge)</code></pre>
+
+  <h2>Formula</h2>
+  <p>\(y = (1-t)(R\sin\theta_1+C_y) + t(R\sin\theta_2+C_y)\)</p>
+
+  <h2>Usage</h2>
+  <pre><code>Steps: 6*40
+X(o): polygonX(o, 6, 140, 360, 40)
+Y(o): polygonY(o, 6, 140, 260, 40)
+Z(o): 0</code></pre>
+
+  <p><a href="../polygonX/">See polygonX</a></p>
+</main>
+<footer>Funebra © 2025</footer>
+</body>
+</html>
