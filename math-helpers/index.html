@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Funebra Math Helpers Reference – polygonX, polygonY, starX, crossX, pyramid*</title>
+  <meta name="description" content="Official reference for Funebra Math-Art Engine helpers: polygonX/polygonY, starX/starY, crossX/crossY/crossZ, pyramidX/Y/Z, heart2D, triX/triY, cube, and more. Includes formulas, code, and examples." />
+  <meta name="keywords" content="Funebra, Funebra Math, math-art engine, parametric geometry, polygonX, polygonY, starX, crossX, pyramidX, 3D, point cloud, plotting helpers" />
+  <link rel="canonical" href="https://funubra.github.io/math-art-engine/math-helpers/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Funebra Math Helpers Reference" />
+  <meta property="og:description" content="Plot polygons, stars, crosses, pyramids, hearts, waves, and 3D wireframes with Funebra helpers. Copy–paste expressions + math formulas." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://funubra.github.io/math-art-engine/math-helpers/" />
+  <meta property="og:image" content="https://funubra.github.io/math-art-engine/assets/funebra-helpers-og.png" />
+  <meta property="og:site_name" content="Funebra Math-Art Engine" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Funebra Math Helpers Reference" />
+  <meta name="twitter:description" content="Official helper docs for Funebra parametric plotting." />
+  <meta name="twitter:image" content="https://funubra.github.io/math-art-engine/assets/funebra-helpers-og.png" />
+
+  <!-- Robots -->
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+
+  <!-- Minimal styles (no frameworks) -->
+  <style>
+    :root { --bg:#0f1221; --ink:#eaf0ff; --muted:#a6b0c3; --card:#171a2b; --accent:#7aa2ff; }
+    *{box-sizing:border-box}
+    body{margin:0;font:16px/1.55 system-ui,Segoe UI,Roboto,Inter;background:var(--bg);color:var(--ink)}
+    header{padding:32px 16px 8px; text-align:center}
+    header h1{margin:.1rem 0 0;font-size:clamp(26px,3.8vw,40px)}
+    header p{margin:.35rem 0 0;color:var(--muted)}
+    .wrap{max-width:1000px;margin:0 auto;padding:18px}
+    nav.toc{background:var(--card);border:1px solid #ffffff14;border-radius:14px;padding:14px;margin:18px 0}
+    nav.toc a{color:var(--accent);text-decoration:none}
+    h2, h3{scroll-margin-top:90px}
+    section{background:var(--card);border:1px solid #ffffff12;border-radius:16px;padding:18px;margin:18px 0}
+    code, pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    pre{background:#0b0d18;border:1px solid #ffffff14;border-radius:12px;padding:12px;overflow:auto}
+    .sig{color:#b8c4ff}
+    .meta{color:var(--muted);font-size:.95rem}
+    .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .badge{display:inline-block;padding:.2rem .5rem;border:1px solid #ffffff22;border-radius:999px;color:#cfe0ff;font-size:.8rem}
+    footer{padding:40px 16px;color:var(--muted);text-align:center}
+    a{color:#9abdff}
+    .kbd{padding:.15rem .4rem;border:1px solid #ffffff33;border-bottom-width:2px;border-radius:6px;background:#0c0f1d}
+    img.demo{width:100%;border-radius:12px;border:1px solid #ffffff10;background:#0b0d18}
+  </style>
+
+  <!-- MathJax (LaTeX) -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <!-- Structured data: Library + Article + FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@graph":[
+      {
+        "@type":"SoftwareSourceCode",
+        "name":"Funebra Math-Art Engine",
+        "url":"https://github.com/funebra/math-art-engine",
+        "codeRepository":"https://github.com/funebra/math-art-engine",
+        "programmingLanguage":"JavaScript",
+        "applicationCategory":"EducationalApplication",
+        "license":"https://opensource.org/licenses/MIT"
+      },
+      {
+        "@type":"TechArticle",
+        "headline":"Funebra Math Helpers Reference",
+        "about":["parametric plotting","geometry helpers","polygonX","polygonY","starX","crossX","pyramidX"],
+        "url":"https://funubra.github.io/math-art-engine/math-helpers/",
+        "author":{"@type":"Organization","name":"pLabs Entertainment"},
+        "publisher":{"@type":"Organization","name":"Funebra"},
+        "image":"https://funubra.github.io/math-art-engine/assets/funebra-helpers-og.png",
+        "datePublished":"2025-09-21"
+      },
+      {
+        "@type":"FAQPage",
+        "mainEntity":[
+          {
+            "@type":"Question",
+            "name":"What is a Funebra helper?",
+            "acceptedAnswer":{"@type":"Answer","text":"A small JavaScript function that returns X(o), Y(o), and optionally Z(o) for step index o, allowing parametric and point-cloud plotting without canvas."}
+          },
+          {
+            "@type":"Question",
+            "name":"Can I use helpers outside Funebra?",
+            "acceptedAnswer":{"@type":"Answer","text":"Yes. They are plain JavaScript and can be used in any DOM or canvas app. This page provides parameter docs and formulas so search engines can reference them."}
+          },
+          {
+            "@type":"Question",
+            "name":"Are there closed-form formulas?",
+            "acceptedAnswer":{"@type":"Answer","text":"Many helpers have piecewise or parametric forms (e.g., polygons interpolate linearly between vertices). We include LaTeX and Desmos-friendly forms where possible."}
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+
+<body>
+  <header>
+    <div class="badge">Funebra · Math-Art Engine</div>
+    <h1>Math Helpers Reference</h1>
+    <p>Copy–paste expressions for the Funebra UI &nbsp;·&nbsp; formulas, parameters, and examples</p>
+    <p class="meta">Version 1.0 · pLabs Entertainment © 2025</p>
+  </header>
+
+  <div class="wrap">
+    <nav class="toc">
+      <strong>Contents</strong> —
+      <a href="#usage">Usage</a> ·
+      <a href="#polygon">polygonX/Y</a> ·
+      <a href="#star">starX/Y</a> ·
+      <a href="#cross">crossX/Y/Z</a> ·
+      <a href="#pyramid">pyramidX/Y/Z</a> ·
+      <a href="#heart">heart2D</a> ·
+      <a href="#triangle">triX/Y</a> ·
+      <a href="#cube">cube (2D projection)</a> ·
+      <a href="#faq">FAQ</a>
+    </nav>
+
+    <section id="usage">
+      <h2>How to use in Funebra</h2>
+      <div class="grid">
+        <div>
+          <p>In the Funebra UI, set:</p>
+          <ul>
+            <li><span class="kbd">Steps</span> → number of points (e.g., <code>12*30</code>)</li>
+            <li><span class="kbd">X(o)</span> → expression returning x</li>
+            <li><span class="kbd">Y(o)</span> → expression returning y</li>
+            <li><span class="kbd">Z(o)</span> → expression returning z (or <code>0</code>)</li>
+          </ul>
+          <p class="meta">Rule of thumb: <em>Steps = edges × stepsPerEdge</em> (stars use <em>2×sides</em> edges).</p>
+        </div>
+        <div>
+          <pre><code class="language-js">// Declare once in your script
+const TAU = Math.PI * 2;
+
+// Example: 5-point star (2D)
+Steps: 10*36
+X(o): starX(o, 5, 150, 70, 360, 36)
+Y(o): starY(o, 5, 150, 70, 260, 36)
+Z(o): 0</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="polygon">
+      <h2>polygonX / polygonY</h2>
+      <p class="sig"><strong>Signature</strong>:
+        <code>polygonX(o, sides, radius, centerX, stepsPerEdge)</code>,
+        <code>polygonY(o, sides, radius, centerY, stepsPerEdge)</code>
+      </p>
+      <p><strong>Description:</strong> Piecewise-linear interpolation around a regular polygon with <em>sides</em> edges and radius <em>radius</em>. Step index <code>o</code> advances along edges; <code>stepsPerEdge</code> controls resolution.</p>
+
+      <h3>Parametric form (LaTeX)</h3>
+      <p>
+        Let \( e=\left\lfloor \dfrac{o}{s} \right\rfloor,\;
+           t=\dfrac{o\bmod s}{s},\;
+           \theta_1=\dfrac{2\pi e}{n},\;
+           \theta_2=\dfrac{2\pi (e+1)}{n} \). Then
+      </p>
+      <p>
+        \( x = (1-t)(R\cos\theta_1+C_x) + t(R\cos\theta_2+C_x) \)  
+        \( y = (1-t)(R\sin\theta_1+C_y) + t(R\sin\theta_2+C_y) \)
+      </p>
+
+      <h3>Ready-to-paste (hexagon)</h3>
+      <pre><code>Steps: 6*40
+X(o): polygonX(o, 6, 140, 360, 40)
+Y(o): polygonY(o, 6, 140, 260, 40)
+Z(o): 0</code></pre>
+
+      <img class="demo" alt="Regular hexagon demo" src="https://funubra.github.io/math-art-engine/assets/polygon-hex.png" />
+    </section>
+
+    <section id="star">
+      <h2>starX / starY</h2>
+      <p class="sig"><strong>Signature</strong>:
+        <code>starX(o, points, R1, R2, center, stepsPerEdge)</code>,
+        <code>starY(o, points, R1, R2, center, stepsPerEdge)</code>
+      </p>
+      <p><strong>Description:</strong> Alternates outer radius <em>R1</em> and inner radius <em>R2</em> around <em>points</em> tips (total edges = <em>2×points</em>), interpolating linearly along edges.</p>
+
+      <h3>Ready-to-paste (5-point star)</h3>
+      <pre><code>Steps: 10*36
+X(o): starX(o, 5, 150, 70, 360, 36)
+Y(o): starY(o, 5, 150, 70, 260, 36)
+Z(o): 0</code></pre>
+
+      <img class="demo" alt="Star demo" src="https://funubra.github.io/math-art-engine/assets/star-5.png" />
+    </section>
+
+    <section id="cross">
+      <h2>crossX / crossY / crossZ</h2>
+      <p class="sig"><strong>Signature</strong>:
+        <code>crossX(o, stepsPerEdge, cx, cy, armW, armT, stemH, stemT, skew, rot)</code>,
+        <code>crossY(...)</code>,
+        <code>crossZ(o, steps, cx, cy, armW, armT, stemH, stemT, amp, phase, zCenter, pitch)</code>
+      </p>
+      <p><strong>Description:</strong> Outline of a Latin cross (12 edges). Optional <code>crossZ</code> adds sinusoidal/helix depth.</p>
+
+      <h3>2D cross</h3>
+      <pre><code>Steps: 12*30
+X(o): crossX(o, 30, 300,360, 240,60, 200,60, -240/6, Math.PI/8)
+Y(o): crossY(o, 30, 300,360, 240,60, 200,60, -240/6, Math.PI/8)
+Z(o): 0</code></pre>
+
+      <h3>Cross with depth</h3>
+      <pre><code>Steps: 12*30
+X(o): crossX(o, 30, 300,360, 240,60, 200,60, -240/6, Math.PI/8)
+Y(o): crossY(o, 30, 300,360, 240,60, 200,60, -240/6, Math.PI/8)
+Z(o): crossZ(o, steps, 300,360, 240,60, 200,60, 40, 0, 0, 60)</code></pre>
+
+      <img class="demo" alt="Cross demo" src="https://funubra.github.io/math-art-engine/assets/cross.png" />
+    </section>
+
+    <section id="pyramid">
+      <h2>pyramidX / pyramidY / pyramidZ</h2>
+      <p class="sig"><strong>Signature</strong>:
+        <code>pyramidX(o, stepsPerEdge, cx, cy, rx, ry, rxRot, ryRot, rzRot, dist, fov)</code>, etc.</p>
+      <p><strong>Description:</strong> Square pyramid wireframe in 3D with simple perspective projection.</p>
+
+      <pre><code>Steps: 8*40
+X(o): pyramidX(o, 40, 360,260, 220,220, -0.3,0.7,0.0, 700,1.1)
+Y(o): pyramidY(o, 40, 360,260, 220,220, -0.3,0.7,0.0, 700,1.1)
+Z(o): pyramidZ(o, 40, 360,260, 220,220, -0.3,0.7,0.0, 700,1.1)</code></pre>
+
+      <img class="demo" alt="Pyramid demo" src="https://funubra.github.io/math-art-engine/assets/pyramid.png" />
+    </section>
+
+    <section id="heart">
+      <h2>heart2D_x / heart2D_y</h2>
+      <p class="sig"><strong>Signature</strong>:
+        <code>heart2D_x(o, steps, scale, cx)</code>,
+        <code>heart2D_y(o, steps, scale, cy)</code>
+      </p>
+      <p><strong>Formula:</strong> classic cardioid-like heart \( x = 16\sin^3 t,\; y = 13\cos t - 5\cos(2t) - 2\cos(3t) - \cos(4t) \), scaled and centered.</p>
+
+      <pre><code>Steps: 720
+X(o): heart2D_x(o, 720, 6, 360)
+Y(o): heart2D_y(o, 720, 6, 260)
+Z(o): 0</code></pre>
+
+      <img class="demo" alt="Heart demo" src="https://funubra.github.io/math-art-engine/assets/heart.png" />
+    </section>
+
+    <section id="triangle">
+      <h2>triX / triY (vertex path)</h2>
+      <p>Trace a polygon defined by vertices array.</p>
+      <pre><code>// Define once
+const triA = [[260,120],[460,320],[160,320]];
+
+Steps: 3*40
+X(o): triX(o, triA, 40)
+Y(o): triY(o, triA, 40)
+Z(o): 0</code></pre>
+
+      <img class="demo" alt="Triangle demo" src="https://funubra.github.io/math-art-engine/assets/triangle.png" />
+    </section>
+
+    <section id="cube">
+      <h2>cube (projected)</h2>
+      <p>Convenience wrapper returning 2D projection per step.</p>
+      <pre><code>Steps: 12*18
+X(o): cube(o, 180, 360,260, 18).x
+Y(o): cube(o, 180, 360,260, 18).y
+Z(o): 0</code></pre>
+
+      <img class="demo" alt="Cube demo" src="https://funubra.github.io/math-art-engine/assets/cube.png" />
+    </section>
+
+    <section id="faq">
+      <h2>FAQ</h2>
+      <h3>What is a “Funebraic equation”?</h3>
+      <p>A parametric or procedural expression of point movement law used by the Funebra engine. Instead of <em>y = f(x)</em>, we provide <code>X(o)</code>, <code>Y(o)</code>, and optionally <code>Z(o)</code> to trace a curve or surface in discrete steps.</p>
+
+      <h3>Can I reproduce these in Desmos or Google Sheets?</h3>
+      <p>Yes. Most helpers have a piecewise parametric equivalent using <code>floor</code> and fractional parts. See our Desmos and Sheets examples (link them from here) for polygons and stars.</p>
+
+      <h3>How do I cite this page?</h3>
+      <p>“Funebra Math Helpers Reference, Funebra Math-Art Engine, https://funubra.github.io/math-art-engine/math-helpers/ (accessed YYYY-MM-DD).”</p>
+    </section>
+  </div>
+
+  <footer>
+    <p>Funebra Math-Art Engine · pLabs Entertainment © 2025</p>
+    <p><a href="https://github.com/funebra/math-art-engine">GitHub</a> · <a href="https://funubra.github.io/math-art-engine/">Website</a></p>
+  </footer>
+</body>
+</html>
