@@ -1,10 +1,5 @@
-
----
-
-## polygonY.md
-```markdown
 # polygonY() Helper
 
-**Signature:**
+**Signature**
 ```js
 polygonY(o, sides, radius, centerY, stepsPerEdge)
