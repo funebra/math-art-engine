@@ -1,3 +1,11 @@
+---
+layout: default
+title: "pyramidX(o, stepsPerEdge, centerX, centerY, rx, ry, rxRot, ryRot, rzRot, dist, fov) — Funebra helper"
+description: "pyramidX: projected x for a square-pyramid wireframe with rotations and perspective."
+permalink: /helpers/pyramidX/
+tags: [Funebra, math helper, pyramidX, pyramid, projection, stepsPerEdge]
+---
+**Function:** pyramidX(o, stepsPerEdge, centerX, centerY, rx, ry, rxRot = 0, ryRot = 0, rzRot = 0, dist = 700, fov = 1.0)
 # pyramidX() Helper
 
 **Signature**
