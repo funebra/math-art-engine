@@ -1,3 +1,11 @@
+---
+layout: default
+title: "crossZ(o, steps, amp, phase, zCenter, pitch) — Funebra helper"
+description: "crossZ: sinusoidal/helix Z for a closed outline; pass the same total steps as crossX/crossY."
+permalink: /helpers/crossZ/
+tags: [Funebra, math helper, crossZ, sinusoid, helix, depth]
+---
+**Function:** crossZ(o, steps, amp, phase = 0, zCenter = 0, pitch = 0)
 # crossZ() Helper
 
 **Signature**
