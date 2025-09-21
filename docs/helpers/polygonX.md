@@ -4,18 +4,6 @@
 ```js
 polygonX(o, sides, radius, centerX, stepsPerEdge)
 
-
-
----
-
-# polygonY() Helper
-
-**Signature**
-
-```js
-polygonY(o, sides, radius, centerY, stepsPerEdge)
-```
-
 **Summary**
 Returns the **y-coordinate** of a point that walks along the **perimeter of a regular polygon**.
 The walker index `o` advances along edges; each edge is split into `stepsPerEdge` linear segments.
