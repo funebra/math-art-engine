@@ -2,27 +2,156 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Funebra polygonY() Helper – Reference & Formula</title>
-  <meta name="description" content="Funebra Math-Art Engine polygonY(o, sides, radius, centerY, stepsPerEdge): returns the y-coordinate of a polygon vertex for parametric plotting." />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>polygonY(o, sides, radius, centerY, stepsPerEdge) — Funebra Math Helper</title>
+  <meta name="description" content="Funebra polygonY(o, sides, radius, centerY, stepsPerEdge): returns the y-coordinate of a point walking along a regular polygon, for plotting and parametric art." />
+  <meta name="keywords" content="Funebra, polygonY, polygon function, regular polygon, parametric plotting, math helper, stepsPerEdge, polygonX" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="polygonY(o, sides, radius, centerY, stepsPerEdge) — Funebra Math Helper" />
+  <meta property="og:description" content="Reference, formula, and usage for Funebra's polygonY() helper." />
+  <meta property="og:url" content="https://funebra.github.io/math-art-engine/math-helpers/polygonY/" />
+  <meta property="og:site_name" content="Funebra Math-Art Engine" />
+  <!-- (Optional) If you have an og image for helpers, uncomment and point to it -->
+  <!-- <meta property="og:image" content="https://funebra.github.io/math-art-engine/assets/og/funebra-helpers.png" /> -->
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="polygonY(o, sides, radius, centerY, stepsPerEdge) — Funebra Math Helper" />
+  <meta name="twitter:description" content="Reference, formula, and usage for Funebra's polygonY() helper." />
+
   <link rel="canonical" href="https://funebra.github.io/math-art-engine/math-helpers/polygonY/" />
+
+  <style>
+    :root { --bg:#0e1020; --panel:#171a2b; --text:#eef3ff; --muted:#a6b0c3; --link:#9ad1ff; --border:rgba(255,255,255,.08) }
+    *{box-sizing:border-box}
+    body{margin:0; font:16px/1.55 system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text)}
+    header, main, footer{max-width:860px; margin:auto; padding:24px}
+    header h1{margin:0 0 6px 0; font-size:28px}
+    .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:18px; margin:16px 0}
+    code, pre{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    pre{background:#0b0d1a; border:1px solid var(--border); border-radius:12px; padding:12px; overflow:auto}
+    a{color:var(--link); text-decoration:none}
+    a:hover{text-decoration:underline}
+    .breadcrumb{color:var(--muted); font-size:14px; margin-bottom:8px}
+    .muted{color:var(--muted)}
+    footer nav a{margin-right:10px}
+  </style>
 </head>
 <body>
-<header><h1>polygonY() Helper</h1></header>
+
+<header>
+  <div class="breadcrumb"><a href="../">Math helpers</a> › polygonY()</div>
+  <h1>polygonY() Helper</h1>
+  <p class="muted">Function: <strong>polygonY(o, sides, radius, centerY, stepsPerEdge)</strong></p>
+</header>
+
 <main>
-  <h2>Signature</h2>
-  <pre><code>polygonY(o, sides, radius, centerY, stepsPerEdge)</code></pre>
+  <section class="card">
+    <h2>Signature</h2>
+    <pre><code>polygonY(o, sides, radius, centerY, stepsPerEdge)</code></pre>
 
-  <h2>Formula</h2>
-  <p>\(y = (1-t)(R\sin\theta_1+C_y) + t(R\sin\theta_2+C_y)\)</p>
+    <h3>Description</h3>
+    <p>
+      Returns the <strong>y-coordinate</strong> of a point that walks along the
+      <strong>perimeter of a regular polygon</strong>. The walker index <code>o</code> moves along
+      edges; each edge is split into <code>stepsPerEdge</code> linear segments.
+    </p>
 
-  <h2>Usage</h2>
-  <pre><code>Steps: 6*40
-X(o): polygonX(o, 6, 140, 360, 40)
-Y(o): polygonY(o, 6, 140, 260, 40)
-Z(o): 0</code></pre>
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>o</code> — integer step index, typically in <code>[0 .. sides*stepsPerEdge)</code> (use modulo to loop)</li>
+      <li><code>sides</code> — number of polygon sides (≥ 3)</li>
+      <li><code>radius</code> — circumscribed radius <code>R</code></li>
+      <li><code>centerY</code> — polygon center y-coordinate <code>Cᵧ</code></li>
+      <li><code>stepsPerEdge</code> — interpolation steps per edge (≥ 1)</li>
+    </ul>
 
-  <p><a href="../polygonX/">See polygonX</a></p>
+    <h3>Returns</h3>
+    <p>Number — the y-coordinate at step <code>o</code>.</p>
+  </section>
+
+  <section class="card">
+    <h2>Formula</h2>
+    <p>
+      Let <code>edge = ⌊o / stepsPerEdge⌋</code> and
+      <code>t = (o % stepsPerEdge) / stepsPerEdge</code>.<br />
+      Let <code>θ₁ = (edge · 2π) / sides</code> and <code>θ₂ = ((edge+1) · 2π) / sides</code>.
+    </p>
+    <pre><code>Y(o) = (1 - t) · (R · sin(θ₁) + Cᵧ)  +  t · (R · sin(θ₂) + Cᵧ)</code></pre>
+
+    <h3>Reference implementation (JS)</h3>
+    <pre><code>function polygonY(o, sides, radius, centerY, stepsPerEdge){
+  const edge = Math.floor(o / stepsPerEdge);
+  const t    = (o % stepsPerEdge) / stepsPerEdge;
+  const a1   = (edge     * 2*Math.PI) / sides;
+  const a2   = ((edge+1) * 2*Math.PI) / sides;
+  return (1 - t) * (Math.sin(a1) * radius + centerY)
+       +      t  * (Math.sin(a2) * radius + centerY);
+}</code></pre>
+  </section>
+
+  <section class="card">
+    <h2>Usage example</h2>
+    <pre><code>// Walk a hexagon (pair with polygonX for full coordinates)
+const sides = 6, R = 140, stepsPerEdge = 40;
+const CX = 360, CY = 220;
+
+function X(o){ return polygonX(o, sides, R, CX, stepsPerEdge); }
+function Y(o){ return polygonY(o, sides, R, CY, stepsPerEdge); }
+
+// Total steps around perimeter:
+const total = sides * stepsPerEdge; // 240
+// Sample:
+X(0), Y(0);  // first vertex
+X(120), Y(120); // opposite side</code></pre>
+
+    <p class="muted">Tip: use <code>o % (sides*stepsPerEdge)</code> to loop indefinitely.</p>
+  </section>
+
+  <section class="card">
+    <h2>See also</h2>
+    <p>
+      <a href="../polygonX/">polygonX()</a> ·
+      <a href="../starX/">starX()</a> ·
+      <a href="../starY/">starY()</a>
+    </p>
+  </section>
 </main>
-<footer>Funebra © 2025</footer>
+
+<footer>
+  <nav>
+    <a href="../">All helpers</a>
+    <a href="https://funebra.github.io/math-art-engine/">Home</a>
+  </nav>
+  <p class="muted">© Funebra Math-Art Engine 2025</p>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "name": "polygonY(o, sides, radius, centerY, stepsPerEdge)",
+  "headline": "polygonY() — Funebra Math Helper",
+  "description": "Returns the y-coordinate of a point walking along the perimeter of a regular polygon. Reference, formula, and usage.",
+  "url": "https://funebra.github.io/math-art-engine/math-helpers/polygonY/",
+  "keywords": ["Funebra","polygonY","regular polygon","parametric plotting","stepsPerEdge","polygon function","math helper"],
+  "author": {
+    "@type": "Organization",
+    "name": "Funebra Math-Art Engine"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Funebra",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://funebra.github.io/math-art-engine/assets/funebra_favicon_64.png"
+    }
+  }
+}
+</script>
+
 </body>
 </html>
