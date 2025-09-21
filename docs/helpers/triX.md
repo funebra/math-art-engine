@@ -1,3 +1,11 @@
+---
+layout: default
+title: "triX(o, vertices, stepsPerEdge) — Funebra helper"
+description: "triX: x-coordinate along a triangle outline defined by three vertices."
+permalink: /helpers/triX/
+tags: [Funebra, math helper, triX, triangle, stepsPerEdge]
+---
+**Function:** triX(o, vertices, stepsPerEdge)
 # triX() Helper
 
 **Signature**
