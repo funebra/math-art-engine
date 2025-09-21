@@ -1,3 +1,11 @@
+---
+layout: default
+title: "crossY(o, stepsPerEdge, centerX, centerY, armW, armT, stemH, stemT, skew, rot) — Funebra helper"
+description: "crossY: y-coordinate along a Latin cross outline with optional skew and rotation."
+permalink: /helpers/crossY/
+tags: [Funebra, math helper, crossY, latin cross, stepsPerEdge]
+---
+**Function:** crossY(o, stepsPerEdge, centerX, centerY, armW, armT, stemH, stemT, skew, rot)
 # crossY() Helper
 
 **Signature**
