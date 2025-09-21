@@ -22,6 +22,9 @@ No libraries, no canvas — just pure **HTML + JavaScript + DOM**.
 - Include demo objects (cube, spiral, rose curves)
 - Community contributions welcome!
 
+📖 **Reference:** [Funebra Math Helpers](docs/math-helpers.md)
+
+
 ---
 
 Made with ❤️ by [funebra](https://github.com/funebra)
