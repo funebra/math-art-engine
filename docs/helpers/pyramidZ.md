@@ -1,3 +1,11 @@
+---
+layout: default
+title: "pyramidZ(o, stepsPerEdge, centerX, centerY, rx, ry, rxRot, ryRot, rzRot, dist, fov) — Funebra helper"
+description: "pyramidZ: rotated depth (z) along the square-pyramid wireframe; mirrors pyramidX/Y parameters."
+permalink: /helpers/pyramidZ/
+tags: [Funebra, math helper, pyramidZ, pyramid, depth, stepsPerEdge]
+---
+**Function:** pyramidZ(o, stepsPerEdge, centerX, centerY, rx, ry, rxRot = 0, ryRot = 0, rzRot = 0, dist = 700, fov = 1.0)
 # pyramidZ() Helper
 
 **Signature**
