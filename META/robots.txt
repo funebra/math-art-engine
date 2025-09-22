@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://funebra.github.io/math-art-engine/META/sitemap.xml
