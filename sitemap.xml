@@ -10,4 +10,7 @@
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+  <url><loc>https://funebra.github.io/math-art-engine/math-helpers/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+<url><loc>https://funebra.github.io/math-art-engine/demos/</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+
 </urlset>
