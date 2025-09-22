@@ -1,0 +1,9 @@
+This repository distributes certain non-code media (e.g., logos, screenshots, example art,
+and documentation images) under the Creative Commons Attribution–NonCommercial–ShareAlike 4.0
+International license (CC BY-NC-SA 4.0).
+
+Canonical license text:
+  https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+
+Human-readable summary:
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
