@@ -1,0 +1,16 @@
+Funebra Math-Art Engine — Licensing Summary
+Copyright (c) 2025 pLabs Entertainment
+
+Core engine: GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
+  See LICENSES/AGPL-3.0-or-later.txt
+
+Plugins, starter templates, and minimal examples: MIT License.
+  See LICENSES/MIT.txt
+
+Media (logos, screenshots, example renders, docs images): Creative Commons Attribution–NonCommercial–ShareAlike 4.0 (CC BY-NC-SA 4.0).
+  See LICENSES/CC-BY-NC-SA-4.0.txt
+
+Trademarks: Funebra™ and related marks are trademarks of pLabs Entertainment. Trademarks are NOT licensed.
+  See TRADEMARKS.md for permitted usage and attribution.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
