@@ -1,0 +1,3 @@
+Contact: mailto:security@plabsfill.com
+Policy: https://funebra.github.io/math-art-engine/SECURITY.md
+Preferred-Languages: en
