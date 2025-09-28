@@ -5,6 +5,14 @@
 A lightweight, hackable, DOM-based **parametric geometry and generative-art engine**.  
 Paint with math formulas → Export as 2D/3D → Print in reality.
 
+<!-- Badges -->
+![Made with JavaScript](https://img.shields.io/badge/Made%20with-JavaScript-yellow?logo=javascript)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+[![Live Demo](https://img.shields.io/badge/Demo-Online-brightgreen)](https://funebra.github.io/math-art-engine/)
+[![Docs](https://img.shields.io/badge/Docs-Math%20Helpers-orange)](https://funebra.github.io/math-art-engine/math-helpers/)
+[![Support Funebra](https://img.shields.io/badge/Donate-Support%20Us-red)](https://plabsfill.com/donate.html)
+
+
 ---
 
 ## ✨ Features
