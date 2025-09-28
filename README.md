@@ -1,25 +1,41 @@
-# Math-Art Engine 1.0 🎨🧮
+# Funebra Math-Art Engine
 
-An experimental browser-based 3D/2D math-art playground.  
-No libraries, no canvas — just pure **HTML + JavaScript + DOM**.
+![Funebra Engine](https://raw.githubusercontent.com/funebra/math-art-engine/main/assets/og/funebra-support.png)
 
-## 🚀 Demo
-👉 [Live on GitHub Pages](https://funebra.github.io/math-art-engine/)
+A lightweight, hackable, DOM-based **parametric geometry and generative-art engine**.  
+Paint with math formulas → Export as 2D/3D → Print in reality.
+
+---
 
 ## ✨ Features
-- Draw points and lines in 3D with fake perspective
-- Build simple objects (cubes, houses, polygons, circles)
-- 100% hackable — edit the code and see instant changes
-- Lightweight: runs directly in the browser
+- 🟢 Parametric shapes (stars, polygons, rose curves, spirographs, Lissajous…)  
+- 🟢 Real-time animation in the browser (no install, just open the page)  
+- 🟢 Point-cloud to **OBJ / GLTF / 3MF** exporter  
+- 🟢 Compatible with slicers (e.g. **Bambu Lab Studio**) for 3D printing  
+- 🟢 Beginner-friendly math helper docs  
 
-## 📂 How to Use
-1. Clone or download this repo
-2. Open `index.html` in your browser
-3. Hack the JavaScript to create your own math-art forms!
+---
 
-## 🛠 Roadmap
-- Add sliders for angle, radius, speed
-- Include demo objects (cube, spiral, rose curves)
+## 🚀 Live Demo
+👉 [funebra.github.io/math-art-engine](https://funebra.github.io/math-art-engine/)
+
+---
+
+## 📘 Documentation
+Helper functions and usage examples:  
+- [polygonX()](https://funebra.github.io/math-art-engine/math-helpers/polygonX/)  
+- [polygonY()](https://funebra.github.io/math-art-engine/math-helpers/polygonY/)  
+- [starX()](https://funebra.github.io/math-art-engine/math-helpers/starX/)  
+- [starY()](https://funebra.github.io/math-art-engine/math-helpers/starY/)  
+
+…and more inside [`/math-helpers`](https://funebra.github.io/math-art-engine/math-helpers/).
+
+---
+
+## 🔧 Usage
+Clone or fork the repo:
+```bash
+git clone https://github.com/funebra/math-art-engine.git
 - Community contributions welcome!
 
 📖 **Reference:** [Funebra Math Helpers](docs/math-helpers.md)
