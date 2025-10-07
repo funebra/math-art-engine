@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funebra Math-Art Engine — PolygonX & PolygonY Tutorial</title>
+<meta name="description" content="Discover the Funebra Math-Art Engine by Peter Lugha — a creative platform where algebra becomes visual and alive. Learn PolygonX & PolygonY for generative geometry and 3D printing.">
+<meta name="keywords" content="Funebra, math art engine, generative art, PolygonX, PolygonY, pLabs Entertainment, 3D printing, geometry, Javascript art, AI art, parametric design">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Funebra Math-Art Engine — PolygonX & PolygonY Tutorial">
+<meta property="og:description" content="Algebra becomes art — design geometric and 3D printable shapes using Funebra's PolygonX & PolygonY tools.">
+<meta property="og:image" content="https://funebra.github.io/assets/og/funebra-tutorial-polygonx.jpg">
+<meta property="og:url" content="https://funebra.github.io/funebra-landing.html">
+<meta property="og:site_name" content="Funebra Math-Art Engine">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Funebra Math-Art Engine — PolygonX & PolygonY">
+<meta name="twitter:description" content="Create mathematical art, geometry and 3D models with Funebra. Built by Peter Lugha & pLabs Entertainment.">
+<meta name="twitter:image" content="https://funebra.github.io/assets/og/funebra-tutorial-polygonx.jpg">
+
+<link rel="canonical" href="https://funebra.github.io/funebra-landing.html">
+<link rel="icon" type="image/png" href="https://funebra.github.io/assets/icon/funebra-cross.png">
+
+<style>
+:root{
+  --bg:#0b0e16;--fg:#e8ecf3;--muted:#a7b3c7;--accent:#ffd400;--line:#1b2130;
+}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Roboto,Ubuntu,sans-serif;line-height:1.4}
+.funebra-hero{
+  background:radial-gradient(1200px 600px at 20% -10%,#1a2133,transparent),var(--bg);
+  border-bottom:1px solid var(--line);padding:60px 20px
+}
+.funebra-wrap{max-width:1100px;margin:auto;display:grid;grid-template-columns:1.1fr 1fr;gap:32px;align-items:center}
+.funebra-kicker{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);
+  border-radius:999px;padding:6px 10px;margin-bottom:12px;display:inline-block}
+.funebra-title{font-size:clamp(28px,4vw,44px);margin:0 0 10px}
+.funebra-sub{font-size:clamp(15px,2.2vw,18px);color:var(--muted);margin:0 0 18px}
+.funebra-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+.funebra-cta a{appearance:none;text-decoration:none;border-radius:12px;padding:12px 16px;font-weight:600}
+.funebra-cta a.primary{background:var(--accent);color:#111;border:1px solid #e6c100}
+.funebra-cta a.secondary{background:#121724;color:var(--fg);border:1px solid var(--line)}
+.funebra-bullets{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:16px;padding:0}
+.funebra-bullets li{list-style:none;background:#101622;border:1px solid var(--line);
+  padding:10px 12px;border-radius:10px;color:#cfd7e6;font-size:14px}
+.funebra-card{position:relative;background:#0f1422;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.funebra-video{aspect-ratio:16/9;width:100%;display:block;border:0}
+.funebra-badge{position:absolute;top:10px;left:10px;background:#0c1220bd;color:#cfe0ff;border:1px solid #203052;
+  padding:6px 10px;border-radius:999px;font-size:12px}
+.funebra-note{margin-top:10px;color:#96a2b7;font-size:12px}
+footer{padding:40px 20px;color:#94a3b8;text-align:center;border-top:1px solid var(--line);font-size:13px}
+@media(max-width:900px){.funebra-wrap{grid-template-columns:1fr}}
+</style>
+</head>
+
+<body>
+<section class="funebra-hero" aria-labelledby="funebra-title">
+  <div class="funebra-wrap">
+    <div>
+      <span class="funebra-kicker">pLabs Entertainment • Peter Lugha</span>
+      <h1 id="funebra-title" class="funebra-title">Funebra Math-Art Engine</h1>
+      <p class="funebra-sub">Algebra → Art. Design polygons, stars, and parametric curves in your browser, export 3D-printable models, and join the Funebra Movement.</p>
+      <div class="funebra-cta">
+        <a class="primary" href="https://www.youtube.com/watch?v=_Xa6jJYg42w" target="_blank" rel="noopener">▶ Watch Tutorial</a>
+        <a class="secondary" href="https://funebra.github.io/math-art-engine" target="_blank" rel="noopener">Try Funebra →</a>
+      </div>
+      <ul class="funebra-bullets" aria-label="Highlights">
+        <li>DOM-based, hackable generative geometry</li>
+        <li>PolygonX & PolygonY: 2D → 3D math shapes</li>
+        <li>OBJ/GLTF/3MF export for 3D printing</li>
+        <li>Open-source spirit • Built for creators & students</li>
+      </ul>
+      <p class="funebra-note">© 2025 pLabs Entertainment • Funebra x ChatGPT Partnership</p>
+    </div>
+
+    <div class="funebra-card" aria-label="Tutorial preview">
+      <span class="funebra-badge">Tutorial • 8:35</span>
+      <iframe class="funebra-video"
+        src="https://www.youtube.com/embed/_Xa6jJYg42w"
+        title="Funebra Tutorial: PolygonX & PolygonY"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen></iframe>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Made with 💛 by <strong>Peter Lugha</strong> • pLabs Entertainment • <a href="https://funebra.github.io/math-art-engine" style="color:#ffd400;text-decoration:none">Funebra Math-Art Engine</a>
+</footer>
+
+<!-- Structured Data for SEO -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Funebra Math-Art Engine",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Web",
+  "creator": { "@type": "Organization", "name": "pLabs Entertainment" },
+  "description": "A browser-based generative geometry engine for creating 2D/3D polygons, point-clouds, and 3D-printable art models.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "url": "https://funebra.github.io/math-art-engine",
+  "sameAs": [
+    "https://www.youtube.com/watch?v=_Xa6jJYg42w",
+    "https://github.com/funebra/math-art-engine"
+  ]
+}
+</script>
+</body>
+</html>
