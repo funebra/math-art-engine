@@ -10,7 +10,7 @@
   .hud{position:fixed;right:10px;top:10px;background:#0009;padding:8px 10px;border:1px solid #ffffff22;border-radius:10px}
 </style>
 
-<!-- Three.js via import map -->
+<!-- Import map for Three.js -->
 <script type="importmap">
 {
   "imports": {
@@ -19,26 +19,26 @@
   }
 }
 </script>
+
+<!-- HARD SHIM (must be before your engine): define a real global var -->
+<script>
+  var Funebra = window.Funebra || {};
+  window.Funebra = Funebra;
+  Funebra.surfaces = Funebra.surfaces || {};
+</script>
+
+<!-- Your engine (returns arrays, references global Funebra) -->
+<script src="https://funebra.github.io/math-art-engine/script.js"></script>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="hud"><label><input id="auto" type="checkbox" checked> auto-rotate</label></div>
 
-<!-- 1) SHIM: create global Funebra BEFORE loading your engine -->
-<script>
-  window.Funebra = window.Funebra || {};
-  Funebra.surfaces = Funebra.surfaces || {};
-</script>
-
-<!-- 2) Your engine (it expects Funebra to exist) -->
-<script src="https://funebra.github.io/math-art-engine/script.js"></script>
-
-<!-- 3) Donut code -->
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-/* One renderer on one canvas (avoid double contexts) */
+/* One renderer on one canvas */
 const canvas = document.getElementById("c");
 const gl = canvas.getContext("webgl", { antialias:true, alpha:false, premultipliedAlpha:true });
 const renderer = new THREE.WebGLRenderer({ canvas, context: gl });
@@ -51,7 +51,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b0c10);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0, 0.8, 3.2);
+camera.position.set(0,0.8,3.2);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -64,49 +64,60 @@ addEventListener("resize", ()=>{
   camera.updateProjectionMatrix();
 });
 
-/* Lights (keep it simple for now; HDRI optional) */
-scene.add(new THREE.HemisphereLight(0xffffff, 0x222233, 1.1));
-const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-dir.position.set(2,3,4);
-scene.add(dir);
-
-/* Engine arrays -> THREE.BufferGeometry */
+/* Adapter: Funebra arrays -> THREE.BufferGeometry (Uint16/Uint32 safe) */
 function toThreeGeometry(raw){
   if (raw?.isBufferGeometry) return raw;
-
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(raw.positions);
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-
   if (raw.uvs) geo.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(raw.uvs), 2));
 
-  // pick 16-bit or 32-bit index based on vertex count + support
   const vertCount = pos.length / 3;
   const need32 = vertCount > 65535;
   const has32  = renderer.capabilities.isWebGL2 || renderer.extensions.get("OES_element_index_uint");
-
-  if (raw.indices) {
+  if (raw.indices){
     const IndexArray = (need32 && has32) ? Uint32Array : Uint16Array;
     geo.setIndex(new THREE.BufferAttribute(new IndexArray(raw.indices), 1));
   }
   if (raw.normals) geo.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(raw.normals), 3));
   else geo.computeVertexNormals();
-
   return geo;
 }
 
-/* Torus parametric (use engine helper if present, else fallback) */
+/* If your engine doesn’t have makeParametric3D yet, provide a tiny fallback */
+if (!Funebra.makeParametric3D){
+  Funebra.makeParametric3D = function(fn, {nu=320, nv=160, wrapU=true, wrapV=true}={}){
+    const N=nu*nv, positions=new Float32Array(N*3), indices=[];
+    let k=0;
+    for (let j=0;j<nv;j++){
+      const v=wrapV? j/nv : j/(nv-1);
+      for (let i=0;i<nu;i++){
+        const u=wrapU? i/nu : i/(nu-1);
+        const p=fn(u,v); positions[k++]=p.x; positions[k++]=p.y; positions[k++]=p.z;
+      }
+    }
+    const lastU=wrapU?nu:(nu-1), lastV=wrapV?nv:(nv-1);
+    for (let j=0;j<lastV;j++){
+      const jn=wrapV? (j+1)%nv : j+1; if (!wrapV && j===nv-1) break;
+      for (let i=0;i<lastU;i++){
+        const inx=wrapU? (i+1)%nu : i+1; if (!wrapU && i===nu-1) break;
+        const a=j*nu+i, b=j*nu+inx, c=jn*nu+i, d=jn*nu+inx; indices.push(a,c,b, b,c,d);
+      }
+    }
+    return { positions: Array.from(positions), indices };
+  };
+}
+
+/* Torus parametric (engine helper if present, else local) */
 const torusFn = (Funebra.surfaces?.torus?.({R:1.15, r:0.44})) || ((u,v)=>{
   const U=u*Math.PI*2, V=v*Math.PI*2, cx=Math.cos(U), sx=Math.sin(U), cv=Math.cos(V), sv=Math.sin(V);
   const R=1.15, r=0.44; return {x:(R+r*cv)*cx, y:(R+r*cv)*sx, z:r*sv};
 });
 
-/* Keep under 65k verts to be WebGL1-safe regardless of extensions */
-const nu = 320, nv = 160; // 51,200 verts
-const raw = Funebra.makeParametric3D ? Funebra.makeParametric3D(torusFn, {nu, nv}) : null;
-
-/* If engine didn’t provide it, synthesize quickly */
-const geo = raw ? toThreeGeometry(raw) : new THREE.TorusGeometry(1.15, 0.44, 64, 220);
+/* Keep vertex count ≤ 65,535 so WebGL1 is always safe */
+const nu=320, nv=160;
+const raw = Funebra.makeParametric3D(torusFn, {nu, nv});
+const geo = toThreeGeometry(raw);
 
 /* Materials */
 const doughMat = new THREE.MeshPhysicalMaterial({
@@ -116,12 +127,12 @@ const glazeMat = new THREE.MeshPhysicalMaterial({
   color: 0xF7B5D5, roughness: 0.25, clearcoat: 1.0, clearcoatRoughness: 0.08, ior: 1.45
 });
 
-/* Meshes — share geometry (no .clone()) */
+/* Meshes (share geometry; no .clone()) */
 const dough = new THREE.Mesh(geo, doughMat);
 const glaze = new THREE.Mesh(geo, glazeMat);
 glaze.scale.setScalar(1.01);
 
-/* Glaze mask + gentle drips (shader tweak) */
+/* Glaze top-half with gentle drips */
 glaze.onBeforeCompile = (shader)=>{
   shader.uniforms.uTime = {value:0};
   shader.uniforms.uCut  = {value:0.06};
@@ -173,7 +184,7 @@ for(let i=0;i<sprinkles.count;i++){
 }
 sprinkles.instanceColor.needsUpdate = true;
 
-/* Group + loop */
+/* Animate */
 const group = new THREE.Group();
 group.add(dough, glaze);
 scene.add(group);
