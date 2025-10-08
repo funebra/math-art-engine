@@ -503,6 +503,83 @@ function pyramid2DY(o, stepsPerEdge=30, ...cfg){
 
 
 
+// AFTER imports, BEFORE you build the meshes:
+function toThreeGeometry(raw){
+  if (raw && raw.isBufferGeometry) return raw; // already THREE
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position",
+    new THREE.BufferAttribute(new Float32Array(raw.positions), 3));
+  if (raw.uvs)
+    geo.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(raw.uvs), 2));
+  if (raw.indices) geo.setIndex(raw.indices);
+  if (raw.normals)
+    geo.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(raw.normals), 3));
+  else
+    geo.computeVertexNormals();
+  return geo;
+}
+
+// === Build donut geometry via Funebra ===================================
+const torusFn = (Funebra.surfaces?.torus?.({R:1.15, r:0.44}))
+  || ((u,v)=>{ // fallback torus
+       const U=u*Math.PI*2,V=v*Math.PI*2,cx=Math.cos(U),sx=Math.sin(U),cv=Math.cos(V),sv=Math.sin(V);
+       const R=1.15,r=0.44; return {x:(R+r*cv)*cx,y:(R+r*cv)*sx,z:r*sv};
+     });
+
+// get raw from engine (arrays) or our fallback
+const raw = Funebra.makeParametric3D
+  ? Funebra.makeParametric3D(torusFn, {nu:420, nv:180})
+  : null;
+
+const geo = toThreeGeometry(raw || { // if engine missing, build here
+  positions: (()=>{ // tiny local sampler
+    const nu=420,nv=180,arr=new Float32Array(nu*nv*3); let k=0;
+    for(let j=0;j<nv;j++){const v=j/(nv-1);
+      for(let i=0;i<nu;i++){const u=i/(nu-1); const p=torusFn(u,v);
+        arr[k++]=p.x; arr[k++]=p.y; arr[k++]=p.z;
+      }} return arr;
+  })(),
+  uvs:null, normals:null, indices:(()=>{
+    const nu=420,nv=180,idx=[];
+    for(let j=0;j<nv-1;j++){for(let i=0;i<nu-1;i++){
+      const a=j*nu+i,b=a+1,c=(j+1)*nu+i,d=c+1; idx.push(a,c,b,b,c,d);
+    }} return idx;
+  })()
+});
+
+// NOTE: share the same geometry (no .clone())
+const dough  = new THREE.Mesh(geo, doughMat);
+const glaze  = new THREE.Mesh(geo, glazeMat);
+glaze.scale.setScalar(1.01);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
