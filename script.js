@@ -478,3 +478,171 @@ function pyramid2DY(o, stepsPerEdge=30, ...cfg){
   const [x1,y1]=v[e], [x2,y2]=v[(e+1)%n];
   return (1-t)*y1 + t*y2;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Funebra 3D Parametric Surface – (u,v) → {x,y,z}
+// Adds: Funebra.makeParametric3D(fn, opts) and Funebra.surfaces.torus(opts)
+
+;(function(root){
+  const Funebra = root.Funebra = root.Funebra || {};
+  Funebra.surfaces = Funebra.surfaces || {};
+
+  /**
+   * makeParametric3D
+   * @param {(u:number,v:number)=>{x:number,y:number,z:number}} fn
+   * @param {object} opts
+   * @param {number} [opts.nu=128] samples along U (major/ring)
+   * @param {number} [opts.nv=64]  samples along V (minor/tube)
+   * @param {boolean} [opts.wrapU=true]  connect first/last U ring
+   * @param {boolean} [opts.wrapV=true]  connect first/last V ring
+   * @returns {THREE.BufferGeometry|{positions:number[], normals:number[], uvs:number[], indices:number[]}}
+   */
+  Funebra.makeParametric3D = function(fn, opts={}){
+    const {
+      nu = 128,
+      nv = 64,
+      wrapU = true,
+      wrapV = true,
+    } = opts;
+
+    const N = nu * nv;
+    const positions = new Float32Array(N * 3);
+    const uvs       = new Float32Array(N * 2);
+
+    // sample points
+    let pk = 0, tk = 0;
+    for (let j = 0; j < nv; j++){
+      const v = j / nv;                         // note: [0,1) if wrap, [0,1] if not
+      const vv = wrapV ? v : (j/(nv-1));
+      for (let i = 0; i < nu; i++){
+        const u = i / nu;
+        const uu = wrapU ? u : (i/(nu-1));
+        const p = fn(uu, vv) || {x:0,y:0,z:0};
+        positions[pk++] = p.x;
+        positions[pk++] = p.y;
+        positions[pk++] = p.z;
+        uvs[tk++] = uu;
+        uvs[tk++] = vv;
+      }
+    }
+
+    // build indices (two triangles per quad)
+    // grid index helper with wrap
+    const wrapIdx = (i, n) => (i < 0 ? i + n : (i >= n ? i - n : i));
+    const idx = [];
+    const nuMax = nu - 1, nvMax = nv - 1;
+    const lastU = wrapU ? nu : nuMax;
+    const lastV = wrapV ? nv : nvMax;
+
+    for (let j = 0; j < lastV; j++){
+      const jn = wrapV ? wrapIdx(j+1, nv) : (j+1);
+      if (!wrapV && j === nvMax) break;
+      for (let i = 0; i < lastU; i++){
+        const inx = wrapU ? wrapIdx(i+1, nu) : (i+1);
+        if (!wrapU && i === nuMax) break;
+
+        const a = j * nu + i;
+        const b = j * nu + inx;
+        const c = jn * nu + i;
+        const d = jn * nu + inx;
+        // two tris: a-c-b and b-c-d
+        idx.push(a, c, b,  b, c, d);
+      }
+    }
+
+    // normals (compute later via THREE if available)
+    let normals = null;
+
+    // If THREE exists, return a BufferGeometry ready to render
+    if (typeof root.THREE !== "undefined" && root.THREE.BufferGeometry){
+      const geo = new root.THREE.BufferGeometry();
+      geo.setAttribute("position", new root.THREE.BufferAttribute(positions, 3));
+      geo.setAttribute("uv",       new root.THREE.BufferAttribute(uvs, 2));
+      geo.setIndex(idx);
+      geo.computeVertexNormals();
+      geo.userData.funebra = { nu, nv, wrapU, wrapV, fnName: fn.name || "anonymous" };
+      return geo;
+    }
+
+    // Otherwise plain buffers (compute normals here if you need them)
+    // Simple per-face average normal accumulation:
+    normals = new Float32Array(N * 3);
+    for (let f = 0; f < idx.length; f += 3){
+      const a = idx[f]*3, b = idx[f+1]*3, c = idx[f+2]*3;
+      const ax = positions[a],   ay = positions[a+1],   az = positions[a+2];
+      const bx = positions[b],   by = positions[b+1],   bz = positions[b+2];
+      const cx = positions[c],   cy = positions[c+1],   cz = positions[c+2];
+
+      const abx = bx-ax, aby = by-ay, abz = bz-az;
+      const acx = cx-ax, acy = cy-ay, acz = cz-az;
+
+      // cross(ab, ac)
+      const nx = aby*acz - abz*acy;
+      const ny = abz*acx - abx*acz;
+      const nz = abx*acy - aby*acx;
+
+      normals[a]   += nx; normals[a+1]   += ny; normals[a+2]   += nz;
+      normals[b]   += nx; normals[b+1]   += ny; normals[b+2]   += nz;
+      normals[c]   += nx; normals[c+1]   += ny; normals[c+2]   += nz;
+    }
+    // normalize
+    for (let k = 0; k < N; k++){
+      const i3 = k*3;
+      const nx = normals[i3], ny = normals[i3+1], nz = normals[i3+2];
+      const len = Math.hypot(nx, ny, nz) || 1;
+      normals[i3] /= len; normals[i3+1] /= len; normals[i3+2] /= len;
+    }
+
+    return {
+      positions: Array.from(positions),
+      normals:   Array.from(normals),
+      uvs:       Array.from(uvs),
+      indices:   idx
+    };
+  };
+
+  // A built-in torus surface helper (nice for quick tests)
+  // Options: R (major radius), r (tube radius)
+  Funebra.surfaces.torus = function({R=1.15, r=0.44}={}){
+    return function(u, v){
+      const U = u * Math.PI * 2;
+      const V = v * Math.PI * 2;
+      const cx = Math.cos(U), sx = Math.sin(U);
+      const cv = Math.cos(V), sv = Math.sin(V);
+      return {
+        x: (R + r*cv) * cx,
+        y: (R + r*cv) * sx,
+        z: r * sv
+      };
+    }
+  };
+
+})(typeof window !== "undefined" ? window : globalThis);
