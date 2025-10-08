@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Funebra Donut – Parametric 3D</title>
+<title>Funebra Donut – stable WebGL1</title>
 <style>
   html,body{height:100%} body{margin:0;background:#0b0c10;color:#e6e9f0;font:14px system-ui}
   #c{display:block;width:100%;height:100%}
@@ -22,29 +22,17 @@
 <canvas id="c"></canvas>
 <div class="hud"><label><input id="auto" type="checkbox" checked> auto-rotate</label></div>
 
-<!-- Your Funebra engine (returns arrays) -->
+<!-- Load your Funebra engine (returns arrays) -->
 <script src="https://funebra.github.io/math-art-engine/script.js"></script>
 
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 
-// --- adapter: arrays -> BufferGeometry
-function toThreeGeometry(raw){
-  if (raw && raw.isBufferGeometry) return raw;
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(raw.positions), 3));
-  if (raw.uvs)     geo.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(raw.uvs), 2));
-  if (raw.indices) geo.setIndex(raw.indices);
-  if (raw.normals) geo.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(raw.normals), 3));
-  else             geo.computeVertexNormals();
-  return geo;
-}
-
-// --- renderer / scene / camera
+// ------------- ONE renderer, forced WebGL1 (avoids 3D tex FLIP_Y noise) -------------
 const canvas = document.getElementById("c");
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+const gl = canvas.getContext("webgl", { antialias:true, alpha:false, premultipliedAlpha:true });
+const renderer = new THREE.WebGLRenderer({ canvas, context: gl });
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth, innerHeight, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -57,6 +45,12 @@ scene.background = new THREE.Color(0x0b0c10);
 const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
 camera.position.set(0,0.8,3.2);
 
+// simple lights (no HDR env, fewer moving parts)
+scene.add(new THREE.HemisphereLight(0xffffff, 0x222233, 1.1));
+const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+dir.position.set(2,3,4);
+scene.add(dir);
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.autoRotate = true;
@@ -64,24 +58,48 @@ controls.autoRotateSpeed = 0.9;
 
 addEventListener("resize", ()=>{
   renderer.setSize(innerWidth, innerHeight, false);
-  camera.aspect = innerWidth/innerHeight;
+  camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 });
 
-// environment reflections (optional)
-new RGBELoader()
-  .setPath("https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/")
-  .load("studio_small_08_1k.hdr", (hdr)=>{
-    hdr.mapping = THREE.EquirectangularReflectionMapping;
-    scene.environment = hdr;
-  });
+// -------- arrays -> BufferGeometry with correct index type ----------
+function toThreeGeometry(raw){
+  if (raw?.isBufferGeometry) return raw;
 
-// --- build donut via Funebra arrays
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(raw.positions);
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+  if (raw.uvs)  geo.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(raw.uvs), 2));
+
+  // choose 16-bit or 32-bit index depending on vertex count & support
+  const vertCount = positions.length / 3;
+  const need32 = vertCount > 65535;
+  const has32  = renderer.capabilities.isWebGL2 || renderer.extensions.get("OES_element_index_uint");
+
+  if (raw.indices) {
+    const IndexArray = (need32 && has32) ? Uint32Array : Uint16Array;
+    geo.setIndex(new THREE.BufferAttribute(new IndexArray(raw.indices), 1));
+  }
+
+  // normals
+  if (raw.normals) {
+    geo.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(raw.normals), 3));
+  } else {
+    geo.computeVertexNormals();
+  }
+  return geo;
+}
+
+// -------- torus via Funebra ------------------------------------------
 const torusFn = (Funebra.surfaces?.torus?.({R:1.15, r:0.44})) || ((u,v)=>{
   const U=u*Math.PI*2, V=v*Math.PI*2, cx=Math.cos(U), sx=Math.sin(U), cv=Math.cos(V), sv=Math.sin(V);
   const R=1.15, r=0.44; return {x:(R+r*cv)*cx, y:(R+r*cv)*sx, z:r*sv};
 });
-const raw = Funebra.makeParametric3D(torusFn, {nu:420, nv:180});
+
+// Keep under 65,535 verts to be WebGL1-safe regardless of 32-bit index ext
+const nu = 320, nv = 160;          // 51,200 verts
+const raw = Funebra.makeParametric3D(torusFn, {nu, nv});
 const geo = toThreeGeometry(raw);
 
 // materials
@@ -92,26 +110,37 @@ const glazeMat = new THREE.MeshPhysicalMaterial({
   color: 0xF7B5D5, roughness: 0.25, clearcoat: 1.0, clearcoatRoughness: 0.08, ior: 1.45
 });
 
-// meshes (no .clone())
+// meshes – share geometry (no .clone())
 const dough = new THREE.Mesh(geo, doughMat);
 const glaze = new THREE.Mesh(geo, glazeMat);
 glaze.scale.setScalar(1.01);
 
-// glaze top-half mask + drips
+// top-half glaze + drips shader
 glaze.onBeforeCompile = (shader)=>{
   shader.uniforms.uTime = {value:0};
   shader.uniforms.uCut  = {value:0.06};
   shader.uniforms.uAmp  = {value:0.055};
   shader.uniforms.uFreq = {value:10.0};
-  shader.vertexShader = shader.vertexShader.replace('#include <common>','\
-#include <common>\n varying vec3 vPos;').replace('#include <begin_vertex>','\
-#include <begin_vertex>\n vPos = transformed;');
-  shader.fragmentShader = shader.fragmentShader.replace('#include <common>','\
-#include <common>\n varying vec3 vPos;\n uniform float uTime,uCut,uAmp,uFreq;\n float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\
- float n2(vec2 p){vec2 i=floor(p),f=fract(p);float a=h(i),b=h(i+vec2(1,0)),c=h(i+vec2(0,1)),d=h(i+vec2(1,1));vec2 u=f*f*(3.-2.*f);return mix(a,b,u.x)+(c-a)*u.y*(1.-u.x)+(d-b)*u.x*u.y;}\
-').replace('#include <output_fragment>','\
-float ang = atan(vPos.y, vPos.x); float drip = n2(vec2(ang*uFreq,0.0)+uTime*0.3); float cut = uCut + (drip-0.5)*uAmp; if(vPos.z<cut) discard; \
-#include <output_fragment>');
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', '#include <common>\n varying vec3 vPos;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\n vPos = transformed;');
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>',
+`#include <common>
+varying vec3 vPos;
+uniform float uTime,uCut,uAmp,uFreq;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n2(vec2 p){vec2 i=floor(p),f=fract(p);
+ float a=h(i),b=h(i+vec2(1,0)),c=h(i+vec2(0,1)),d=h(i+vec2(1,1));
+ vec2 u=f*f*(3.-2.*f);
+ return mix(a,b,u.x)+(c-a)*u.y*(1.-u.x)+(d-b)*u.x*u.y;}
+`)
+    .replace('#include <output_fragment>',
+`float ang = atan(vPos.y, vPos.x);
+float drip = n2(vec2(ang*uFreq, 0.0) + uTime*0.3);
+float cut = uCut + (drip-0.5)*uAmp;
+if (vPos.z < cut) discard;
+#include <output_fragment>`);
   glaze.userData.shader = shader;
 };
 
@@ -119,7 +148,7 @@ const group = new THREE.Group();
 group.add(dough, glaze);
 scene.add(group);
 
-// sprinkles
+// sprinkles (instanced)
 const sprinkleGeo = new THREE.CapsuleGeometry(0.007, 0.04, 2, 6);
 const sprinkleMat = new THREE.MeshPhysicalMaterial({roughness:0.35, clearcoat:0.6, clearcoatRoughness:0.2});
 const count = 420;
