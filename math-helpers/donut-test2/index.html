@@ -3,161 +3,197 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Funebra Donut – Parametric 3D</title>
+<title>Funebra Donut – global THREE, hard shim</title>
 <style>
   html,body{height:100%} body{margin:0;background:#0b0c10;color:#e6e9f0;font:14px system-ui}
   #c{display:block;width:100%;height:100%}
   .hud{position:fixed;right:10px;top:10px;background:#0009;padding:8px 10px;border:1px solid #ffffff22;border-radius:10px}
 </style>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-  }
-}
-</script>
-</head>
-<body>
-<canvas id="c"></canvas>
-<div class="hud"><label><input id="auto" type="checkbox" checked> auto-rotate</label></div>
 
-<!-- HARD SHIM: must be BEFORE script.js -->
+<!-- 1) GLOBAL THREE (must be BEFORE your engine) -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+
+<!-- 2) HARD Funebra shim (engine expects a real global var) -->
 <script>
   var Funebra = window.Funebra || {};
   window.Funebra = Funebra;
   Funebra.surfaces = Funebra.surfaces || {};
 </script>
 
-<!-- Engine -->
+<!-- 3) Your engine (it will now see global THREE + Funebra) -->
 <script src="https://funebra.github.io/math-art-engine/script.js"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud"><label><input id="auto" type="checkbox" checked> auto-rotate</label></div>
 
+<!-- 4) Donut code (non-module, uses global THREE) -->
+<script>
+// --- Fallbacks so the page works even if the engine lacks them ---
+if (!Funebra.surfaces.torus) {
+  Funebra.surfaces.torus = function({R=1.15, r=0.44}={}) {
+    return function(u,v){
+      var U=u*Math.PI*2, V=v*Math.PI*2, cx=Math.cos(U), sx=Math.sin(U), cv=Math.cos(V), sv=Math.sin(V);
+      return { x:(R+r*cv)*cx, y:(R+r*cv)*sx, z:r*sv };
+    }
+  };
+}
 
-<script type="module">
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+if (typeof Funebra.makeParametric3D !== 'function') {
+  Funebra.makeParametric3D = function(fn, opts){
+    opts = opts || {};
+    var nu=opts.nu||320, nv=opts.nv||160, wrapU=opts.wrapU!==false, wrapV=opts.wrapV!==false;
+    var N = nu*nv, positions = new Float32Array(N*3), indices = [];
+    var k=0, i, j;
+    for (j=0;j<nv;j++){
+      var v = wrapV ? j/nv : j/(nv-1);
+      for (i=0;i<nu;i++){
+        var u = wrapU ? i/nu : i/(nu-1);
+        var p = fn(u,v);
+        positions[k++]=p.x; positions[k++]=p.y; positions[k++]=p.z;
+      }
+    }
+    var lastU = wrapU? nu : (nu-1);
+    var lastV = wrapV? nv : (nv-1);
+    for (j=0;j<lastV;j++){
+      var jn = wrapV ? (j+1)%nv : (j+1); if (!wrapV && j===nv-1) break;
+      for (i=0;i<lastU;i++){
+        var inx = wrapU ? (i+1)%nu : (i+1); if (!wrapU && i===nu-1) break;
+        var a=j*nu+i, b=j*nu+inx, c=jn*nu+i, d=jn*nu+inx;
+        indices.push(a,c,b, b,c,d);
+      }
+    }
+    return {positions:Array.from(positions), indices:indices};
+  };
+}
 
-// --- adapter: arrays -> BufferGeometry
-function toThreeGeometry(raw){
+// arrays -> BufferGeometry (handles Uint16/Uint32 indices)
+function toThreeGeometry(raw, renderer){
   if (raw && raw.isBufferGeometry) return raw;
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(raw.positions), 3));
-  if (raw.uvs)     geo.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(raw.uvs), 2));
-  if (raw.indices) geo.setIndex(raw.indices);
+  var geo = new THREE.BufferGeometry();
+  var pos = raw.positions instanceof Float32Array ? raw.positions : new Float32Array(raw.positions);
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  var vertCount = pos.length/3;
+  var need32 = vertCount > 65535;
+  var has32  = !!(renderer && (renderer.capabilities.isWebGL2 || renderer.extensions.get("OES_element_index_uint")));
+  if (raw.indices && raw.indices.length){
+    var IndexArray = (need32 && has32) ? Uint32Array : Uint16Array;
+    geo.setIndex(new THREE.BufferAttribute(new IndexArray(raw.indices), 1));
+  }
   if (raw.normals) geo.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(raw.normals), 3));
-  else             geo.computeVertexNormals();
+  else geo.computeVertexNormals();
   return geo;
 }
 
-// --- renderer / scene / camera
-const canvas = document.getElementById("c");
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(innerWidth, innerHeight, false);
+// --- Renderer / scene / camera (single WebGL context) ---
+var canvas = document.getElementById("c");
+var gl = canvas.getContext("webgl", { antialias:true, alpha:false, premultipliedAlpha:true });
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
 
-const scene = new THREE.Scene();
+var scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b0c10);
 
-const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0,0.8,3.2);
+var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(0, 0.8, 3.2);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.9;
 
-addEventListener("resize", ()=>{
-  renderer.setSize(innerWidth, innerHeight, false);
-  camera.aspect = innerWidth/innerHeight;
+window.addEventListener("resize", function(){
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  camera.aspect = window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
 });
 
-// environment reflections (optional)
-new RGBELoader()
-  .setPath("https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/")
-  .load("studio_small_08_1k.hdr", (hdr)=>{
-    hdr.mapping = THREE.EquirectangularReflectionMapping;
-    scene.environment = hdr;
-  });
+// simple lights (skip HDR for stability)
+scene.add(new THREE.HemisphereLight(0xffffff, 0x222233, 1.1));
+var dir = new THREE.DirectionalLight(0xffffff, 0.9);
+dir.position.set(2,3,4);
+scene.add(dir);
 
-// --- build donut via Funebra arrays
-const torusFn = (Funebra.surfaces?.torus?.({R:1.15, r:0.44})) || ((u,v)=>{
-  const U=u*Math.PI*2, V=v*Math.PI*2, cx=Math.cos(U), sx=Math.sin(U), cv=Math.cos(V), sv=Math.sin(V);
-  const R=1.15, r=0.44; return {x:(R+r*cv)*cx, y:(R+r*cv)*sx, z:r*sv};
-});
-const raw = Funebra.makeParametric3D(torusFn, {nu:420, nv:180});
-const geo = toThreeGeometry(raw);
+// Build donut from engine arrays (≤65k verts = WebGL1-safe)
+var torusFn = Funebra.surfaces.torus({R:1.15, r:0.44});
+var raw = Funebra.makeParametric3D(torusFn, {nu:320, nv:160});
+var geo = toThreeGeometry(raw, renderer);
 
-// materials
-const doughMat = new THREE.MeshPhysicalMaterial({
+// Materials
+var doughMat = new THREE.MeshPhysicalMaterial({
   color: 0xAD7A4E, roughness: 0.85, metalness: 0.0, sheen: 0.25, sheenRoughness: 0.9
 });
-const glazeMat = new THREE.MeshPhysicalMaterial({
+var glazeMat = new THREE.MeshPhysicalMaterial({
   color: 0xF7B5D5, roughness: 0.25, clearcoat: 1.0, clearcoatRoughness: 0.08, ior: 1.45
 });
 
-// meshes (no .clone())
-const dough = new THREE.Mesh(geo, doughMat);
-const glaze = new THREE.Mesh(geo, glazeMat);
+// Meshes (share geometry; no .clone())
+var dough = new THREE.Mesh(geo, doughMat);
+var glaze = new THREE.Mesh(geo, glazeMat);
 glaze.scale.setScalar(1.01);
 
-// glaze top-half mask + drips
-glaze.onBeforeCompile = (shader)=>{
+// Glaze mask + soft drips
+glaze.onBeforeCompile = function(shader){
   shader.uniforms.uTime = {value:0};
   shader.uniforms.uCut  = {value:0.06};
   shader.uniforms.uAmp  = {value:0.055};
   shader.uniforms.uFreq = {value:10.0};
-  shader.vertexShader = shader.vertexShader.replace('#include <common>','\
-#include <common>\n varying vec3 vPos;').replace('#include <begin_vertex>','\
-#include <begin_vertex>\n vPos = transformed;');
-  shader.fragmentShader = shader.fragmentShader.replace('#include <common>','\
-#include <common>\n varying vec3 vPos;\n uniform float uTime,uCut,uAmp,uFreq;\n float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\
- float n2(vec2 p){vec2 i=floor(p),f=fract(p);float a=h(i),b=h(i+vec2(1,0)),c=h(i+vec2(0,1)),d=h(i+vec2(1,1));vec2 u=f*f*(3.-2.*f);return mix(a,b,u.x)+(c-a)*u.y*(1.-u.x)+(d-b)*u.x*u.y;}\
-').replace('#include <output_fragment>','\
-float ang = atan(vPos.y, vPos.x); float drip = n2(vec2(ang*uFreq,0.0)+uTime*0.3); float cut = uCut + (drip-0.5)*uAmp; if(vPos.z<cut) discard; \
-#include <output_fragment>');
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', '#include <common>\n varying vec3 vPos;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\n vPos = transformed;');
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>',
+'#include <common>\n\
+varying vec3 vPos;\n\
+uniform float uTime,uCut,uAmp,uFreq;\n\
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\
+float n2(vec2 p){vec2 i=floor(p),f=fract(p);float a=h(i),b=h(i+vec2(1,0)),c=h(i+vec2(0,1)),d=h(i+vec2(1,1));vec2 u=f*f*(3.-2.*f);return mix(a,b,u.x)+(c-a)*u.y*(1.-u.x)+(d-b)*u.x*u.y;}'
+    )
+    .replace('#include <output_fragment>',
+'float ang = atan(vPos.y, vPos.x); float drip = n2(vec2(ang*uFreq, 0.0) + uTime*0.3); float cut = uCut + (drip-0.5)*uAmp; if (vPos.z < cut) discard; #include <output_fragment>');
   glaze.userData.shader = shader;
 };
 
-const group = new THREE.Group();
+var group = new THREE.Group();
 group.add(dough, glaze);
 scene.add(group);
 
-// sprinkles
-const sprinkleGeo = new THREE.CapsuleGeometry(0.007, 0.04, 2, 6);
-const sprinkleMat = new THREE.MeshPhysicalMaterial({roughness:0.35, clearcoat:0.6, clearcoatRoughness:0.2});
-const count = 420;
-const sprinkles = new THREE.InstancedMesh(sprinkleGeo, sprinkleMat, count);
+// Sprinkles
+var sprinkleGeo = new THREE.CapsuleGeometry(0.007, 0.04, 2, 6);
+var sprinkleMat = new THREE.MeshPhysicalMaterial({roughness:0.35, clearcoat:0.6, clearcoatRoughness:0.2});
+var sprinkles = new THREE.InstancedMesh(sprinkleGeo, sprinkleMat, 420);
 scene.add(sprinkles);
-const palette=[0xff4d6d,0x6ae3ff,0xffe066,0x8cff7a,0xc69cff,0xffffff];
-const dummy=new THREE.Object3D(), color=new THREE.Color();
-for(let i=0;i<count;i++){
-  const U=Math.random()*Math.PI*2, V=(Math.random()*0.6+0.4)*Math.PI*2;
-  const R=1.15,r=0.44, cx=Math.cos(U),sx=Math.sin(U), cv=Math.cos(V),sv=Math.sin(V);
-  const x=(R+r*cv)*cx, y=(R+r*cv)*sx, z=r*sv;
+var palette=[0xff4d6d,0x6ae3ff,0xffe066,0x8cff7a,0xc69cff,0xffffff];
+var dummy=new THREE.Object3D(), color=new THREE.Color();
+for(var s=0;s<sprinkles.count;s++){
+  var U=Math.random()*Math.PI*2, V=(Math.random()*0.6+0.4)*Math.PI*2;
+  var R=1.15,r=0.44, cx=Math.cos(U),sx=Math.sin(U), cv=Math.cos(V),sv=Math.sin(V);
+  var x=(R+r*cv)*cx, y=(R+r*cv)*sx, z=r*sv;
   dummy.position.set(x,y,z);
-  const n=new THREE.Vector3(cv*cx,cv*sx,sv).normalize();
+  var n=new THREE.Vector3(cv*cx,cv*sx,sv).normalize();
   dummy.lookAt(dummy.position.clone().add(n));
   dummy.rotateX(Math.PI*0.5);
   dummy.scale.setScalar(1+Math.random()*0.3);
   dummy.updateMatrix();
-  sprinkles.setMatrixAt(i, dummy.matrix);
+  sprinkles.setMatrixAt(s, dummy.matrix);
   color.setHex(palette[(Math.random()*palette.length)|0]);
-  sprinkles.setColorAt(i, color);
+  sprinkles.setColorAt(s, color);
 }
 sprinkles.instanceColor.needsUpdate = true;
 
 // UI
-document.getElementById('auto').addEventListener('change', e=> controls.autoRotate = e.target.checked);
+document.getElementById('auto').addEventListener('change', function(e){
+  controls.autoRotate = e.target.checked;
+});
 
-// loop
-const clock = new THREE.Clock();
-renderer.setAnimationLoop(()=>{
-  const t = clock.getElapsedTime();
+// Loop
+var clock = new THREE.Clock();
+renderer.setAnimationLoop(function(){
+  var t = clock.getElapsedTime();
   if (glaze.userData.shader) glaze.userData.shader.uniforms.uTime.value = t;
   if (controls.autoRotate) group.rotation.y += 0.003;
   controls.update();
