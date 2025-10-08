@@ -10,10 +10,17 @@
   .hud{position:fixed;right:10px;top:10px;background:#0009;padding:8px 10px;border:1px solid #ffffff22;border-radius:10px}
 </style>
 
-<!-- 1) GLOBAL THREE (must be BEFORE your engine) -->
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 
+<!-- Import map: Three + addons -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+  
 <!-- 2) HARD Funebra shim (engine expects a real global var) -->
 <script>
   var Funebra = window.Funebra || {};
