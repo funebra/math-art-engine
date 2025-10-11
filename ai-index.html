@@ -98,6 +98,8 @@
   <div id="exportBar">
     <button id="btnPng">📸 Export PNG</button>
     <button id="btnGif">🎞️ Export GIF</button>
+    <button id="btnCancel" style="background:#ef4444;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer;display:none">⏹ Cancel</button>
+
     <span id="expStatus" style="margin-left:6px;opacity:.9"></span>
   </div>
 
@@ -243,25 +245,37 @@ setTimeout(mvx, eval(dta.value));
 
   <!-- ===== PNG/GIF exporter (targets #stage) ===== -->
   <script type="module">
+  // Buttons / UI
   const bar = document.getElementById('exportBar');
   const expStatus = document.getElementById('expStatus');
   const btnPng = document.getElementById('btnPng');
   const btnGif = document.getElementById('btnGif');
+  const btnCancel = document.getElementById('btnCancel');
   const stage = document.getElementById('stage');
 
+  // Helpers
   function withBarHidden(fn){
     const prev = bar.style.visibility;
     bar.style.visibility = 'hidden';
     return Promise.resolve(fn()).finally(()=>{ bar.style.visibility = prev; });
   }
+  const dpr = Math.min(2, window.devicePixelRatio || 1); // clamp for perf
 
+  // Capture settings (tweak to taste)
+  const totalFrames = 120;     // fewer = faster, smaller
+  const delayMs = 40;          // ~25 fps
+  const scale = 0.9 * dpr;     // DPI-aware scaling
+  const transparent = true;    // false => solid bg
+  const bg = transparent ? null : '#000';
+
+  // PNG
   btnPng.addEventListener('click', async () => {
     expStatus.textContent = ' Capturing PNG…';
     await withBarHidden(async () => {
       const canvas = await html2canvas(stage, {
-        useCORS:true,
-        backgroundColor:null,      // set '#000' for solid
-        scale: window.devicePixelRatio
+        useCORS: true,
+        backgroundColor: null,
+        scale: dpr
       });
       canvas.toBlob(b => {
         const a = document.createElement('a');
@@ -274,74 +288,90 @@ setTimeout(mvx, eval(dta.value));
     expStatus.textContent = ' ✅ PNG saved';
   });
 
+  // GIF
+  let __cancelGif = false;
+
   btnGif.addEventListener('click', async () => {
+    if (btnGif.disabled) return;
     btnGif.disabled = true;
+    btnPng.disabled = true;
+    btnCancel.style.display = '';
+    __cancelGif = false;
+
     expStatus.textContent = ' Preparing encoder…';
     const { GIFEncoder, quantize, applyPalette } =
       await import('https://unpkg.com/gifenc@1.0.3/dist/gifenc.esm.js');
 
-    // Tweakables
-    const totalFrames = 120;      // faster/smaller than 180
-    const delayMs = 40;           // ~25 fps
-    const throttle = Number(window?.dta?.value || 0);
-    const scale = 0.9;
-    const transparent = true;     // false => bake bg
-    const bg = transparent ? null : '#000';
-
     const encoder = GIFEncoder();
+
+    // kick mvx if idle so our recorder can sync to steps
     if (typeof window.__onFunebraStep === 'function') { window.__onFunebraStep(); }
-// If mvx isn't running yet, start it once so steps begin advancing
-if (typeof window.__funebraRunning === 'undefined' || !window.__funebraRunning) {
-  window.__funebraRunning = true;
-  try { mvx(); } catch(e) {}
-}
-
-
-await withBarHidden(async () => {
-  for (let i = 0; i < totalFrames; i++) {
-    expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
-
-    const canvas = await html2canvas(stage, { useCORS:true, backgroundColor:bg, scale });
-    const ctx = canvas.getContext('2d', { willReadFrequently:true });
-    const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-    // Build palette + indices
-    const palette = quantize(data, 256);
-    const index = applyPalette(data, palette);
-
-    // Ensure fully transparent pixels map to palette index 0
-    if (transparent) {
-      for (let p = 0, q = 0; p < data.length; p += 4, q++) {
-        if (data[p + 3] === 0) index[q] = 0;
-      }
-      if (!palette[0]) {
-        // ensure palette[0] exists; use black
-        palette[0] = new Uint8Array([0, 0, 0]);
-      }
+    if (!window.__funebraRunning) {
+      window.__funebraRunning = true;
+      try { mvx(); } catch (e) {}
     }
 
-    encoder.writeFrame(index, width, height, {
-      palette,
-      delay: delayMs,
-      disposal: 2,          // clear to transparent before next frame
-      transparent: transparent ? 0 : undefined
-    });
+    // cancel handler
+    btnCancel.onclick = () => { __cancelGif = true; expStatus.textContent = ' Cancelling…'; };
 
-    // Wait exactly for the next Funebra step
-    await new Promise(r => { window.__onFunebraStep = r; });
-  }
-});
+    try {
+      await withBarHidden(async () => {
+        for (let i = 0; i < totalFrames; i++) {
+          if (__cancelGif) break;
+          expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
 
+          const canvas = await html2canvas(stage, { useCORS:true, backgroundColor:bg, scale });
+          const ctx = canvas.getContext('2d', { willReadFrequently:true });
+          const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    encoder.finish();
-    const blob = new Blob([encoder.bytes()], { type:'image/gif' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'funebra_animation.gif'; a.click();
-    URL.revokeObjectURL(url);
-    expStatus.textContent = ' ✅ GIF saved';
-    btnGif.disabled = false;
+          // Palette + indices
+          const palette = quantize(data, 256);
+          const index = applyPalette(data, palette);
+
+          // Guarantee transparency uses palette index 0
+          if (transparent) {
+            for (let p = 0, q = 0; p < data.length; p += 4, q++) {
+              if (data[p + 3] === 0) index[q] = 0;
+            }
+            if (!palette[0]) palette[0] = new Uint8Array([0,0,0]);
+          }
+
+          encoder.writeFrame(index, width, height, {
+            palette,
+            delay: delayMs,
+            disposal: 2,
+            transparent: transparent ? 0 : undefined
+          });
+
+          // Wait for next Funebra step (mvx signals via window.__onFunebraStep)
+          await new Promise(r => { window.__onFunebraStep = r; });
+        }
+      });
+
+      if (!__cancelGif) {
+        encoder.finish();
+        const blob = new Blob([encoder.bytes()], { type:'image/gif' });
+        const url = URL.createObjectURL(blob);
+        const ts = new Date().toISOString().replace(/[:.]/g,'-');
+        const a = document.createElement('a');
+        a.href = url; a.download = `funebra_animation_${ts}.gif`; a.click();
+        URL.revokeObjectURL(url);
+        expStatus.textContent = ' ✅ GIF saved';
+      } else {
+        expStatus.textContent = ' ❎ GIF cancelled';
+      }
+    } catch (err) {
+      console.error(err);
+      expStatus.textContent = ' ⚠️ GIF failed (see console)';
+    } finally {
+      btnGif.disabled = false;
+      btnPng.disabled = false;
+      btnCancel.style.display = 'none';
+      btnCancel.onclick = null;
+      __cancelGif = false;
+    }
   });
-  </script>
+</script>
+
 </body>
 </html>
