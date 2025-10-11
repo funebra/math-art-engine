@@ -164,6 +164,9 @@
 
   var isIndex=[], ob=0, isId=0, u=0, iu=600, zx=0;
   function mvx(){
+    // mark the loop as running
+    window.__funebraRunning = true;
+
     if (eLoop.checked === true && Number(steps.value) >= 0) { status = x; }
     if (o <= Math.floor(eval(stpEnd.value) / eval(steps.value))) {
       o = o + eval(eval(stpStart.value) + eval(steps.value));
@@ -194,9 +197,20 @@
             round(el.style.left.substring(0, el.style.left.length-2));
         }
       }
-      setTimeout(mvx, eval(dta.value));
+
+      // signal "a step just completed" to the recorder (if waiting)
+if (typeof window.__onFunebraStep === 'function') {
+  const cb = window.__onFunebraStep;
+  window.__onFunebraStep = null;   // prevent double-resolve
+  try { cb(); } catch(e) {}
+}
+setTimeout(mvx, eval(dta.value));
+
     } else {
+      
       o=0; x=0; i=600; y=0; ob=0; u=0; iu=600; zx=0;
+      window.__funebraRunning = false;
+
     }
   }
 
@@ -269,22 +283,48 @@
 
     const encoder = GIFEncoder();
     if (typeof window.__onFunebraStep === 'function') { window.__onFunebraStep(); }
+// If mvx isn't running yet, start it once so steps begin advancing
+if (typeof window.__funebraRunning === 'undefined' || !window.__funebraRunning) {
+  window.__funebraRunning = true;
+  try { mvx(); } catch(e) {}
+}
 
 
-    await withBarHidden(async () => {
-      for (let i=0;i<totalFrames;i++){
-        expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
-        const canvas = await html2canvas(stage, { useCORS:true, backgroundColor:bg, scale });
-        const ctx = canvas.getContext('2d', { willReadFrequently:true });
-        const { data, width, height } = ctx.getImageData(0,0,canvas.width,canvas.height);
-        const palette = quantize(data, 256);
-        const index   = applyPalette(data, palette, transparent ? { transparent: 0 } : undefined);
-        encoder.writeFrame(index, width, height, { palette, delay: delayMs });
-        await new Promise(r => { window.__onFunebraStep = r; });
-        // (Trigger mvx() yourself if it's not already running)
+await withBarHidden(async () => {
+  for (let i = 0; i < totalFrames; i++) {
+    expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
 
+    const canvas = await html2canvas(stage, { useCORS:true, backgroundColor:bg, scale });
+    const ctx = canvas.getContext('2d', { willReadFrequently:true });
+    const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Build palette + indices
+    const palette = quantize(data, 256);
+    const index = applyPalette(data, palette);
+
+    // Ensure fully transparent pixels map to palette index 0
+    if (transparent) {
+      for (let p = 0, q = 0; p < data.length; p += 4, q++) {
+        if (data[p + 3] === 0) index[q] = 0;
       }
+      if (!palette[0]) {
+        // ensure palette[0] exists; use black
+        palette[0] = new Uint8Array([0, 0, 0]);
+      }
+    }
+
+    encoder.writeFrame(index, width, height, {
+      palette,
+      delay: delayMs,
+      disposal: 2,          // clear to transparent before next frame
+      transparent: transparent ? 0 : undefined
     });
+
+    // Wait exactly for the next Funebra step
+    await new Promise(r => { window.__onFunebraStep = r; });
+  }
+});
+
 
     encoder.finish();
     const blob = new Blob([encoder.bytes()], { type:'image/gif' });
