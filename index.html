@@ -64,7 +64,7 @@ window.setTimeout("osc1()", 200);
 
 function osc2(){}
 
-
+var bod ='';
 function printit(){
 pTool1();
 if(h < 1024){
@@ -76,7 +76,7 @@ ojy.id = 'bn'+h;
 ojy.onclick= function() { mPosition.value = this.id.substring(2, this.id.Length); oDef.innerText = eval('bn'+this.id.substring(2, this.id.Length)).innerHTML;}
 ojy.style.cursor='hand';
 document.body.appendChild(ojy);
-if(h == 20)document.body.innerHTML += "<div id='pcontrol' style='background:url(https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg);width:410px;color:black;'><input type='button' value='PaintV..X' onClick='mvx()'><b id='oo'></b>"+
+if(h == 20)bod += "<div id='pcontrol' style='background:url(https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg);width:410px;color:black;'><input type='button' value='PaintV..X' onClick='mvx()'><b id='oo'></b>"+
    "<input id='steps' value='3' type='text' style='width:30;'><b style='background-color:silver;cursor:hand;' onClick='tul("+'stepper'+")'>:  o  </b><input id='eLoop' type='checkbox' checked='false'><br>"+
 "<div id='stepper' style='background:black;visibility:hidden;'><input id='stpStart' value='0' type='text' style='width:30;'><---><input id='stpEnd' value='717' type='text' style='width:45;'><b style='background-color:silver;cursor:hand;' onClick='tul("+'stepper'+")'>: Steps</b></div><br>"+
    "<input id='scodeX' type='text' value='rings[u+zx+3]+180' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :x</b><br>"+
