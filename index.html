@@ -104,8 +104,20 @@ var  timeout = 3000; // Timeout value to remove the flicker (in milliseconds)
 
 
 </head>
-<body style="background:rgb(200, 200, 230);color:red;" onClick="osc2()" onLoad="initEURWave().then(() => {console.log('EUR data ready!');});document.getElementById('bn1').innerHTML=''">
+<div id="exportBar" style="
+  position:fixed;left:10px;top:10px;z-index:99999;
+  display:flex;gap:8px;align-items:center;
+  background:rgba(0,0,0,.5);padding:8px 10px;border-radius:8px;color:#fff;
+  font:14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;">
+  <button id="btnPng" style="background:#0ea5e9;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer">📸 Export PNG</button>
+  <button id="btnGif" style="background:#22c55e;color:#000;border:0;border-radius:6px;padding:6px 10px;cursor:pointer">🎞️ Export GIF</button>
+  <span id="expStatus" style="margin-left:6px;opacity:.9"></span>
+</div>
 
+  <!-- DOM snapshot -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<body style="background:rgb(200, 200, 230);color:red;" onClick="osc2()" onLoad="initEURWave().then(() => {console.log('EUR data ready!');});document.getElementById('bn1').innerHTML=''">
+<input id="chk" type="checkbox" checked> Draw/Update elements
 <script>
 
 
@@ -146,7 +158,7 @@ ojy = document.createElement(oi);
 ojy.style.position = 'absolute';
 ojy.id = 'bn'+h;
 ojy.onclick= function() { mPosition.value = this.id.substring(2, this.id.Length); oDef.innerText = eval('bn'+this.id.substring(2, this.id.Length)).innerHTML;}
-ojy.style.cursor='hand';
+ojy.style.cursor='pointer';
 document.body.appendChild(ojy);
 if(h == 20)document.body.innerHTML += "<div style='background:url(https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg);width:410px;color:black;'><input type='button' value='PaintV..X' onClick='mvx()'><b id='oo'></b>"+
    "<input id='steps' value='3' type='text' style='width:30;'><b style='background-color:silver;cursor:hand;' onClick='tul("+'stepper'+")'>:  o  </b><input id='eLoop' type='checkbox' checked='false'><br>"+
@@ -192,8 +204,9 @@ var isIndex = [];
 ob =0;isId = 0;u=0;iu=600;zx=0;
 function mvx(){
 
-
-if(eLoop.checked = 'true' && steps.value >= 0 ){;status=x;}
+// ❌ was: if(eLoop.checked = 'true' && steps.value >= 0 ){
+if (eLoop.checked === true && Number(steps.value) >= 0) {
+status=x;}
 if(o <= Math.floor(eval(stpEnd.value) / eval(steps.value))){o = o+eval(eval(stpStart.value)+eval(steps.value));m='bn'+o;oo.innerText=o;ob=ob+1;isId +=1;u+=1;
              iu = u*3;zx=zx+1*2;
              i = i-eval(steps.value);
@@ -272,6 +285,67 @@ window.setTimeout("execon()", dta.value);
 
 </body>
 </html>
+  <script type="module">
+/* PNG + GIF recorder for your DOM scene (no rewrite needed) */
+const expStatus = document.getElementById('expStatus');
+const btnPng = document.getElementById('btnPng');
+const btnGif = document.getElementById('btnGif');
+
+/* Single PNG snapshot of the viewport/body */
+btnPng.addEventListener('click', async () => {
+  expStatus.textContent = ' Capturing PNG…';
+  const canvas = await html2canvas(document.body, {useCORS:true, backgroundColor:null});
+  canvas.toBlob(b => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = 'funebra_snapshot.png';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    expStatus.textContent = ' ✅ PNG saved';
+  }, 'image/png');
+});
+
+/* GIF capture: N frames of the live DOM, encoded with gifenc */
+btnGif.addEventListener('click', async () => {
+  btnGif.disabled = true;
+  expStatus.textContent = ' Preparing encoder…';
+  const { GIFEncoder, quantize, applyPalette } = await import('https://unpkg.com/gifenc@1.0.3/dist/gifenc.esm.js');
+
+  // Settings — tweak to taste
+  const totalFrames = 180;          // ~6 seconds @ 30ms
+  const delayMs = 30;               // per-frame delay in ms
+  const throttle = Number(window?.dta?.value || 0); // align with your mvx() timer if you like
+
+  const encoder = GIFEncoder();
+  for (let i = 0; i < totalFrames; i++) {
+    expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
+    // Snapshot the DOM
+    const canvas = await html2canvas(document.body, {useCORS:true, backgroundColor:'#000'}); // set null for transparent
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // gifenc expects RGBA Uint8Array — data is already RGBA
+    const palette = quantize(data, 256);
+    const index = applyPalette(data, palette);
+    encoder.writeFrame(index, width, height, { palette, delay: delayMs });
+
+    // light yield + (optional) sync to your step timer
+    await new Promise(r => setTimeout(r, Math.max(1, throttle || 1)));
+  }
+
+  encoder.finish();
+  const blob = new Blob([encoder.bytes()], { type: 'image/gif' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'funebra_animation.gif';
+  a.click();
+  URL.revokeObjectURL(url);
+  expStatus.textContent = ' ✅ GIF saved';
+  btnGif.disabled = false;
+});
+</script>
+
 <!-- partial -->
   <script  src="./script.js"></script>
 
