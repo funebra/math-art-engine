@@ -2,7 +2,7 @@
 {
   "imports": {
     "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "funebra": "/path/to/script.module.js"
+    "funebra": "https://funebra.github.io/math-art-engine/script.module.js"
   }
 }
 </script>
