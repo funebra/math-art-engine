@@ -95,7 +95,7 @@
 <body onclick="osc2()" onload="initEURWave().then(()=>console.log('EUR data ready!'));">
 
   <!-- export toolbar -->
-<div id="exportBar">
+<div id="exportBar" data-export-ignore>
   <button id="btnPng">📸 Export PNG</button>
   <button id="btnGif">🎞️ Export GIF</button>
   <button id="btnCancel" style="background:#ef4444;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer;display:none">⏹ Cancel</button>
@@ -117,7 +117,12 @@
   var deg2radians = Math.PI*2/360, amountOfp=-2;
   var h=0, oi='DIV';
 
-  function chngBG(){ document.body.style.background = selo.options[selo.selectedIndex].value; }
+  //function chngBG(){ document.body.style.background = selo.options[selo.selectedIndex].value; }
+
+    if (typeof html2canvas !== 'function') {
+  console.error('html2canvas not available'); 
+}
+
 
   var ca=1, cb=324, cz=0;
   function gear(){ if(ca<=322){ ca+=2; cz=ca; } setTimeout(gear,200); } gear();
@@ -196,7 +201,7 @@
             el.style.color = eval(clor.value);
           }
           if (clor.value.substring(3,7) == 'blue' || clor.value.substring(1,5) == 'http') {
-            el.innerHTML = "<img id='io"+ob+"' src='"+eval(clor.value)+"' width='"+(window.wL?eval(wL.value):32)+"' height='"+(window.hT?eval(hT.value):32)+"'>";
+            el.innerHTML = "<img id='io"+ob+"' crossorigin='anonymous' src='"+eval(clor.value)+"' width='"+(window.wL?eval(wL.value):32)+"' height='"+(window.hT?eval(hT.value):32)+"'>";
           }
           el.style.top  = eval(scodeY.value) + "px";
           el.style.left = eval(scodeX.value) + "px";
@@ -225,7 +230,10 @@ setTimeout(mvx, eval(dta.value));
 
   var scounter=0;
   function xIt(){ lvel = steps.value + 3; }
-  function opaz(){ msp = selo.options[selo.selectedIndex].value; clor.value = msp.substring(4, msp.length -1); }
+ // function opaz(){ msp = selo.options[selo.selectedIndex].value; clor.value = msp.substring(4, msp.length -1); }
+    function chngBG(){ if (window.selo && selo.options && selo.selectedIndex >= 0) document.body.style.background = selo.options[selo.selectedIndex].value; }
+function opaz(){ if (window.selo && selo.options && selo.selectedIndex >= 0) { const v = selo.options[selo.selectedIndex].value; if (window.clor) clor.value = v.substring(4, v.length - 1); } }
+
   function tul(ctr){ ctr.style.visibility = (ctr.style.visibility=='hidden') ? '' : 'hidden'; }
 
   printit();
@@ -239,8 +247,7 @@ setTimeout(mvx, eval(dta.value));
     } else gta = 360;
   }
   </script>
-
-    <button id="btnCancel" style="background:#ef4444;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer;display:none">⏹ Cancel</button>
+  
 
   
   <!-- download helper you referenced -->
@@ -257,41 +264,38 @@ setTimeout(mvx, eval(dta.value));
   const stage = document.getElementById('stage');
 
   // Helpers
-  function withBarHidden(fn){
-    const prev = bar.style.visibility;
-    bar.style.visibility = 'hidden';
-    return Promise.resolve(fn()).finally(()=>{ bar.style.visibility = prev; });
-  }
   const dpr = Math.min(2, window.devicePixelRatio || 1); // clamp for perf
-
-  // Capture settings (tweak to taste)
-  const totalFrames = 120;     // fewer = faster, smaller
-  const delayMs = 40;          // ~25 fps
-  const scale = 0.9 * dpr;     // DPI-aware scaling
-  const transparent = true;    // false => solid bg
+  const totalFrames = 120;
+  const delayMs = 40;                 // ~25 fps
+  const scale = 0.9 * dpr;
+  const transparent = true;
   const bg = transparent ? null : '#000';
 
-  // PNG
+  // Reusable capture options (hides any element with data-export-ignore)
+  const commonCaptureOpts = {
+    useCORS: true,
+    ignoreElements: (el) => el && (el.id === 'exportBar' || el.hasAttribute('data-export-ignore'))
+  };
+
+  // --- PNG ---
   btnPng.addEventListener('click', async () => {
     expStatus.textContent = ' Capturing PNG…';
-    await withBarHidden(async () => {
-      const canvas = await html2canvas(stage, {
-        useCORS: true,
-        backgroundColor: null,
-        scale: dpr
-      });
-      canvas.toBlob(b => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(b);
-        a.download = 'funebra_snapshot.png';
-        a.click();
-        URL.revokeObjectURL(a.href);
-      }, 'image/png');
+    const canvas = await html2canvas(stage, {
+      ...commonCaptureOpts,
+      backgroundColor: null,
+      scale: dpr
     });
+    canvas.toBlob(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'funebra_snapshot.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }, 'image/png');
     expStatus.textContent = ' ✅ PNG saved';
   });
 
-  // GIF
+  // --- GIF ---
   let __cancelGif = false;
 
   btnGif.addEventListener('click', async () => {
@@ -307,55 +311,59 @@ setTimeout(mvx, eval(dta.value));
 
     const encoder = GIFEncoder();
 
-    // kick mvx if idle so our recorder can sync to steps
+    // Kick mvx if idle so recorder can sync to steps
     if (typeof window.__onFunebraStep === 'function') { window.__onFunebraStep(); }
     if (!window.__funebraRunning) {
       window.__funebraRunning = true;
       try { mvx(); } catch (e) {}
     }
 
-    // cancel handler
+    // Cancel handler
     btnCancel.onclick = () => { __cancelGif = true; expStatus.textContent = ' Cancelling…'; };
 
     try {
-      await withBarHidden(async () => {
-        for (let i = 0; i < totalFrames; i++) {
-          if (__cancelGif) break;
-          expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
+      for (let i = 0; i < totalFrames; i++) {
+        if (__cancelGif) break;
+        expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
 
-          const canvas = await html2canvas(stage, { useCORS:true, backgroundColor:bg, scale });
-          const ctx = canvas.getContext('2d', { willReadFrequently:true });
-          const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const canvas = await html2canvas(stage, {
+          ...commonCaptureOpts,
+          backgroundColor: bg,
+          scale
+        });
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-          // Palette + indices
-          const palette = quantize(data, 256);
-          const index = applyPalette(data, palette);
+        const palette = quantize(data, 256);
+        const index   = applyPalette(data, palette);
 
-          // Guarantee transparency uses palette index 0
-          if (transparent) {
-            for (let p = 0, q = 0; p < data.length; p += 4, q++) {
-              if (data[p + 3] === 0) index[q] = 0;
-            }
-            if (!palette[0]) palette[0] = new Uint8Array([0,0,0]);
+        // Ensure fully transparent pixels map to palette index 0
+        if (transparent) {
+          for (let p = 0, q = 0; p < data.length; p += 4, q++) {
+            if (data[p + 3] === 0) index[q] = 0;
           }
-
-          encoder.writeFrame(index, width, height, {
-            palette,
-            delay: delayMs,
-            disposal: 2,
-            transparent: transparent ? 0 : undefined
-          });
-
-          // Wait for next Funebra step (mvx signals via window.__onFunebraStep)
-          await new Promise(r => { window.__onFunebraStep = r; });
+          if (!palette[0]) palette[0] = new Uint8Array([0,0,0]);
         }
-      });
+
+        encoder.writeFrame(index, width, height, {
+          palette,
+          delay: delayMs,
+          disposal: 2,
+          transparent: transparent ? 0 : undefined
+        });
+
+        // Wait for next Funebra step (max 500ms so we don't hang if mvx stops)
+        await Promise.race([
+          new Promise(r => { window.__onFunebraStep = r; }),
+          new Promise(r => setTimeout(r, 500))
+        ]);
+      } // <-- closes the for-loop
 
       if (!__cancelGif) {
         encoder.finish();
-        const blob = new Blob([encoder.bytes()], { type:'image/gif' });
+        const blob = new Blob([encoder.bytes()], { type: 'image/gif' });
         const url = URL.createObjectURL(blob);
-        const ts = new Date().toISOString().replace(/[:.]/g,'-');
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
         const a = document.createElement('a');
         a.href = url; a.download = `funebra_animation_${ts}.gif`; a.click();
         URL.revokeObjectURL(url);
@@ -375,6 +383,7 @@ setTimeout(mvx, eval(dta.value));
     }
   });
 </script>
+
 
 </body>
 </html>
