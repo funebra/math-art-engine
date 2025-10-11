@@ -104,6 +104,8 @@ var  timeout = 3000; // Timeout value to remove the flicker (in milliseconds)
 
 
 </head>
+<body style="background:rgb(200, 200, 230);color:red;" onClick="osc2()" onLoad="initEURWave().then(() => {console.log('EUR data ready!');});document.getElementById('bn1').innerHTML=''">
+
 <div id="exportBar" style="
   position:fixed;right:10px;bottom:10px;z-index:99999;
   display:flex;gap:8px;align-items:center;
@@ -116,8 +118,6 @@ var  timeout = 3000; // Timeout value to remove the flicker (in milliseconds)
 
   <!-- DOM snapshot -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<body style="background:rgb(200, 200, 230);color:red;" onClick="osc2()" onLoad="initEURWave().then(() => {console.log('EUR data ready!');});document.getElementById('bn1').innerHTML=''">
-
 <script>
 
 
@@ -157,7 +157,10 @@ if(h < 1024){
 ojy = document.createElement(oi);
 ojy.style.position = 'absolute';
 ojy.id = 'bn'+h;
-ojy.onclick= function() { mPosition.value = this.id.substring(2, this.id.Length); oDef.innerText = eval('bn'+this.id.substring(2, this.id.Length)).innerHTML;}
+  ojy.onclick = function () {
+  mPosition.value = this.id.substring(2, this.id.length);
+  oDef.innerText = eval('bn' + this.id.substring(2, this.id.length)).innerHTML;
+};
 ojy.style.cursor='pointer';
 document.body.appendChild(ojy);
 if(h == 20)document.body.innerHTML += "<div style='background:url(https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg);width:410px;color:black;'><input type='button' value='PaintV..X' onClick='mvx()'><b id='oo'></b>"+
