@@ -1,45 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" >
-
-
-  
-  
-
-<!-- partial:index.partial.html -->
-<!-- //10.34--04.04.021d[◇_●]° -->
-<!-- //02.16--05.11.017d[-_-]b -->
-<!-- //afd.n2+13.18 wen.22.11.017d[-_-]b -->
-<!-- //afd.n2stk008+13.18 sat.15.06.019d[O_.-.]b -->
-<!-- //homepro+11.10 tir.22.11.022[O.o] --> 
-<HTML> 
- 
-  
-
+<html lang="en">
 <head>
+  <meta charset="utf-8" />
   <title>Math-Art Engine 1.0 – Funebra</title>
 
-  
-  <!-- Anti-flickering script -->
-<script>
-var  timeout = 3000; // Timeout value to remove the flicker (in milliseconds)
-!function(h,i,d,e){var  t,n=h.createElement("style");n.id=e,n.innerHTML="body{opacity:0}",h.head.appendChild(n),t=d,i.rmfk=function(){var  t=h.getElementById(e);t&&t.parentNode.removeChild(t)},setTimeout(i.rmfk,t)}(document,window,timeout,"abhide");
-</script>
+  <!-- Anti-flicker -->
+  <script>
+  var timeout = 3000;
+  !function(h,i,d,e){var t,n=h.createElement("style");n.id=e,n.innerHTML="body{opacity:0}",h.head.appendChild(n),t=d,i.rmfk=function(){var t=h.getElementById(e);t&&t.parentNode.removeChild(t)},setTimeout(i.rmfk,t)}(document,window,timeout,"abhide");
+  </script>
 
-<!-- Mida A/B Testing Script (Place in <HEAD> for speed & no flicker) -->
-<script type="text/javascript" async src="https://cdn.mida.so/js/optimize.js?key=9mv6yAGkYDA7LRJEzlN34O"></script>
+  <!-- Mida A/B -->
+  <script async src="https://cdn.mida.so/js/optimize.js?key=9mv6yAGkYDA7LRJEzlN34O"></script>
 
+  <!-- SEO / OG -->
+  <meta name="description" content="A lightweight, hackable, browser-based math and art engine. Create geometry, chaos patterns, and visual experiments directly in your browser.">
+  <meta name="keywords" content="math art engine, browser math tool, funebra, parametric art, geometry engine, geogebra alternative, hackable math studio">
+  <meta name="author" content="Peter M. Lugha">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://funebra.github.io/math-art-engine/">
 
-
-
-
-  
-<meta name="description" content="A lightweight, hackable, browser-based math and art engine. Create geometry, chaos patterns, and visual experiments directly in your browser.">
-<meta name="keywords" content="math art engine, browser math tool, funebra, parametric art, geometry engine, geogebra alternative, hackable math studio">
-<meta name="author" content="Peter M. Lugha">
-  <meta name="google-site-verification" content="vY9MAQVvON-eTkinjHXWeHxiu5G9GkJwQD8fqDsnaIs" />
-  <!-- ...your existing tags... -->
-
-  <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://funebra.github.io/math-art-engine/">
   <meta property="og:title" content="Math-Art Engine 1.0 – Funebra">
@@ -47,310 +27,270 @@ var  timeout = 3000; // Timeout value to remove the flicker (in milliseconds)
   <meta property="og:image" content="https://funebra.github.io/math-art-engine/assets/og/funebra-og.png">
   <meta property="og:image:secure_url" content="https://robot.at.ua/bluetooth/logo/star.png">
   <meta property="og:image:alt" content="Funebra star logo">
-  <!-- (Optional if you know them and the image is big enough)
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630"> -->
 
-  <!-- Twitter/X (nice to have) -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Math-Art Engine 1.0 – Funebra">
   <meta name="twitter:description" content="Hackable, browser-based math-art studio.">
   <meta name="twitter:image" content="https://funebra.github.io/math-art-engine/assets/og/funebra-og.png">
-  <meta name="robots" content="index, follow">
 
-<link rel="canonical" href="https://funebra.github.io/math-art-engine/">
-<LINK href="https://robot.at.ua/bluetooth/logo/star.png" rel="shortcut icon">
+  <link rel="icon" sizes="16x16" href="funebra_favicon_16.png">
+  <link rel="icon" sizes="32x32" href="funebra_favicon_32.png">
+  <link rel="icon" sizes="64x64" href="funebra_favicon_64.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="funebra_favicon_180.png">
+  <meta name="theme-color" content="#0e1020">
 
-  <!-- Favicons -->
-<link rel="icon" type="image/png" sizes="16x16" href="funebra_favicon_16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="funebra_favicon_32.png">
-<link rel="icon" type="image/png" sizes="64x64" href="funebra_favicon_64.png">
-<link rel="apple-touch-icon" sizes="180x180" href="funebra_favicon_180.png">
-<meta name="theme-color" content="#0e1020">
+  <!-- Legacy libs you rely on -->
+  <script src="https://plabs.at.ua/game/aftermath.1.6.4/tool-2022-11-22-13-03-Tir.js"></script>
+  <script src="https://plabs.at.ua/res/math.js"></script>
+  <script src="https://plabs.at.ua/res/regulators.js"></script>
+  <script src="https://plabs.at.ua/res/bgspec0012o021o.js"></script>
+  <script src="https://plabs.at.ua/res/defObj.js"></script>
+  <script src="https://plabs.at.ua/res/partner/jquery-1.9.1.min.js"></script>
+  <script src="https://plabs.at.ua/res/maths001o017o.js"></script>
+  <script src="https://plabs.at.ua/res/maths001o021o.js"></script>
+  <script src="https://plabs.at.ua/game/sacred/defCon.js"></script>
 
-
-<!--  https://plabsfill.com/res/tool2021-04-04-1916.js -->
-<script language="javascript" src="https://plabs.at.ua/game/aftermath.1.6.4/tool-2022-11-22-13-03-Tir.js"></script>
-<script language="javascript" src="https://plabs.at.ua/res/math.js"></script>
-    <script language="javascript" src="https://plabs.at.ua/res/regulators.js"></script>
-<script language="javascript" src="https://plabs.at.ua/res/bgspec0012o021o.js"></script>
-<SCRIPT language="javascript" src="https://plabs.at.ua/res/defObj.js"></script>
-<script src=""></script>
-<script src="https://plabs.at.ua/res/partner/jquery-1.9.1.min.js">
-</script>
-
-
-<!-- https://plabs.at.ua/game/home/tool2021-04-07-1958.js  section 2022 update-->
-<!-- <script language="javascript" src="https://plabs.a.ua/game/home/matter.js"></script> 2025-->
-<script language="javascript" src="https://plabs.at.ua/res/maths001o017o.js"></script>
-<script language="javascript" src="https://plabs.at.ua/res/maths001o021o.js"></script>
-<script src="https://plabs.at.ua/game/sacred/defCon.js"></script>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7190047409728823"
-     crossorigin="anonymous"></script>
-<!--                                                     section 2022 end -->
-
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7190047409728823" crossorigin="anonymous"></script>
 
   <script type="application/ld+json">
-{
-  "@context":"https://schema.org",
-  "@type":"SoftwareApplication",
-  "name":"Funebra Math-Art Engine",
-  "applicationCategory":"EducationalApplication",
-  "operatingSystem":"Web",
-  "url":"https://funebra.github.io/math-art-engine/",
-  "author":{"@type":"Organization","name":"pLabs Entertainment"}
-}
-</script>
+  {
+    "@context":"https://schema.org",
+    "@type":"SoftwareApplication",
+    "name":"Funebra Math-Art Engine",
+    "applicationCategory":"EducationalApplication",
+    "operatingSystem":"Web",
+    "url":"https://funebra.github.io/math-art-engine/",
+    "author":{"@type":"Organization","name":"pLabs Entertainment"}
+  }
+  </script>
 
+  <!-- DOM snapshot for export -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
+  <style>
+    html,body { height:100% }
+    body { margin:0; background:rgb(200,200,230); color:red; }
+    #stage { position:relative; width:100%; height:100%; overflow:hidden; }
+    #exportBar {
+      position:fixed; right:10px; bottom:10px; z-index:99999;
+      display:flex; gap:8px; align-items:center;
+      background:rgba(0,0,0,.5); padding:8px 10px; border-radius:8px; color:#fff;
+      font:14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    }
+    #exportBar button {
+      border:0; border-radius:6px; padding:6px 10px; cursor:pointer;
+    }
+    #btnPng { background:#0ea5e9; color:#fff }
+    #btnGif { background:#22c55e; color:#000 }
+  </style>
 </head>
-<body style="background:rgb(200, 200, 230);color:red;" onClick="osc2()" onLoad="initEURWave().then(() => {console.log('EUR data ready!');});document.getElementById('bn1').innerHTML=''">
 
-<div id="exportBar" style="
-  position:fixed;right:10px;bottom:10px;z-index:99999;
-  display:flex;gap:8px;align-items:center;
-  background:rgba(0,0,0,.5);padding:8px 10px;border-radius:8px;color:#fff;
-  font:14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;">
-  <button id="btnPng" style="background:#0ea5e9;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer">📸 Export PNG</button>
-  <button id="btnGif" style="background:#22c55e;color:#000;border:0;border-radius:6px;padding:6px 10px;cursor:pointer">🎞️ Export GIF</button>
-  <span id="expStatus" style="margin-left:6px;opacity:.9"></span>
-</div>
+<body onclick="osc2()" onload="initEURWave().then(()=>console.log('EUR data ready!')); (document.getElementById('bn1')||{}).innerHTML=''">
 
-  <!-- DOM snapshot -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script>
+  <!-- export toolbar -->
+  <div id="exportBar">
+    <button id="btnPng">📸 Export PNG</button>
+    <button id="btnGif">🎞️ Export GIF</button>
+    <span id="expStatus" style="margin-left:6px;opacity:.9"></span>
+  </div>
 
+  <!-- drawing surface target -->
+  <div id="stage"></div>
 
-var x = 0; y = 0; i=600; iCount = 0;pCounter=new Array();
-var deg2radians = Math.PI *2 / 360;amountOfp=-2;
+  <!-- minimal placeholders your code references -->
+  <input id="mPosition" type="text" style="position:fixed;left:-9999px;top:-9999px" value="1">
+  <textarea id="oDef" style="position:fixed;left:-9999px;top:-9999px"></textarea>
+  <input id="chk" type="checkbox" checked style="position:fixed;left:-9999px;top:-9999px">
 
+  <script>
+  // ===== your legacy engine, with small safe fixes =====
+  var x=0, y=0, i=600, iCount=0, pCounter=[];
+  var deg2radians = Math.PI*2/360, amountOfp=-2;
+  var h=0, oi='DIV';
 
-h =0;
-oi = 'DIV';
-if(typeof oi == 'undefined'){oi = 'object';}
-function chngBG(){
-document.body.style.background = selo.options[selo.selectedIndex].value;
-}
+  function chngBG(){ document.body.style.background = selo.options[selo.selectedIndex].value; }
 
+  var ca=1, cb=324, cz=0;
+  function gear(){ if(ca<=322){ ca+=2; cz=ca; } setTimeout(gear,200); } gear();
+  function osc1(){ if(ca==323){ if(cb>1) cb-=1, cz=cb; } if(cb==1){ cb=324; ca=1; } setTimeout(osc1,200); } osc1();
+  function osc2(){}
 
-var  ca=1;cb=324;cz=0;
-function gear(){
-if(ca <= 322){ca +=2;cz=ca;}
-setTimeout("gear()",200);
-}gear()
-
-function osc1(){
-if(ca == 323){if(cb > 1)
-cb -= 1; cz = cb;
-}if(cb == 1){cb = 324;ca=1;}
-window.setTimeout("osc1()", 200);
-}osc1();
-
-function osc2(){}
-
-
-function printit(){
-pTool1();
-if(h < 1024){
-   h=h+1;status=h;
-
-ojy = document.createElement(oi);
-ojy.style.position = 'absolute';
-ojy.id = 'bn'+h;
-  ojy.onclick = function () {
-  mPosition.value = this.id.substring(2, this.id.length);
-  oDef.innerText = eval('bn' + this.id.substring(2, this.id.length)).innerHTML;
-};
-ojy.style.cursor='pointer';
-document.body.appendChild(ojy);
-if(h == 20)document.body.innerHTML += "<div style='background:url(https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg);width:410px;color:black;'><input type='button' value='PaintV..X' onClick='mvx()'><b id='oo'></b>"+
-   "<input id='steps' value='3' type='text' style='width:30;'><b style='background-color:silver;cursor:hand;' onClick='tul("+'stepper'+")'>:  o  </b><input id='eLoop' type='checkbox' checked='false'><br>"+
-"<div id='stepper' style='background:black;visibility:hidden;'><input id='stpStart' value='0' type='text' style='width:30;'><---><input id='stpEnd' value='717' type='text' style='width:45;'><b style='background-color:silver;cursor:hand;' onClick='tul("+'stepper'+")'>: Steps</b></div><br>"+
-   "<input id='scodeX' type='text' value='rings[u+zx+3]+180' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :x</b><br>"+
-   "<input id='scodeY' type='text' value='rings[u+zx+4]+360' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :y</b><br>"+
-   "<input id='clor' type='text' value='"+'"rgb("+(cos(iu*cz/180)*360+255)/2+", "+125+","+(cos(iu*gta/180)*360+255)/2+")"'+"' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :Color</b>"+lev+
-   "<input id='itext' type='text' style='width:340px;' value='"+'"&#9787;"'+"'><b style='background-color:silver'> :iText</b><br>"+
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   "<input type='button' value='toolz' onClick='tul("+'tool'+");tul("+'page01'+");"+
-   "if(eLoop.checked == false){tul("+'pl80'+");tul("+'demLim'+")}'>"+
-  "<input type='button' value ='Cleanup' onclick ='bn1.innerHTML=&quot;&quot;'>"+
-
-"<br><input type='text' id='dta' value='2048' style='width:40;background:url(https://plabs.at.ua/bluetooth/trans/still/green.png);'>"+
-
-
-"</div><div id='pl80' style='position:absolute;background:lightblue;visibility:hidden;width:200;height:160;z-Index:2;'></div>";
-   window.setTimeout("printit()",50);
- }
-}
-o =0;var lTmer =0;hPntz =0;
-function detrm(){
-o = eval(mPosition.value);
-}
-function def(){
-eval('bn'+mPosition.value).innerHTML = oDef.value;
-}
-var isIndex = [];
-ob =0;isId = 0;u=0;iu=600;zx=0;
-function mvx(){
-
-// ❌ was: if(eLoop.checked = 'true' && steps.value >= 0 ){
-if (eLoop.checked === true && Number(steps.value) >= 0) {
-status=x;}
-if(o <= Math.floor(eval(stpEnd.value) / eval(steps.value))){o = o+eval(eval(stpStart.value)+eval(steps.value));m='bn'+o;oo.innerText=o;ob=ob+1;isId +=1;u+=1;
-             iu = u*3;zx=zx+1*2;
-             i = i-eval(steps.value);
-              iCount += 3.1415;
-                                  rad = iCount * deg2radians;
-with(Math){      costheta = cos(rad);
-                                  sintheta = sin(rad);
-                                         x = x + costheta;
-                                         y = y + sintheta;
-  if(chk.checked == true){
-document.getElementById(m).style.zIndex = o;
-
-if(clor.value.substring(1, 4)=='rgb'){
-document.getElementById(m).innerHTML=eval(itext.value);
-document.getElementById(m).style.fontSize='14pt';
-document.getElementById(m).style.color = eval(clor.value);
-//document.getElementById(m).style.width = eval(wL.value); document.getElementById(m).style.height = eval(hT.value);
-}  
-
-if(clor.value.substring(3,7)=='blue'){
-document.getElementById(m).innerHTML = "<img id='io"+ob+"' src='"+eval(clor.value)+"' width='"+eval(wL.value)+
-                                       "' height='"+eval(hT.value)+"'>";}
-if(clor.value.substring(1,5)=='http'){
-document.getElementById(m).innerHTML = "<img id='io"+ob+"' src='"+eval(clor.value)+"' width='"+eval(wL.value)+
-                                       "' height='"+eval(hT.value)+"'>";}  
-document.getElementById(m).style.top = eval(scodeY.value) + "px";
-document.getElementById(m).style.left = eval(scodeX.value) + "px";
-isIndex[isId]=round(eval(m).style.top.substring(0,eval(m).style.top.length-2))+','+round(eval(m).style.left.substring(0,eval(m).style.left.length-2))+','+round(eval(m).style.left.substring(0,eval(m).style.left.length-2));
-}};setTimeout("mvx()", eval(dta.value));
-}else{o = 0;x = 0;i = 600;y = 0;ob = 0;u=0;iu=600;zx=0;}
-}
-
-
-/*
-var falso = new ActiveXObject("Scripting.FileSystemObject");
-function mSave(){
-var a = falso.CreateTextFile(".\\3Dcoords.txt", true);
-    a.WriteLine(isIndex);
-    a.Close();
-}  */
-
-
-
-scounter = 0;
-
-
-function xIt(){lvel = steps.value +3;}
-function opaz(){msp = selo.options[selo.selectedIndex].value;
-
-clor.value = msp.substring(4, msp.length -1);}
-function tul(ctr){
-if(ctr.style.visibility == 'hidden'){
-//page01.style.visibility = '';
-ctr.style.visibility ="";
-}else{ctr.style.visibility = 'hidden';}}
-
-printit();
-
-function printpetit(soda){
-if(soda==0){printit();}
-          else{soda=soda-1;}
-}
- gta = 360;
-function execon(){
-if(gta > 0){
-    gta = gta-1;
-eval(oDef.value);
-window.setTimeout("execon()", dta.value);
-}else{
-       gta = 360;
-}
-}
-</script>
-<script src="https://plabs.at.ua/res/partner/download.js">
-</script>
-
-</body>
-</html>
-  <script type="module">
-/* PNG + GIF recorder for your DOM scene (no rewrite needed) */
-const expStatus = document.getElementById('expStatus');
-const btnPng = document.getElementById('btnPng');
-const btnGif = document.getElementById('btnGif');
-
-/* Single PNG snapshot of the viewport/body */
-btnPng.addEventListener('click', async () => {
-  expStatus.textContent = ' Capturing PNG…';
-  const canvas = await html2canvas(document.body, {useCORS:true, backgroundColor:null});
-  canvas.toBlob(b => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(b);
-    a.download = 'funebra_snapshot.png';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    expStatus.textContent = ' ✅ PNG saved';
-  }, 'image/png');
-});
-
-/* GIF capture: N frames of the live DOM, encoded with gifenc */
-btnGif.addEventListener('click', async () => {
-  btnGif.disabled = true;
-  expStatus.textContent = ' Preparing encoder…';
-  const { GIFEncoder, quantize, applyPalette } = await import('https://unpkg.com/gifenc@1.0.3/dist/gifenc.esm.js');
-
-  // Settings — tweak to taste
-  const totalFrames = 180;          // ~6 seconds @ 30ms
-  const delayMs = 30;               // per-frame delay in ms
-  const throttle = Number(window?.dta?.value || 0); // align with your mvx() timer if you like
-
-  const encoder = GIFEncoder();
-  for (let i = 0; i < totalFrames; i++) {
-    expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
-    // Snapshot the DOM
-    const canvas = await html2canvas(document.body, {useCORS:true, backgroundColor:'#000'}); // set null for transparent
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-    // gifenc expects RGBA Uint8Array — data is already RGBA
-    const palette = quantize(data, 256);
-    const index = applyPalette(data, palette);
-    encoder.writeFrame(index, width, height, { palette, delay: delayMs });
-
-    // light yield + (optional) sync to your step timer
-    await new Promise(r => setTimeout(r, Math.max(1, throttle || 1)));
+  function addControlPanelOnce(){
+    if (document.getElementById('controlPanel')) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'controlPanel';
+    wrap.innerHTML =
+      "<div style='background:url(https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg);width:410px;color:black;'>" +
+      "<input type='button' value='PaintV..X' onClick='mvx()'><b id=\"oo\"></b>" +
+      "<input id='steps' value='3' type='text' style='width:30;'><b style=\"background-color:silver;cursor:pointer\" onClick='tul(stepper)'>:  o  </b>" +
+      "<input id='eLoop' type='checkbox' checked='false'><br>" +
+      "<div id='stepper' style='background:black;visibility:hidden;'><input id='stpStart' value='0' type='text' style='width:30;'><--->" +
+      "<input id='stpEnd' value='717' type='text' style='width:45;'><b style='background-color:silver;cursor:pointer' onClick='tul(stepper)'>: Steps</b></div><br>" +
+      "<input id='scodeX' type='text' value='rings[u+zx+3]+180' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :x</b><br>" +
+      "<input id='scodeY' type='text' value='rings[u+zx+4]+360' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :y</b><br>" +
+      "<input id='clor' type='text' value='" + "rgb(" + "(cos(iu*cz/180)*360+255)/2" + ", " + 125 + ", " + "(cos(iu*gta/180)*360+255)/2" + ")' " +
+      "style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :Color</b>" +
+      "<input id='itext' type='text' style='width:340px;' value='&#9787;'><b style='background-color:silver'> :iText</b><br>" +
+      "<input type='button' value='toolz' onClick='tul(tool);tul(page01); if(eLoop.checked==false){tul(pl80);tul(demLim)}'>" +
+      "<input type='button' value='Cleanup' onclick='(document.getElementById(\"bn1\")||{}).innerHTML=\"\"'>" +
+      "<br><input type='text' id='dta' value='2048' style='width:40;background:url(https://plabs.at.ua/bluetooth/trans/still/green.png);'>" +
+      "</div><div id='pl80' style='position:absolute;background:lightblue;visibility:hidden;width:200px;height:160px;z-index:2;'></div>";
+    document.body.appendChild(wrap);
   }
 
-  encoder.finish();
-  const blob = new Blob([encoder.bytes()], { type: 'image/gif' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'funebra_animation.gif';
-  a.click();
-  URL.revokeObjectURL(url);
-  expStatus.textContent = ' ✅ GIF saved';
-  btnGif.disabled = false;
-});
-</script>
+  function printit(){
+    pTool1 && pTool1();
+    if(h < 1024){
+      h = h + 1; status = h;
+      const ojy = document.createElement(oi || 'DIV');
+      ojy.style.position = 'absolute';
+      ojy.id = 'bn' + h;
+      ojy.onclick = function(){
+        mPosition.value = this.id.substring(2, this.id.length);
+        oDef.innerText = (window['bn'+ this.id.substring(2, this.id.length)] || this).innerHTML;
+      };
+      ojy.style.cursor='pointer';
+      // append paint nodes to stage
+      (document.getElementById('stage') || document.body).appendChild(ojy);
 
-<!-- partial -->
-  <script  src="./script.js"></script>
+      if(h === 20) addControlPanelOnce();
+      setTimeout(printit, 50);
+    }
+  }
 
+  var o=0, lTmer=0, hPntz=0;
+  function detrm(){ o = eval(mPosition.value); }
+  function def(){ eval('bn'+mPosition.value).innerHTML = oDef.value; }
+
+  var isIndex=[], ob=0, isId=0, u=0, iu=600, zx=0;
+  function mvx(){
+    if (eLoop.checked === true && Number(steps.value) >= 0) { status = x; }
+    if (o <= Math.floor(eval(stpEnd.value) / eval(steps.value))) {
+      o = o + eval(eval(stpStart.value) + eval(steps.value));
+      var m = 'bn' + o; oo.innerText = o; ob += 1; isId += 1; u += 1;
+      iu = u*3; zx = zx + 2; i = i - eval(steps.value); iCount += 3.1415;
+      var rad = iCount * deg2radians;
+      with (Math) {
+        var costheta = cos(rad), sintheta = sin(rad);
+        x = x + costheta; y = y + sintheta;
+        if (chk.checked == true) {
+          var el = document.getElementById(m);
+          if (!el) return setTimeout(mvx, eval(dta.value));
+          el.style.zIndex = o;
+
+          if (clor.value.substring(1,4) == 'rgb') {
+            el.innerHTML = itext.value;
+            el.style.fontSize = '14pt';
+            el.style.color = eval(clor.value);
+          }
+          if (clor.value.substring(3,7) == 'blue' || clor.value.substring(1,5) == 'http') {
+            el.innerHTML = "<img id='io"+ob+"' src='"+eval(clor.value)+"' width='"+(window.wL?eval(wL.value):32)+"' height='"+(window.hT?eval(hT.value):32)+"'>";
+          }
+          el.style.top  = eval(scodeY.value) + "px";
+          el.style.left = eval(scodeX.value) + "px";
+          isIndex[isId] =
+            round(el.style.top.substring(0, el.style.top.length-2)) + ',' +
+            round(el.style.left.substring(0, el.style.left.length-2)) + ',' +
+            round(el.style.left.substring(0, el.style.left.length-2));
+        }
+      }
+      setTimeout(mvx, eval(dta.value));
+    } else {
+      o=0; x=0; i=600; y=0; ob=0; u=0; iu=600; zx=0;
+    }
+  }
+
+  var scounter=0;
+  function xIt(){ lvel = steps.value + 3; }
+  function opaz(){ msp = selo.options[selo.selectedIndex].value; clor.value = msp.substring(4, msp.length -1); }
+  function tul(ctr){ ctr.style.visibility = (ctr.style.visibility=='hidden') ? '' : 'hidden'; }
+
+  printit();
+
+  var gta=360;
+  function execon(){
+    if(gta > 0){
+      gta = gta - 1;
+      eval(oDef.value);
+      setTimeout(execon, dta.value);
+    } else gta = 360;
+  }
+  </script>
+
+  <!-- download helper you referenced -->
+  <script src="https://plabs.at.ua/res/partner/download.js"></script>
+
+  <!-- ===== PNG/GIF exporter (targets #stage) ===== -->
+  <script type="module">
+  const bar = document.getElementById('exportBar');
+  const expStatus = document.getElementById('expStatus');
+  const btnPng = document.getElementById('btnPng');
+  const btnGif = document.getElementById('btnGif');
+  const stage = document.getElementById('stage');
+
+  function withBarHidden(fn){
+    const prev = bar.style.visibility;
+    bar.style.visibility = 'hidden';
+    return Promise.resolve(fn()).finally(()=>{ bar.style.visibility = prev; });
+  }
+
+  btnPng.addEventListener('click', async () => {
+    expStatus.textContent = ' Capturing PNG…';
+    await withBarHidden(async () => {
+      const canvas = await html2canvas(stage, {
+        useCORS:true,
+        backgroundColor:null,      // set '#000' for solid
+        scale: window.devicePixelRatio
+      });
+      canvas.toBlob(b => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = 'funebra_snapshot.png';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, 'image/png');
+    });
+    expStatus.textContent = ' ✅ PNG saved';
+  });
+
+  btnGif.addEventListener('click', async () => {
+    btnGif.disabled = true;
+    expStatus.textContent = ' Preparing encoder…';
+    const { GIFEncoder, quantize, applyPalette } =
+      await import('https://unpkg.com/gifenc@1.0.3/dist/gifenc.esm.js');
+
+    // Tweakables
+    const totalFrames = 120;      // faster/smaller than 180
+    const delayMs = 40;           // ~25 fps
+    const throttle = Number(window?.dta?.value || 0);
+    const scale = 0.9;
+    const transparent = true;     // false => bake bg
+    const bg = transparent ? null : '#000';
+
+    const encoder = GIFEncoder();
+
+    await withBarHidden(async () => {
+      for (let i=0;i<totalFrames;i++){
+        expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
+        const canvas = await html2canvas(stage, { useCORS:true, backgroundColor:bg, scale });
+        const ctx = canvas.getContext('2d', { willReadFrequently:true });
+        const { data, width, height } = ctx.getImageData(0,0,canvas.width,canvas.height);
+        const palette = quantize(data, 256);
+        const index   = applyPalette(data, palette, transparent ? { transparent: 0 } : undefined);
+        encoder.writeFrame(index, width, height, { palette, delay: delayMs });
+        await new Promise(r => setTimeout(r, Math.max(1, throttle || 1)));
+      }
+    });
+
+    encoder.finish();
+    const blob = new Blob([encoder.bytes()], { type:'image/gif' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'funebra_animation.gif'; a.click();
+    URL.revokeObjectURL(url);
+    expStatus.textContent = ' ✅ GIF saved';
+    btnGif.disabled = false;
+  });
+  </script>
 </body>
 </html>
