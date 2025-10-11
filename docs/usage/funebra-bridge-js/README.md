@@ -6,7 +6,7 @@
 
 <!-- Now “import” it like a module anywhere -->
 <script type="module">
-  import Funebra, { polygonX } from "/path/to/funebra-bridge.mjs";
+  import Funebra, { polygonX } from "https://funebra.github.io/math-art-engine/funebra-bridge.mjs";
 
   const torus = Funebra.surfaces.torus({ R:1.2, r:0.4 });
   const geo = Funebra.makeParametric3D(torus, { nu:256, nv:128 });
