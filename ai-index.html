@@ -85,6 +85,13 @@
   </style>
 </head>
 
+  <script>
+  if (typeof window.initEURWave !== 'function') {
+    window.initEURWave = async function () { /* noop fallback */ };
+  }
+</script>
+
+
 <body onclick="osc2()" onload="initEURWave().then(()=>console.log('EUR data ready!'));">
 
   <!-- export toolbar -->
