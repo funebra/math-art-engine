@@ -1,3 +1,4 @@
+
 // script.module.js — ES Module version of core Funebra pieces
 // - Pure ESM (no globals).
 // - Uses local THREE import instead of root.THREE.
@@ -320,6 +321,80 @@ export function makeParametric3D(fn, opts={}){
   };
 }
 
+// ---------- NEW: 2D pipeline used by legacy demos ----------
+
+/**
+ * makeParametric — create a 2D parametric path description.
+ * @param {Object} spec
+ *   x(i): number generator
+ *   y(i): number generator
+ *   steps: integer sample count (required)
+ *   close: boolean (default false)
+ *   color: fill color (optional)
+ *   stroke: stroke color (optional)
+ *   lineWidth: number (optional)
+ */
+export function makeParametric(spec={}){
+  const { x, y, steps=0, close=false, color, stroke, lineWidth } = spec;
+  if (typeof x !== 'function' || typeof y !== 'function')
+    throw new Error('makeParametric: x and y must be functions');
+  if (!Number.isFinite(steps) || steps <= 0)
+    throw new Error('makeParametric: steps must be a positive integer');
+  return { kind:'param2d', x, y, steps: Math.floor(steps), close, color, stroke, lineWidth };
+}
+
+/**
+ * render — draw one or more 2D parametric paths to a canvas.
+ * @param {Array} items array of values returned by makeParametric()
+ * @param {Object} opts  { canvas, clear=true, fill=true, stroke='#000', lineWidth=1 }
+ */
+export function render(items=[], opts={}){
+  const canvas = opts.canvas || document.querySelector('canvas') || (()=>{
+    const c = document.createElement('canvas');
+    document.body.appendChild(c);
+    return c;
+  })();
+  const ctx = canvas.getContext('2d');
+  // auto-fit to viewport when it looks like a full-screen overlay
+  if (canvas === opts.canvas && (canvas.style.position === 'fixed' || canvas.style.position === 'absolute')){
+    const w = (opts.width  ?? window.innerWidth);
+    const h = (opts.height ?? window.innerHeight);
+    if (canvas.width !== w)  canvas.width  = w;
+    if (canvas.height !== h) canvas.height = h;
+  }
+  if (opts.clear !== false) ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const doFill = (v)=> v === true || typeof v === 'string';
+  for (const it of items){
+    if (!it || it.kind !== 'param2d') continue;
+    const p = new Path2D();
+    for (let i=0;i<it.steps;i++){
+      const X = it.x(i);
+      const Y = it.y(i);
+      if (i===0) p.moveTo(X, Y);
+      else       p.lineTo(X, Y);
+    }
+    if (it.close) p.closePath();
+
+    // stroke
+    const strokeColor = it.stroke ?? opts.stroke;
+    const lw          = it.lineWidth ?? opts.lineWidth ?? 1;
+    if (strokeColor){
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = lw;
+      ctx.stroke(p);
+    }
+
+    // fill
+    const fillFlag = it.color ?? opts.fill;
+    if (doFill(fillFlag)){
+      ctx.fillStyle = typeof fillFlag === 'string' ? fillFlag : (opts.fillStyle || '#000');
+      ctx.fill(p);
+    }
+  }
+}
+
+// ---- Existing example surface ----
 export const surfaces = {
   torus({R=1.15, r=0.44} = {}){
     return (u, v) => {
@@ -334,8 +409,15 @@ export const surfaces = {
 
 // Default export: namespaced bundle (nice DX)
 const Funebra = {
+  // 2D
+  makeParametric,
+  render,
+
+  // 3D
   makeParametric3D,
   surfaces,
+
+  // helpers
   polygonX, polygonY, starX, starY,
   squareWave, wave, waveX, waveY,
   curwaveX, curwaveY,
