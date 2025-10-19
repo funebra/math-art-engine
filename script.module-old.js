@@ -14,6 +14,17 @@
 import * as THREE from 'three';
 
 
+// near top of the file (once)
+const TAU = Math.PI * 2;
+
+// light guard helper
+const _normStep = (o, steps) => {
+  const s = (steps|0) > 0 ? (steps|0) : 1;
+  return { t: (o % s) / s, s };
+};
+
+
+
 // --- Core Funebra line helper ---
 // o: step index (0 → totalSteps)
 // centerX, centerY: starting point
