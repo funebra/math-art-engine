@@ -63,6 +63,92 @@ Funebra.render([circle], { canvas, clear: true });
 -->
 
 
+
+
+
+
+
+
+// ---- Generic Bézier math (any order) ----
+export function bezierPoint1D(t, pts) {
+  // De Casteljau on scalars
+  let a = pts.slice();
+  for (let k = a.length - 1; k > 0; k--) {
+    for (let i = 0; i < k; i++) a[i] = (1 - t) * a[i] + t * a[i + 1];
+  }
+  return a[0];
+}
+export function bezierPoint2D(t, pts) {
+  const xs = pts.map(p => p[0]);
+  const ys = pts.map(p => p[1]);
+  return [ bezierPoint1D(t, xs), bezierPoint1D(t, ys) ];
+}
+
+// ---- Quadratic Bézier (A, B, C) ----
+export function bezierQuadX(o, steps, Ax, Ay, Bx, By, Cx, Cy) {
+  const t = (o % steps) / steps;
+  const x = (1-t)*(1-t)*Ax + 2*(1-t)*t*Bx + t*t*Cx;
+  return x;
+}
+export function bezierQuadY(o, steps, Ax, Ay, Bx, By, Cx, Cy) {
+  const t = (o % steps) / steps;
+  const y = (1-t)*(1-t)*Ay + 2*(1-t)*t*By + t*t*Cy;
+  return y;
+}
+
+// ---- Cubic Bézier (A, B, C, D) ----
+export function bezierCubicX(o, steps, Ax, Ay, Bx, By, Cx, Cy, Dx, Dy) {
+  const t = (o % steps) / steps, u = 1 - t;
+  const x = u*u*u*Ax + 3*u*u*t*Bx + 3*u*t*t*Cx + t*t*t*Dx;
+  return x;
+}
+export function bezierCubicY(o, steps, Ax, Ay, Bx, By, Cx, Cy, Dx, Dy) {
+  const t = (o % steps) / steps, u = 1 - t;
+  const y = u*u*u*Ay + 3*u*u*t*By + 3*u*t*t*Cy + t*t*t*Dy;
+  return y;
+}
+
+// ---- Convenience: poly-Bézier (array of segments) ----
+// segments: [{type:'quad', A:[x,y], B:[x,y], C:[x,y], steps: N}, {type:'cubic', ...}, ...]
+export function polyBezierX(o, segments) {
+  let acc = 0;
+  for (const s of segments) {
+    const n = s.steps|0; if (o < acc + n) {
+      const i = o - acc;
+      if (s.type === 'quad')
+        return bezierQuadX(i, n, s.A[0], s.A[1], s.B[0], s.B[1], s.C[0], s.C[1]);
+      else
+        return bezierCubicX(i, n, s.A[0], s.A[1], s.B[0], s.B[1], s.C[0], s.C[1], s.D[0], s.D[1]);
+    }
+    acc += n;
+  }
+  // clamp to last segment end
+  const last = segments[segments.length-1];
+  return (last.type==='quad'? last.C[0] : last.D[0]);
+}
+export function polyBezierY(o, segments) {
+  let acc = 0;
+  for (const s of segments) {
+    const n = s.steps|0; if (o < acc + n) {
+      const i = o - acc;
+      if (s.type === 'quad')
+        return bezierQuadY(i, n, s.A[0], s.A[1], s.B[0], s.B[1], s.C[0], s.C[1]);
+      else
+        return bezierCubicY(i, n, s.A[0], s.A[1], s.B[0], s.B[1], s.C[0], s.C[1], s.D[0], s.D[1]);
+    }
+    acc += n;
+  }
+  const last = segments[segments.length-1];
+  return (last.type==='quad'? last.C[1] : last.D[1]);
+}
+
+
+
+
+
+
+  
+
 export function polygonX(o, sides, radius, centerX, stepsPerEdge){
   const edge = Math.floor(o / stepsPerEdge);
   const t    = (o % stepsPerEdge) / stepsPerEdge;
@@ -467,8 +553,13 @@ const Funebra = {
   surfaces,
 
   // helpers
-  lineX, lineY, circleX, circleY,
+    lineX, lineY,
+  circleX, circleY,
   polygonX, polygonY, starX, starY,
+  bezierPoint1D, bezierPoint2D,       // generic
+  bezierQuadX, bezierQuadY,
+  bezierCubicX, bezierCubicY,
+  polyBezierX, polyBezierY,
   squareWave, wave, waveX, waveY,
   curwaveX, curwaveY,
   triX, triY,
