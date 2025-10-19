@@ -436,6 +436,7 @@ const Funebra = {
   surfaces,
 
   // helpers
+  lineX, lineY,
   polygonX, polygonY, starX, starY,
   squareWave, wave, waveX, waveY,
   curwaveX, curwaveY,
