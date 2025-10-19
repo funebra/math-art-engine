@@ -545,21 +545,20 @@ export const surfaces = {
 // Default export: namespaced bundle (nice DX)
 const Funebra = {
   // 2D
-  makeParametric,
-  render,
+  makeParametric, render,
 
   // 3D
-  makeParametric3D,
-  surfaces,
+  makeParametric3D, surfaces,
 
   // helpers
-    lineX, lineY,
-  circleX, circleY,
+  lineX, lineY, lineSegmentX, lineSegmentY,
+  circleX, circleY, ellipseX, ellipseY,
   polygonX, polygonY, starX, starY,
   bezierPoint1D, bezierPoint2D,
   bezierQuadX, bezierQuadY,
   bezierCubicX, bezierCubicY,
-  polyBezierX, polyBezierY,
+  polyBezierX, polyBezierY, polyBezierToSVGPath,
+  resampleEven,
   squareWave, wave, waveX, waveY,
   curwaveX, curwaveY,
   triX, triY,
