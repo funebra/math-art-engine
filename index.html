@@ -1,15 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
 
-  <head>
-    <meta charset="UTF-8">
-    <title>Funebra Math-Art-Engine 1.0</title>
-    
-
-  </head>
-    
-  <body>
-  <!-- //10.34--04.04.021d[◇_●]° -->
+<!-- //10.34--04.04.021d[◇_●]° -->
 <!-- //02.16--05.11.017d[-_-]b -->
 <!-- //afd.n2+13.18 wen.22.11.017d[-_-]b -->
 <!-- //afd.n2stk008+13.18 sat.15.06.019d[O_.-.]b -->
@@ -19,6 +9,15 @@
 
 <head><title>pLabs Entertainment &copy; 2025</title>
   
+  <!-- Import map to resolve bare module specifiers used by dependencies (e.g., "three") -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
   
   <!-- Anti-flicker -->
   <script>
@@ -87,8 +86,18 @@
   
  
   <style>
+    
+
     html,body { height:100% }
     body { margin:0; background:rgb(200,200,230); color:red; }
+ #funebraCanvas{position:fixed; inset:0; pointer-events:none; z-index:0; }
+    #testPanel{position:fixed; top:8px; right:8px; background:rgba(0,0,0,.6); color:#cfe9cf; padding:.5rem .75rem; border-radius:.5rem; font:12px/1.4 system-ui,Segoe UI,Arial}
+    #testPanel b{color:#fff}
+    .ok{color:#9fff9f}
+    .fail{color:#ff9f9f}
+  
+#tool, #page01, #page03 { position:relative; z-index:10; }
+    #
     #stage { position:relative; width:100%; height:100%; overflow:hidden; }
     #exportBar {
       position:fixed; right:10px; bottom:10px; z-index:99999;
@@ -96,11 +105,13 @@
       background:rgba(0,0,0,.5); padding:8px 10px; border-radius:8px; color:#fff;
       font:14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     }
-    #exportBar button {
-      border:0; border-radius:6px; padding:6px 10px; cursor:pointer;
-    }
+    #exportBar button { border:0; border-radius:6px; padding:6px 10px; cursor:pointer; }
     #btnPng { background:#0ea5e9; color:#fff }
     #btnGif { background:#22c55e; color:#000 }
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+
   </style>
 </head>
 
@@ -113,7 +124,14 @@
   
   
 <!--  https://plabsfill.com/res/tool2021-04-04-1916.js -->
-  
+<script language="javascript" src="https://plabs.at.ua/game/aftermath.1.6.4/tool-2022-11-22-13-03-Tir.js"></script>
+<script language="javascript" src="https://plabs.at.ua/res/math.js"></script>
+    <script language="javascript" src="http://plabs.at.ua/res/regulators.js"></script>
+<script language="javascript" src="https://plabs.at.ua/res/bgspec0012o021o.js"></script>
+<SCRIPT language="javascript" src="https://plabs.at.ua/res/defObj.js"></script>
+<script src=""></script>
+<script src="https://plabs.at.ua/res/partner/jquery-1.9.1.min.js">
+</script>
 
 
 <!-- https://plabs.at.ua/game/home/tool2021-04-07-1958.js  section 2022 update-->
@@ -127,15 +145,131 @@
 
 
 </head>
+
+
+
+
+  <script>
+  // Ensure overlay canvas exists ASAP so later tests don't fail
+  (function ensureCanvas(){
+    var cvs = document.getElementById('funebraCanvas');
+    if (!cvs){
+      cvs = document.createElement('canvas');
+      cvs.id = 'funebraCanvas';
+      cvs.style.position = 'fixed';
+      cvs.style.inset = 0;
+      cvs.style.pointerEvents = 'none';
+      if (document.body) document.body.appendChild(cvs);
+      else document.addEventListener('DOMContentLoaded', function(){
+        if (!document.getElementById('funebraCanvas')) document.body.appendChild(cvs);
+      });
+    }
+  })();
+  </script>
+
+  <script type="module">
+   import Funebra from "https://funebra.github.io/math-art-engine/script.module-old.js";
+const { makeParametric } = Funebra;
+
+    const cvs = document.getElementById('funebraCanvas');
+    const R = 120;
+    const sides = 3;
+    const turn = (i) => (i / sides) * Math.PI * 2 - Math.PI / 2; // point up
+
+    let a = 0;
+    function drawFunebra() {
+      const { innerWidth:w, innerHeight:h } = window;
+      const tri = makeParametric({
+        x: (i) => Math.cos(turn(i)+a) * R + w/2,
+        y: (i) => Math.sin(turn(i)+a) * R + h/2,
+        steps: sides,
+        close: true,
+        color: "#ffb400"
+      });
+      Funebra.render([tri], { canvas: cvs, fill:true, stroke: "#ff6600", lineWidth: 2, clear: true });
+      a += 0.01;
+      requestAnimationFrame(drawFunebra);
+    }
+    requestAnimationFrame(drawFunebra);
+    addEventListener('resize', () => { /* Funebra handles size on render */ });
+    window.Funebra = Funebra;
+
+  </script>
+
+
 <body style="background:rgb(200, 200, 230);color:red;" onClick="osc2()" onLoad="initEURWave().then(() => {console.log('EUR data ready!');});">
+
+  
+   <!-- ===== Quick self-tests (act like test-cases) ===== -->
+  <div id="testPanel">
+    <b>Smoke Tests</b>
+    <ul id="tests" style="margin:.25rem 0 0 .9rem; padding:0"></ul>
+  </div>
+  <script type="module">
+    const T = document.getElementById('tests');
+    const pass = (msg)=>{ const li=document.createElement('li'); li.className='ok'; li.textContent='✓ '+msg; T.appendChild(li); };
+    const fail = (msg,e)=>{ const li=document.createElement('li'); li.className='fail'; li.textContent='✗ '+msg+ (e? ' — '+(e.message||e):''); T.appendChild(li); };
+
+    // Test 1: Import mapping for "three" resolves and is usable
+    try {
+      const THREE = await import('three');
+      if (THREE.Vector3) {
+        const v = new THREE.Vector3(1,2,3);
+        pass('three import resolved (Vector3 length='+v.length().toFixed(3)+')');
+      } else {
+        fail('three import missing Vector3');
+      }
+    } catch(e){ fail('three import failed', e); }
+
+    // Test 2: Funebra available OR graceful fallback
+    try {
+      const mod = await import('https://funebra.github.io/math-art-engine/script.module.js');
+      if (mod && typeof mod.default?.render === 'function') pass('Funebra available');
+      else pass('Funebra not available — using canvas fallback');
+    } catch(e){ pass('Funebra import error — using canvas fallback'); }
+
+    // Test 3: Canvas injected
+    try {
+      const c = document.getElementById('funebraCanvas');
+      if (c) pass('funebraCanvas present');
+      else fail('funebraCanvas missing');
+    } catch(e){ fail('Canvas test failed', e); }
+
+    // Test 4: Animation ticking (frame counter increases)
+    try {
+      const c = document.getElementById('funebraCanvas');
+      let frames=0; const r = ()=>{ frames++; if(frames>10){ pass('animation ticking'); cancelAnimationFrame(id);} else { id=requestAnimationFrame(r);} };
+      let id = requestAnimationFrame(r);
+      setTimeout(()=>{ if(frames<=1) fail('animation did not tick'); }, 1000);
+    } catch(e){ fail('Animation test failed', e); }
+
+    // Test 5: mvx is globally available
+    try {
+      if (typeof window.mvx === 'function') {
+        pass('mvx is globally available');
+      } else {
+        fail('mvx is not on window');
+      }
+    } catch(e){ fail('mvx availability test failed', e); }
+  </script>
+
+  <!-- ===== Legacy Aftermath UI (kept, corrected) ===== -->
+
+  <!-- Minimal seed canvas kept (unused by Funebra layer) -->
+  <canvas id="canvas" style="display:none"></canvas>
 
   
    <!-- export toolbar -->
 <div id="exportBar" data-export-ignore>
-  <button id="btnPng">📸 Export PNG</button>
-  <button id="btnGif">🎞️ Export GIF</button>
-  <button id="btnCancel" style="background:#ef4444;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer;display:none">⏹ Cancel</button>
-  <span id="expStatus" style="margin-left:6px;opacity:.9"></span>
+ <button id="btnPng" type="button" aria-label="Export as PNG (P)" title="Export as PNG (P)">📸 Export PNG</button>
+<button id="btnGif" type="button" aria-label="Export as GIF (G)" title="Export as GIF (G)">🎞️ Export GIF</button>
+<button id="btnCancel" type="button" aria-label="Cancel export (Esc)" title="Cancel export (Esc)">⏹ Cancel</button>
+<script type="module">
+  window.addEventListener('keydown', (e)=>{
+    if (e.key.toLowerCase()==='p') btnPng.click();
+    else if (e.key.toLowerCase()==='g') btnGif.click();
+    else if (e.key==='Escape') btnCancel.click();
+  });</script>
 </div>
 
 
@@ -314,198 +448,190 @@ window.setTimeout("execon()", dta.value);
 </script>
 
   
-  </script>
-
-  <!-- ===== PNG/GIF exporter (targets #stage) ===== -->
-  <script type="module">
-  // Buttons / UI
-  const bar = document.getElementById('exportBar');
-  const expStatus = document.getElementById('expStatus');
-  const btnPng = document.getElementById('btnPng');
-  const btnGif = document.getElementById('btnGif');
-  const btnCancel = document.getElementById('btnCancel');
-  const stage = document.getElementById('stage');
-
-  // Helpers
-  const dpr = Math.min(2, window.devicePixelRatio || 1); // clamp for perf
-  const totalFrames = 120;
-  const delayMs = 40;                 // ~25 fps
-  const scale = 0.9 * dpr;
-  const transparent = true;
-  const bg = transparent ? null : '';
-
-  // Reusable capture options (hides any element with data-export-ignore)
-  const commonCaptureOpts = {
-    useCORS: true,
-    ignoreElements: (el) => el && (el.id === 'exportBar' || el.hasAttribute('data-export-ignore'))
-  };
-
-  // --- PNG ---
-  btnPng.addEventListener('click', async () => {
-    expStatus.textContent = ' Capturing PNG…';
-    const canvas = await html2canvas(stage, {
-      ...commonCaptureOpts,
-      backgroundColor: null,
-      scale: dpr
-    });
-    canvas.toBlob(b => {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(b);
-      a.download = 'funebra_snapshot.png';
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }, 'image/png');
-    expStatus.textContent = ' ✅ PNG saved';
-  });
-
- 
-</script>
-<!-- ===== GIF exporter (gif.js worker, Vizzu-style) ===== -->
-<script type="module">
-  // Reuse existing handles already on the page:
-  const bar = document.getElementById('exportBar');
-  const expStatus = document.getElementById('expStatus');
-  const btnPng = document.getElementById('btnPng');
-  const btnGif = document.getElementById('btnGif');
-  const btnCancel = document.getElementById('btnCancel');
-  const stage = document.getElementById('stage');
-  const stpEnd = Number(document.getElementById('stpEnd')?.value || 0);
-  const steps = Number(document.getElementById('steps')?.value || 1);
-
-  // Capture settings (mirrors your PNG setup)
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const totalFrames = 180;
-  const delayMs = 40;                 // ~25 fps
-  const scale = 0.9 * dpr;
-  const transparent = true;
-
-  // Shared html2canvas options
-  const commonCaptureOpts = {
-    useCORS: true,
-    ignoreElements: (el) => el && (el.id === 'exportBar' || el.hasAttribute('data-export-ignore'))
-  };
-
-  // Lazy-load gif.js (sets window.GIF) and fetch its worker as a Blob (CORS-safe)
-  async function prepareGif(width, height) {
-    await import('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js');
-
-    const res = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
-    if (!res.ok) throw new Error('Failed to fetch gif.worker.js');
-    const workerUrl = URL.createObjectURL(await res.blob());
-
-    const gif = new window.GIF({
-      workers: 4,
-      workerScript: workerUrl,
-      quality: 10,
-      width,
-      height
-      // NOTE: GIF has 1-bit transparency; we’ll preserve alpha from canvas,
-      // gif.js will pick a transparent index for fully-transparent pixels.
-    });
-
-    // Clean up the blob URL when done
-    gif.on('finished', () => URL.revokeObjectURL(workerUrl));
-    return gif;
-  }
-
-  // Utility: render #stage to a canvas for one frame
-  async function captureFrame() {
-    return html2canvas(stage, {
-      ...commonCaptureOpts,
-      backgroundColor: transparent ? null : transparent,
-      scale
-    });
-  }
-
-  let __cancelGif = false;
-
-  btnGif.addEventListener('click', async () => {
-    if (btnGif.disabled) return;
-    btnGif.disabled = true;
-    btnPng.disabled = true;
-    btnCancel.style.display = '';
-    __cancelGif = false;
-
-    try {
-      expStatus.textContent = ' Measuring stage…';
-      // Measure once (gif.js needs fixed WxH)
-      const testCanvas = await captureFrame();
-      const width = testCanvas.width;
-      const height = testCanvas.height;
-
-      expStatus.textContent = ' Preparing encoder…';
-      const gif = await prepareGif(width, height);
-
-      // Progress feedback
-      gif.on('progress', p => {
-        const pct = Math.max(0, Math.min(100, Math.round(p * 100)));
-        expStatus.textContent = ` Encoding… ${pct}%`;
-      });
-
-      // Cancel handler
-      btnCancel.onclick = () => { __cancelGif = true; expStatus.textContent = ' Cancelling…'; };
-
-      // Kick mvx if idle so we sync frames to Funebra steps
-      if (typeof window.__onFunebraStep === 'function') { window.__onFunebraStep(); }
-      if (!window.__funebraRunning) {
-        window.__funebraRunning = true;
-        try { mvx(); } catch (e) {}
-      }
-
-      // Add first frame (already captured)
-      expStatus.textContent = ` Recording 1/${totalFrames}…`;
-      gif.addFrame(testCanvas, { copy: true, delay: delayMs });
-
-      // Remaining frames
-      for (let i = 1; i < totalFrames; i++) {
-        if (__cancelGif) break;
-
-        expStatus.textContent = ` Recording ${i+1}/${totalFrames}…`;
-
-        // Wait for the next Funebra step (or timeout so we never hang)
-        await Promise.race([
-          new Promise(r => { window.__onFunebraStep = r; }),
-          new Promise(r => setTimeout(r, 500))
-        ]);
-
-        const canvas = await captureFrame();
-        gif.addFrame(canvas, { copy: true, delay: delayMs });
-      }
-
-      if (!__cancelGif) {
-        expStatus.textContent = ' Finalizing GIF…';
-        gif.on('finished', blob => {
-          const url = URL.createObjectURL(blob);
-          const ts = new Date().toISOString().replace(/[:.]/g, '-');
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `funebra_animation_${ts}.gif`;
-          a.click();
-          URL.revokeObjectURL(url);
-          expStatus.textContent = ' ✅ GIF saved';
-        });
-        gif.render();
-      } else {
-        expStatus.textContent = ' ❎ GIF cancelled';
-      }
-    } catch (err) {
-      console.error(err);
-      expStatus.textContent = ' ⚠️ GIF failed (see console)';
-    } finally {
-      btnGif.disabled = false;
-      btnPng.disabled = false;
-      btnCancel.style.display = 'none';
-      btnCancel.onclick = null;
-      __cancelGif = false;
+ <script type="module">
+  const onReady = (fn) => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    } else {
+      fn();
     }
+  };
+</script>
+
+
+<script type="module">
+  onReady(() => {
+    const bar = document.getElementById('exportBar');
+    const expStatus = document.getElementById('expStatus');
+    const btnPng = document.getElementById('btnPng');
+
+    if (!bar || !expStatus || !btnPng) return; // elements missing; abort cleanly
+
+    const captureTarget = document.body;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+    const commonCaptureOpts = {
+      useCORS: true,
+      backgroundColor: null,
+      scale: dpr,
+      ignoreElements: (el) =>
+        el && (el.id === 'exportBar' || (el.hasAttribute && el.hasAttribute('data-export-ignore')))
+    };
+
+    const temporarilyHide = (el) => {
+      if (!el) return () => {};
+      const old = el.style.visibility;
+      el.style.visibility = 'hidden';
+      return () => { el.style.visibility = old; };
+    };
+
+    btnPng.addEventListener('click', async () => {
+      if (typeof html2canvas !== 'function') {
+        console.error('html2canvas not available');
+        expStatus.textContent = ' ⚠️ PNG failed: html2canvas missing';
+        return;
+      }
+      expStatus.textContent = ' Capturing PNG…';
+      btnPng.disabled = true;
+
+      const restore = temporarilyHide(bar);
+      try {
+        const canvas = await html2canvas(captureTarget, commonCaptureOpts);
+        await new Promise(r => requestAnimationFrame(r));
+        canvas.toBlob((blob) => {
+          if (!blob) { expStatus.textContent = ' ⚠️ PNG failed (no blob)'; return; }
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'funebra_snapshot.png';
+          a.click();
+          URL.revokeObjectURL(a.href);
+          expStatus.textContent = ' ✅ PNG saved';
+        }, 'image/png');
+      } catch (err) {
+        console.error(err);
+        expStatus.textContent = ' ⚠️ PNG failed (see console)';
+      } finally {
+        restore();
+        btnPng.disabled = false;
+      }
+    }, { passive: true });
   });
 </script>
+
+
+<script type="module">
+  onReady(() => {
+    const bar = document.getElementById('exportBar');
+    const expStatus = document.getElementById('expStatus');
+    const btnGif = document.getElementById('btnGif');
+    const btnPng = document.getElementById('btnPng');
+    const btnCancel = document.getElementById('btnCancel');
+
+    if (!bar || !expStatus || !btnGif || !btnPng || !btnCancel) return;
+
+    const captureTarget = document.body;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const totalFrames = 180;
+    const delayMs = 40;
+    let cancelled = false;
+
+    const commonCaptureOpts = {
+      useCORS: true,
+      backgroundColor: null,
+      scale: dpr,
+      ignoreElements: (el) =>
+        el && (el.id === 'exportBar' || (el.hasAttribute && el.hasAttribute('data-export-ignore')))
+    };
+
+    const temporarilyHide = (el) => {
+      if (!el) return () => {};
+      const old = el.style.visibility;
+      el.style.visibility = 'hidden';
+      return () => { el.style.visibility = old; };
+    };
+
+    const captureFrame = async () => {
+      await new Promise(r => requestAnimationFrame(r));
+      return html2canvas(captureTarget, commonCaptureOpts);
+    };
+
+    const prepareGif = async (width, height) => {
+      await import('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js');
+      const res = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
+      if (!res.ok) throw new Error('Failed to fetch gif.worker.js');
+      const workerUrl = URL.createObjectURL(await res.blob());
+      const gif = new window.GIF({ workers: 4, workerScript: workerUrl, quality: 10, width, height });
+      gif.on('finished', () => URL.revokeObjectURL(workerUrl));
+      return gif;
+    };
+
+    btnGif.addEventListener('click', async () => {
+      if (typeof html2canvas !== 'function') {
+        console.error('html2canvas not available');
+        expStatus.textContent = ' ⚠️ GIF failed: html2canvas missing';
+        return;
+      }
+
+      btnGif.disabled = true;
+      btnPng.disabled = true;
+      btnCancel.style.display = '';
+      cancelled = false;
+
+      const restore = temporarilyHide(bar);
+      const onCancel = () => { cancelled = true; expStatus.textContent = ' Cancelling…'; };
+      btnCancel.addEventListener('click', onCancel, { once: true });
+
+      try {
+        expStatus.textContent = ' Measuring…';
+        const first = await captureFrame();
+        const gif = await prepareGif(first.width, first.height);
+
+        gif.on('progress', (p) => {
+          const pct = Math.max(0, Math.min(100, Math.round(p * 100)));
+          expStatus.textContent = ` Encoding… ${pct}%`;
+        });
+
+        expStatus.textContent = ` Recording 1/${totalFrames}…`;
+        gif.addFrame(first, { copy: true, delay: delayMs });
+
+        for (let i = 1; i < totalFrames; i++) {
+          if (cancelled) break;
+          expStatus.textContent = ` Recording ${i + 1}/${totalFrames}…`;
+          const canvas = await captureFrame();
+          gif.addFrame(canvas, { copy: true, delay: delayMs });
+        }
+
+        if (!cancelled) {
+          expStatus.textContent = ' Finalizing…';
+          gif.on('finished', (blob) => {
+            const url = URL.createObjectURL(blob);
+            const ts = new Date().toISOString().replace(/[:.]/g, '-');
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `funebra_animation_${ts}.gif`;
+            a.click();
+            URL.revokeObjectURL(url);
+            expStatus.textContent = ' ✅ GIF saved';
+          });
+          gif.render();
+        } else {
+          expStatus.textContent = ' ❎ GIF cancelled';
+        }
+      } catch (err) {
+        console.error(err);
+        expStatus.textContent = ' ⚠️ GIF failed (see console)';
+      } finally {
+        restore();
+        btnGif.disabled = false;
+        btnPng.disabled = false;
+        btnCancel.style.display = 'none';
+      }
+    }, { passive: true });
+  });
+</script>
+
 
   
 </body>
 </html>
-    <script  src="./script.module-old.js"></script>
 
-  </body>
-  
-</html>
