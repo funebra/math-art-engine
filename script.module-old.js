@@ -13,6 +13,24 @@
 
 import * as THREE from 'three';
 
+
+// --- Core Funebra line helper ---
+// o: step index (0 → totalSteps)
+// centerX, centerY: starting point
+// radius: length of line
+// direction: angle in radians (0 = right, π/2 = up)
+// stepsPerEdge: number of samples along this line
+export function Funebra_lineX(o, centerX, radius, direction, stepsPerEdge) {
+  const t = (o % stepsPerEdge) / stepsPerEdge;   // normalized progress 0..1
+  return centerX + Math.cos(direction) * radius * t;
+}
+
+export function Funebra_lineY(o, centerY, radius, direction, stepsPerEdge) {
+  const t = (o % stepsPerEdge) / stepsPerEdge;
+  return centerY + Math.sin(direction) * radius * t;
+}
+
+
 // ----- math + helpers (ported unchanged) -----
 export function polygonX(o, sides, radius, centerX, stepsPerEdge){
   const edge = Math.floor(o / stepsPerEdge);
