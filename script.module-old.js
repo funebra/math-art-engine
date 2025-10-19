@@ -20,16 +20,16 @@ import * as THREE from 'three';
 // radius: length of line
 // direction: angle in radians (0 = right, π/2 = up)
 // stepsPerEdge: number of samples along this line
-export function Funebra_lineX(o, centerX, radius, direction, stepsPerEdge) {
+export function lineX(o, centerX, radius, direction, stepsPerEdge) {
   const t = (o % stepsPerEdge) / stepsPerEdge;   // normalized progress 0..1
   return centerX + Math.cos(direction) * radius * t;
 }
 
-export function Funebra_lineY(o, centerY, radius, direction, stepsPerEdge) {
+export function lineY(o, centerY, radius, direction, stepsPerEdge) {
   const t = (o % stepsPerEdge) / stepsPerEdge;
   return centerY + Math.sin(direction) * radius * t;
 }
-
+// usage Funebra.lineY(o, 256, 200, 0, 240)
 
 // ----- math + helpers (ported unchanged) -----
 export function polygonX(o, sides, radius, centerX, stepsPerEdge){
