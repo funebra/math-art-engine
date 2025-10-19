@@ -32,6 +32,37 @@ export function lineY(o, centerY, radius, direction, stepsPerEdge) {
 // usage Funebra.lineY(o, 256, 200, 0, 240)
 
 // ----- math + helpers (ported unchanged) -----
+
+
+// --- Core Funebra circle helpers ---
+// o: step index (0 → totalSteps)
+// radius: circle radius
+// centerX, centerY: circle center
+// totalSteps: number of samples around the full loop
+// offset: optional angular offset (radians)
+export function circleX(o, radius, centerX, totalSteps, offset = 0) {
+  const theta = ((o % totalSteps) / totalSteps) * Math.PI * 2 + offset;
+  return centerX + Math.cos(theta) * radius;
+}
+
+export function circleY(o, radius, centerY, totalSteps, offset = 0) {
+  const theta = ((o % totalSteps) / totalSteps) * Math.PI * 2 + offset;
+  return centerY + Math.sin(theta) * radius;
+}
+<!-- usage
+const steps = 480;
+const circle = Funebra.makeParametric({
+  steps,
+  x: i => Funebra.circleX(i, 120, 256, steps),
+  y: i => Funebra.circleY(i, 120, 256, steps),
+  close: true,
+  stroke: '#49d17d',
+  lineWidth: 2
+});
+Funebra.render([circle], { canvas, clear: true });
+-->
+
+
 export function polygonX(o, sides, radius, centerX, stepsPerEdge){
   const edge = Math.floor(o / stepsPerEdge);
   const t    = (o % stepsPerEdge) / stepsPerEdge;
@@ -436,7 +467,7 @@ const Funebra = {
   surfaces,
 
   // helpers
-  lineX, lineY,
+  lineX, lineY, circleX, circleY,
   polygonX, polygonY, starX, starY,
   squareWave, wave, waveX, waveY,
   curwaveX, curwaveY,
