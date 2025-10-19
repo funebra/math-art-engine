@@ -49,18 +49,18 @@ export function circleY(o, radius, centerY, totalSteps, offset = 0) {
   const theta = ((o % totalSteps) / totalSteps) * Math.PI * 2 + offset;
   return centerY + Math.sin(theta) * radius;
 }
-<!-- usage
-const steps = 480;
-const circle = Funebra.makeParametric({
-  steps,
-  x: i => Funebra.circleX(i, 120, 256, steps),
-  y: i => Funebra.circleY(i, 120, 256, steps),
-  close: true,
-  stroke: '#49d17d',
-  lineWidth: 2
-});
-Funebra.render([circle], { canvas, clear: true });
--->
+//<!-- usage
+// const steps = 480;
+// const circle = Funebra.makeParametric({
+//  steps,
+ // x: i => Funebra.circleX(i, 120, 256, steps),
+ // y: i => Funebra.circleY(i, 120, 256, steps),
+ // close: true,
+ // stroke: '#49d17d',
+//  lineWidth: 2
+// });
+// Funebra.render([circle], { canvas, clear: true });
+// -->
 
 
 
