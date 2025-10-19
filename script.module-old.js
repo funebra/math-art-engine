@@ -556,7 +556,7 @@ const Funebra = {
     lineX, lineY,
   circleX, circleY,
   polygonX, polygonY, starX, starY,
-  bezierPoint1D, bezierPoint2D,       // generic
+  bezierPoint1D, bezierPoint2D,
   bezierQuadX, bezierQuadY,
   bezierCubicX, bezierCubicY,
   polyBezierX, polyBezierY,
