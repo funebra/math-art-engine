@@ -76,6 +76,37 @@ export function circleY(o, radius, centerY, totalSteps, offset = 0) {
 
 
 
+// Ellipse with independent radii and rotation (radians) + angular offset
+export function ellipseX(o, rx, ry, centerX, centerY, totalSteps, rotation = 0, offset = 0) {
+  const { t } = _normStep(o, totalSteps);
+  const th = t * TAU + offset;
+  const cs = Math.cos(th), sn = Math.sin(th);
+  const xr = rx * cs, yr = ry * sn;
+  // rotate ellipse by 'rotation'
+  const cr = Math.cos(rotation), sr = Math.sin(rotation);
+  return centerX + xr * cr - yr * sr;
+}
+export function ellipseY(o, rx, ry, centerX, centerY, totalSteps, rotation = 0, offset = 0) {
+  const { t } = _normStep(o, totalSteps);
+  const th = t * TAU + offset;
+  const cs = Math.cos(th), sn = Math.sin(th);
+  const xr = rx * cs, yr = ry * sn;
+  const cr = Math.cos(rotation), sr = Math.sin(rotation);
+  return centerY + xr * sr + yr * cr;
+}
+
+
+
+
+
+export function lineSegmentX(o, steps, ax, ay, bx, by) {
+  const { t } = _normStep(o, steps);
+  return ax + (bx - ax) * t;
+}
+export function lineSegmentY(o, steps, ax, ay, bx, by) {
+  const { t } = _normStep(o, steps);
+  return ay + (by - ay) * t;
+}
 
 
 
@@ -89,11 +120,120 @@ export function bezierPoint1D(t, pts) {
   }
   return a[0];
 }
+//export function bezierPoint2D(t, pts) {
+  //const xs = pts.map(p => p[0]);
+  //const ys = pts.map(p => p[1]);
+  //return [ bezierPoint1D(t, xs), bezierPoint1D(t, ys) ];
+//}
+
 export function bezierPoint2D(t, pts) {
-  const xs = pts.map(p => p[0]);
-  const ys = pts.map(p => p[1]);
-  return [ bezierPoint1D(t, xs), bezierPoint1D(t, ys) ];
+  // pts: [[x,y], [x,y], ...]
+  let tmp = pts.map(p => [p[0], p[1]]);
+  for (let k = tmp.length - 1; k > 0; k--) {
+    for (let i = 0; i < k; i++) {
+      tmp[i][0] = (1 - t) * tmp[i][0] + t * tmp[i + 1][0];
+      tmp[i][1] = (1 - t) * tmp[i][1] + t * tmp[i + 1][1];
+    }
+  }
+  return tmp[0];
 }
+
+
+
+
+
+// sample curve f(t)->[x,y] into N roughly even points
+export function resampleEven(f, N = 256) {
+  // dense pre-sample
+  const M = Math.max(64, N * 8);
+  const xs = new Float32Array(M);
+  const ys = new Float32Array(M);
+  const ls = new Float32Array(M);
+  let L = 0, px = 0, py = 0;
+
+  for (let i = 0; i < M; i++) {
+    const t = i / (M - 1);
+    const [x, y] = f(t);
+    xs[i] = x; ys[i] = y;
+    if (i) L += Math.hypot(x - px, y - py);
+    ls[i] = L; px = x; py = y;
+  }
+  // map equal arc lengths to t via binary search over ls
+  const out = new Array(N);
+  for (let k = 0; k < N; k++) {
+    const target = (k / (N - 1)) * L;
+    // binary search
+    let lo = 0, hi = M - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (ls[mid] < target) lo = mid + 1; else hi = mid;
+    }
+    const i1 = Math.max(1, lo), i0 = i1 - 1;
+    const segL = ls[i1] - ls[i0] || 1;
+    const a = (target - ls[i0]) / segL;
+    out[k] = [ xs[i0] + a * (xs[i1] - xs[i0]), ys[i0] + a * (ys[i1] - ys[i0]) ];
+  }
+  return out; // array of [x,y]
+}
+
+
+
+
+
+
+
+/*
+Usage with a cubic Bézier:
+
+const A=[120,340], B=[180,120], C=[380,120], D=[420,340];
+const pts = resampleEven(t => bezierPoint2D(t, [A,B,C,D]), 480);
+const path = makeParametric({
+  steps: pts.length, close:false,
+  x: i => pts[i][0],
+  y: i => pts[i][1],
+  stroke: '#fff', lineWidth: 2
+});
+
+
+
+*/
+
+
+
+
+
+
+
+
+export function polyBezierToSVGPath(segments) {
+  if (!segments?.length) return '';
+  const s0 = segments[0];
+  let d = `M ${s0.A[0]} ${s0.A[1]}`;
+  for (const s of segments) {
+    if (s.type === 'quad') {
+      d += ` Q ${s.B[0]} ${s.B[1]} ${s.C[0]} ${s.C[1]}`;
+    } else {
+      d += ` C ${s.B[0]} ${s.B[1]} ${s.C[0]} ${s.C[1]} ${s.D[0]} ${s.D[1]}`;
+    }
+  }
+  return d;
+}
+
+/* example use
+
+const d = polyBezierToSVGPath(segments);
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <path d="${d}" fill="none" stroke="#49d17d" stroke-width="2"/>
+</svg>`;
+*/
+
+
+
+
+
+
+
+
 
 // ---- Quadratic Bézier (A, B, C) ----
 export function bezierQuadX(o, steps, Ax, Ay, Bx, By, Cx, Cy) {
