@@ -463,58 +463,6 @@ window.setTimeout("execon()", dta.value);
 
 
 
-
-
-  <script type="module">
-    import { PointMorphEngine } from 'https://funebra.github.io/math-art-engine/pointmorph.module.js';
-    import asChars from 'https://funebra.github.io/math-art-engine/funebra-ascii-bitmap.js';
-
-    // Optional CSV shape (triplets "x,y,z, ..."); replace with your own if you like
-    const demoCSV = (() => {
-      const out = []; const R=120, r=40;
-      for (let i=0;i<900;i++){
-        const u = (i/900)*Math.PI*2;
-        const v = ((i*11)%900)/900*Math.PI*2;
-        const x = (R + r*Math.cos(v))*Math.cos(u);
-        const y = (R + r*Math.cos(v))*Math.sin(u);
-        const z = r*Math.sin(v);
-        out.push(x|0,y|0,z|0);
-      }
-      return out.join(',');
-    })();
-
-    const $ = (id) => document.getElementById(id);
-    const canvas = $('c');
-
-    const engine = new PointMorphEngine({
-      canvas,
-      asChars,
-      fontSize: +$('font').value,
-      color: $('color').value,
-      autoRotate: $('auto').checked,
-      speed: +$('speed').value,
-      enablePointerControls: true
-    });
-
-    // Initial mode
-    engine.setText($('txt').value.toUpperCase());
-
-    // UI wiring
-    $('btnText').onclick   = () => engine.setText($('txt').value.toUpperCase());
-    $('btnSphere').onclick = () => engine.setSphere(2200, 170);
-    $('btnCSV').onclick    = () => engine.setCSV(demoCSV);
-
-    $('font').addEventListener('input', () => engine.setFontSize(+$('font').value));
-    $('color').addEventListener('input', () => engine.setColor($('color').value));
-    $('auto').addEventListener('input', () => engine.setAutoRotate($('auto').checked));
-    $('speed').addEventListener('input', () => engine.setSpeed(+$('speed').value));
-
-    // Optional: update text target live as you type (feels nice)
-    $('txt').addEventListener('input', () => engine.setText($('txt').value.toUpperCase()));
-  </script>
-
-
-
   
 
 <script type="module">
