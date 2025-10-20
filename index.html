@@ -169,6 +169,29 @@
 
   <script type="module">
    import Funebra from "https://funebra.github.io/math-art-engine/script.module-old.js";
+const { makeParametric } = Funebra;
+
+    const cvs = document.getElementById('funebraCanvas');
+    const R = 120;
+    const sides = 3;
+    const turn = (i) => (i / sides) * Math.PI * 2 - Math.PI / 2; // point up
+
+    let a = 0;
+    function drawFunebra() {
+      const { innerWidth:w, innerHeight:h } = window;
+      const tri = makeParametric({
+        x: (i) => Math.cos(turn(i)+a) * R + w/2,
+        y: (i) => Math.sin(turn(i)+a) * R + h/2,
+        steps: sides,
+        close: true,
+        color: "#ffb400"
+      });
+      Funebra.render([tri], { canvas: cvs, fill:true, stroke: "#ff6600", lineWidth: 2, clear: true });
+      a += 0.01;
+      requestAnimationFrame(drawFunebra);
+    }
+    requestAnimationFrame(drawFunebra);
+    addEventListener('resize', () => { /* Funebra handles size on render */ });
     window.Funebra = Funebra;
 
   </script>
@@ -233,7 +256,7 @@
   <!-- ===== Legacy Aftermath UI (kept, corrected) ===== -->
 
   <!-- Minimal seed canvas kept (unused by Funebra layer) -->
-  <canvas id="funebraCanvas" style="display:;"></canvas>
+  <canvas id="canvas" style="display:none"></canvas>
 
   
    <!-- export toolbar -->
@@ -436,12 +459,6 @@ window.setTimeout("execon()", dta.value);
 </script>
 
 
-
-
-
-
-  
-
 <script type="module">
   onReady(() => {
     const bar = document.getElementById('exportBar');
@@ -617,4 +634,3 @@ window.setTimeout("execon()", dta.value);
   
 </body>
 </html>
-
