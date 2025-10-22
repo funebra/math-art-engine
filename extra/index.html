@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Funebra™ Multiply — Base-100 Complement Tutor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0c10;
+      --card: #14161c;
+      --fg: #e8eef6;
+      --muted: #9aa4af;
+      --green: #77ff77;
+      --blue: #77bfff;
+      --yellow: #ffe666;
+      --pink: #ff9ad6;
+      --gray: rgba(80,80,80,.6);
+      --amber: rgba(140,140,80,.8);
+      --teal: rgba(90,180,160,.6);
+      --shadow: 0 20px 40px rgba(0,0,0,.35);
+    }
+    html,body { height:100%; margin:0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif; }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 24px auto;
+      padding: 16px;
+    }
+
+    .hero {
+      position: relative;
+      border-radius: 20px;
+      overflow: clip;
+      box-shadow: var(--shadow);
+      background: #000;
+      aspect-ratio: 21/10;
+      display: grid;
+      place-items: center;
+    }
+    .hero img { width: 100%; height: 100%; object-fit: cover; opacity: .85; }
+    .hero .overlay {
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      font-size: clamp(18px, 6vw, 72px);
+      text-shadow: 2px 2px 0 #f00, 6px 6px 10px #0f0;
+      filter: drop-shadow(0 14px 24px rgba(0,255,0,.35));
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 16px;
+      margin-top: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+    @media (min-width: 920px) {
+      .grid.cols-4 { grid-template-columns: 1.2fr 1fr 1fr .9fr; }
+    }
+    @media (max-width: 919.98px) {
+      .grid.cols-4 { grid-template-columns: 1fr; }
+    }
+
+    .fase {
+      border-radius: 14px;
+      padding: 12px;
+      min-height: 140px;
+      line-height: 1.5;
+    }
+    .fase.f1 { background: var(--gray); color: #ddd; }
+    .fase.f2 { background: var(--amber); color: #1a1a1a; }
+    .fase.f3 { background: var(--teal); color: #1a1a1a; }
+
+    .op-card {
+      background: #10131a;
+      border: 1px solid #1e2633;
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1; min-width: 160px; }
+
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+    input, select {
+      width: 100%; padding: 10px 12px;
+      border-radius: 12px; border: 1px solid #263041;
+      background: #0e1117; color: var(--fg);
+      outline: none;
+    }
+
+    .btn {
+      cursor: pointer;
+      border: 0; border-radius: 12px;
+      padding: 10px 14px;
+      background: #1c6cff;
+      color: white;
+      box-shadow: 0 8px 16px rgba(28,108,255,.25);
+    }
+    .btn.secondary { background: #263041; color: #fff; box-shadow: none; }
+    .btn.ghost { background: transparent; border: 1px solid #2c3749; }
+
+    .legend { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .c-green { color: var(--green); }
+    .c-blue { color: var(--blue); }
+    .c-yellow { color: var(--yellow); }
+    .c-pink { color: var(--pink); }
+
+    .kpi {
+      font-size: clamp(20px, 5vw, 42px);
+      font-weight: 700;
+      text-align: center;
+      margin: 6px 0 2px 0;
+    }
+
+    .yt {
+      display: none;
+      margin-top: 12px;
+      border-radius: 16px;
+      overflow: clip;
+      aspect-ratio: 16/9;
+      background: #000;
+    }
+
+    /* monos for math lines */
+    .mono { font-family: ui-monospace, Menlo, Consolas, "SF Mono", monospace; }
+
+    /* small helper pills */
+    .pill { font-size: 11px; padding: 3px 8px; border: 1px solid #2c3749; border-radius: 999px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- HERO -->
+    <div class="hero">
+      <img src="https://plabs.at.ua/game/abc/steve/multiply/pLabs_math-trns.png" alt="pLabs Math">
+      <div class="overlay"><span id="heroText"><span class="c-green">63</span></span></div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label>Multiplicator</label>
+          <input id="n1" type="number" inputmode="numeric" value="63" min="0" max="9999" />
+        </div>
+        <div>
+          <label>Multiplier</label>
+          <input id="n2" type="number" inputmode="numeric" value="37" min="0" max="9999" />
+        </div>
+        <div>
+          <label>Language (voice)</label>
+          <select id="voiceLang">
+            <option value="sw-TZ">Swahili (sw-TZ)</option>
+            <option value="en-US">English (en-US)</option>
+            <option value="da-DK">Danish (da-DK)</option>
+          </select>
+          <div class="legend">Uses Speech Synthesis (browser dependent)</div>
+        </div>
+        <div>
+          <label>Autoplay</label>
+          <div class="row">
+            <select id="speed">
+              <option value="2200">Fast</option>
+              <option value="4200" selected>Normal</option>
+              <option value="7000">Slow</option>
+            </select>
+            <button id="play" class="btn">▶ Play</button>
+            <button id="pause" class="btn secondary">⏸ Pause</button>
+            <button id="next" class="btn ghost">Step →</button>
+          </div>
+          <div class="legend"><span class="pill">Tip</span> You can step manually or let it narrate.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRID -->
+    <div class="grid cols-4 panel">
+      <div class="fase f1">
+        <div><strong>Fase 01</strong></div>
+        <div id="sumtbl01" class="mono"></div>
+      </div>
+      <div class="fase f2">
+        <div><strong>Fase 02</strong></div>
+        <div id="sumtbl02" class="mono"></div>
+      </div>
+      <div class="fase f3">
+        <div><strong>Fase 03</strong></div>
+        <div id="sumtbl03" class="mono"></div>
+      </div>
+      <div class="op-card">
+        <div><strong>Operation</strong></div>
+        <div id="opStream" class="mono" style="margin-top:8px;"></div>
+        <div id="kpi" class="kpi"></div>
+        <div id="ytWrap" class="yt">
+          <iframe id="yt" width="100%" height="100%" src="https://www.youtube.com/embed/SuyZD4IwK7k?autoplay=0&mute=0&color=white" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture;" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend panel">
+      Copyright © 2022–012 pLabs Entertainment — Funebra™ Multiply Tutor (ESM rebuild)
+    </div>
+  </div>
+
+  <script type="module">
+    import { FunebraMultiply } from './funebra-multiply.module.js';
+
+    const ui = {
+      n1: document.getElementById('n1'),
+      n2: document.getElementById('n2'),
+      sum1: document.getElementById('sumtbl01'),
+      sum2: document.getElementById('sumtbl02'),
+      sum3: document.getElementById('sumtbl03'),
+      stream: document.getElementById('opStream'),
+      kpi: document.getElementById('kpi'),
+      heroText: document.getElementById('heroText'),
+      play: document.getElementById('play'),
+      pause: document.getElementById('pause'),
+      next: document.getElementById('next'),
+      speed: document.getElementById('speed'),
+      voiceLang: document.getElementById('voiceLang'),
+      ytWrap: document.getElementById('ytWrap'),
+      yt: document.getElementById('yt')
+    };
+
+    const tutor = new FunebraMultiply(ui);
+
+    // wire controls
+    const run = () => tutor.start(+ui.n1.value, +ui.n2.value, { lang: ui.voiceLang.value, interval: +ui.speed.value });
+    ui.play.addEventListener('click', run);
+    ui.pause.addEventListener('click', () => tutor.pause());
+    ui.next.addEventListener('click', () => tutor.step());
+    ui.n1.addEventListener('change', () => tutor.reset());
+    ui.n2.addEventListener('change', () => tutor.reset());
+    ui.speed.addEventListener('change', () => tutor.setInterval(+ui.speed.value));
+    ui.voiceLang.addEventListener('change', () => tutor.setLang(ui.voiceLang.value));
+
+    // initial render
+    tutor.renderStatic(+ui.n1.value, +ui.n2.value);
+  </script>
+</body>
+</html>
