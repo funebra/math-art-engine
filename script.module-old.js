@@ -1,546 +1,453 @@
-// script.module.js — ES Module version of core Funebra pieces
-// Pure ESM (no globals). Uses local THREE import. Default export exposes the namespace.
-// Usage:
-//   import Funebra, { makeParametric3D, surfaces } from './script.module.js';
-//   import * as THREE from 'three';
-//   const geo = makeParametric3D(surfaces.torus({R:1.2,r:0.4}), {nu:256,nv:128});
-
-import * as THREE from 'three';
-
-// ──────────────────────────────────────────────────────────────────────────────
-// constants + tiny helpers
-// ──────────────────────────────────────────────────────────────────────────────
-const TAU = Math.PI * 2;
-
-const _normStep = (o, steps) => {
-  const s = (steps|0) > 0 ? (steps|0) : 1;
-  return { t: (o % s) / s, s };
-};
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Core Funebra line helpers
-// ──────────────────────────────────────────────────────────────────────────────
-export function lineX(o, centerX, radius, direction, stepsPerEdge) {
-  const t = (o % stepsPerEdge) / stepsPerEdge;
-  return centerX + Math.cos(direction) * radius * t;
-}
-export function lineY(o, centerY, radius, direction, stepsPerEdge) {
-  const t = (o % stepsPerEdge) / stepsPerEdge;
-  return centerY + Math.sin(direction) * radius * t;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Circles / Ellipses
-// ──────────────────────────────────────────────────────────────────────────────
-export function circleX(o, radius, centerX, totalSteps, offset = 0) {
-  const theta = ((o % totalSteps) / totalSteps) * TAU + offset;
-  return centerX + Math.cos(theta) * radius;
-}
-export function circleY(o, radius, centerY, totalSteps, offset = 0) {
-  const theta = ((o % totalSteps) / totalSteps) * TAU + offset;
-  return centerY + Math.sin(theta) * radius;
-}
-
-// Ellipse with independent radii, rotation (radians) + angular offset
-export function ellipseX(o, rx, ry, centerX, centerY, totalSteps, rotation = 0, offset = 0) {
-  const { t } = _normStep(o, totalSteps);
-  const th = t * TAU + offset;
-  const cs = Math.cos(th), sn = Math.sin(th);
-  const xr = rx * cs,      yr = ry * sn;
-  const cr = Math.cos(rotation), sr = Math.sin(rotation);
-  return centerX + xr * cr - yr * sr;
-}
-export function ellipseY(o, rx, ry, centerX, centerY, totalSteps, rotation = 0, offset = 0) {
-  const { t } = _normStep(o, totalSteps);
-  const th = t * TAU + offset;
-  const cs = Math.cos(th), sn = Math.sin(th);
-  const xr = rx * cs,      yr = ry * sn;
-  const cr = Math.cos(rotation), sr = Math.sin(rotation);
-  return centerY + xr * sr + yr * cr;
-}
-
-// Line segments
-export function lineSegmentX(o, steps, ax, ay, bx, by) { const { t } = _normStep(o, steps); return ax + (bx - ax) * t; }
-export function lineSegmentY(o, steps, ax, ay, bx, by) { const { t } = _normStep(o, steps); return ay + (by - ay) * t; }
-
-// ──────────────────────────────────────────────────────────────────────────────
-/** Generic Bézier math */
-// ──────────────────────────────────────────────────────────────────────────────
-export function bezierPoint1D(t, pts) {
-  let a = pts.slice();
-  for (let k = a.length - 1; k > 0; k--) {
-    for (let i = 0; i < k; i++) a[i] = (1 - t) * a[i] + t * a[i + 1];
-  }
-  return a[0];
-}
-export function bezierPoint2D(t, pts) {
-  let tmp = pts.map(p => [p[0], p[1]]);
-  for (let k = tmp.length - 1; k > 0; k--) {
-    for (let i = 0; i < k; i++) {
-      tmp[i][0] = (1 - t) * tmp[i][0] + t * tmp[i + 1][0];
-      tmp[i][1] = (1 - t) * tmp[i][1] + t * tmp[i + 1][1];
-    }
-  }
-  return tmp[0];
-}
-
-// even-arc-length resample for any f(t)->[x,y]
-export function resampleEven(f, N = 256) {
-  const M = Math.max(64, N * 8);
-  const xs = new Float32Array(M);
-  const ys = new Float32Array(M);
-  const ls = new Float32Array(M);
-  let L = 0, px = 0, py = 0;
-
-  for (let i = 0; i < M; i++) {
-    const t = i / (M - 1);
-    const [x, y] = f(t);
-    xs[i] = x; ys[i] = y;
-    if (i) L += Math.hypot(x - px, y - py);
-    ls[i] = L; px = x; py = y;
-  }
-  const out = new Array(N);
-  for (let k = 0; k < N; k++) {
-    const target = (k / (N - 1)) * L;
-    let lo = 0, hi = M - 1;
-    while (lo < hi) { const mid = (lo + hi) >> 1; (ls[mid] < target) ? (lo = mid + 1) : (hi = mid); }
-    const i1 = Math.max(1, lo), i0 = i1 - 1;
-    const segL = ls[i1] - ls[i0] || 1;
-    const a = (target - ls[i0]) / segL;
-    out[k] = [ xs[i0] + a * (xs[i1] - xs[i0]), ys[i0] + a * (ys[i1] - ys[i0]) ];
-  }
-  return out;
-}
-
-// SVG path for poly-Bézier
-export function polyBezierToSVGPath(segments) {
-  if (!segments?.length) return '';
-  const s0 = segments[0];
-  let d = `M ${s0.A[0]} ${s0.A[1]}`;
-  for (const s of segments) {
-    if (s.type === 'quad') d += ` Q ${s.B[0]} ${s.B[1]} ${s.C[0]} ${s.C[1]}`;
-    else                   d += ` C ${s.B[0]} ${s.B[1]} ${s.C[0]} ${s.C[1]} ${s.D[0]} ${s.D[1]}`;
-  }
-  return d;
-}
-
-// Quadratic / Cubic convenience
-export function bezierQuadX(o, steps, Ax, Ay, Bx, By, Cx, Cy) { const t = (o % steps) / steps; return (1-t)*(1-t)*Ax + 2*(1-t)*t*Bx + t*t*Cx; }
-export function bezierQuadY(o, steps, Ax, Ay, Bx, By, Cx, Cy) { const t = (o % steps) / steps; return (1-t)*(1-t)*Ay + 2*(1-t)*t*By + t*t*Cy; }
-export function bezierCubicX(o, steps, Ax, Ay, Bx, By, Cx, Cy, Dx, Dy) { const t = (o % steps) / steps, u = 1 - t; return u*u*u*Ax + 3*u*u*t*Bx + 3*u*t*t*Cx + t*t*t*Dx; }
-export function bezierCubicY(o, steps, Ax, Ay, Bx, By, Cx, Cy, Dx, Dy) { const t = (o % steps) / steps, u = 1 - t; return u*u*u*Ay + 3*u*u*t*By + 3*u*t*t*Cy + t*t*t*Dy; }
-
-// Poly-Bézier sampler
-export function polyBezierX(o, segments) {
-  let acc = 0;
-  for (const s of segments) {
-    const n = s.steps|0; if (o < acc + n) {
-      const i = o - acc;
-      return (s.type === 'quad')
-        ? bezierQuadX(i, n, s.A[0], s.A[1], s.B[0], s.B[1], s.C[0], s.C[1])
-        : bezierCubicX(i, n, s.A[0], s.A[1], s.B[0], s.B[1], s.C[0], s.C[1], s.D[0], s.D[1]);
-    }
-    acc += n;
-  }
-  const last = segments[segments.length-1];
-  return (last.type==='quad'? last.C[0] : last.D[0]);
-}
-export function polyBezierY(o, segments) {
-  let acc = 0;
-  for (const s of segments) {
-    const n = s.steps|0; if (o < acc + n) {
-      const i = o - acc;
-      return (s.type === 'quad')
-        ? bezierQuadY(i, n, s.A[0], s.A[1], s.B[0], s.B[1], s.C[0], s.C[1])
-        : bezierCubicY(i, n, s.A[0], s.A[1], s.B[0], s.B[1], s.C[0], s.C[1], s.D[0], s.D[1]);
-    }
-    acc += n;
-  }
-  const last = segments[segments.length-1];
-  return (last.type==='quad'? last.C[1] : last.D[1]);
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Polygons / Stars / Waves / Triangles
-// ──────────────────────────────────────────────────────────────────────────────
-export function polygonX(o, sides, radius, centerX, stepsPerEdge){
-  const edge = Math.floor(o / stepsPerEdge);
-  const t    = (o % stepsPerEdge) / stepsPerEdge;
-  const a1   = (edge     * TAU) / sides;
-  const a2   = ((edge+1) * TAU) / sides;
-  return (1-t) * (Math.cos(a1)*radius + centerX) + t * (Math.cos(a2)*radius + centerX);
-}
-export function polygonY(o, sides, radius, centerY, stepsPerEdge){
-  const edge = Math.floor(o / stepsPerEdge);
-  const t    = (o % stepsPerEdge) / stepsPerEdge;
-  const a1   = (edge     * TAU) / sides;
-  const a2   = ((edge+1) * TAU) / sides;
-  return (1-t) * (Math.sin(a1)*radius + centerY) + t * (Math.sin(a2)*radius + centerY);
-}
-export function starX(o, sides, outerR, innerR, centerX, stepsPerEdge){
-  const total = sides*2, edge = Math.floor(o/stepsPerEdge), t=(o%stepsPerEdge)/stepsPerEdge;
-  const a1=(edge*TAU)/total, a2=((edge+1)*TAU)/total;
-  const r1 = edge%2===0 ? outerR : innerR;
-  const r2 = (edge+1)%2===0 ? outerR : innerR;
-  return (1-t)*(Math.cos(a1)*r1 + centerX) + t*(Math.cos(a2)*r2 + centerX);
-}
-export function starY(o, sides, outerR, innerR, centerY, stepsPerEdge){
-  const total = sides*2, edge = Math.floor(o/stepsPerEdge), t=(o%stepsPerEdge)/stepsPerEdge;
-  const a1=(edge*TAU)/total, a2=((edge+1)*TAU)/total;
-  const r1 = edge%2===0 ? outerR : innerR;
-  const r2 = (edge+1)%2===0 ? outerR : innerR;
-  return (1-t)*(Math.sin(a1)*r1 + centerY) + t*(Math.sin(a2)*r2 + centerY);
-}
-
-export function squareWave(t, A, period, cy=0){ return ((t%period) < period/2 ? A : -A) + cy; }
-export function wave(type, t, A, period, cy=0){
-  const ph=(t%period)/period;
-  if(type==="sine")     return Math.sin(ph*TAU)*A + cy;
-  if(type==="square")   return (ph<.5?A:-A) + cy;
-  if(type==="triangle") return (4*A*Math.abs(ph-.5)-A) + cy;
-  if(type==="sawtooth") return (2*A*(ph-.5)) + cy;
-  return cy;
-}
-export function waveX(o, step){ return o*step; }
-export function waveY(o, type, A, period, cy){ return wave(type, o, A, period, cy); }
-
-export function curwaveX(i, step){ return i*step; }
-export function curwaveY(rate, minRate, maxRate, height, centerY){
-  const n = (rate - minRate) / (maxRate - minRate || 1);
-  return centerY + height/2 - n*height;
-}
-
-export function triX(o, verts, stepsPerEdge){
-  const e=Math.floor(o/stepsPerEdge)%3, t=(o%stepsPerEdge)/stepsPerEdge;
-  return (1-t)*verts[e][0] + t*verts[(e+1)%3][0];
-}
-export function triY(o, verts, stepsPerEdge){
-  const e=Math.floor(o/stepsPerEdge)%3, t=(o%stepsPerEdge)/stepsPerEdge;
-  return (1-t)*verts[e][1] + t*verts[(e+1)%3][1];
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Simple cube projection
-// ──────────────────────────────────────────────────────────────────────────────
-export function cube(o, size, cx=0, cy=0, stepsPerEdge=10){
-  const h=size/2, V=[[-h,-h,-h],[h,-h,-h],[h,h,-h],[-h,h,-h],[-h,-h,h],[h,-h,h],[h,h,h],[-h,h,h]];
-  const E=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-  const ei=Math.floor(o/stepsPerEdge)%E.length, t=(o%stepsPerEdge)/stepsPerEdge;
-  const [a,b]=E[ei], [x1,y1,z1]=V[a], [x2,y2,z2]=V[b];
-  const x=x1+(x2-x1)*t, y=y1+(y2-y1)*t, z=z1+(z2-z1)*t;
-  return { x: cx + x + 0.5*z, y: cy - y - 0.3*z };
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-/** Hearts 2D/3D */
-// ──────────────────────────────────────────────────────────────────────────────
-export function heart2D_x(o, steps=360, s=6, cx=0){
-  const t = (o/steps)*TAU;
-  return cx + s*16*Math.pow(Math.sin(t),3);
-}
-export function heart2D_y(o, steps=360, s=6, cy=0){
-  const t = (o/steps)*TAU;
-  return cy - s*(13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t));
-}
-export function heart3D_steps(U=140, V=96){ return (U+1)*(V+1); }
-function _heartProfile(u, scale){
-  return {
-    x: scale*16*Math.pow(Math.sin(u),3),
-    y: scale*(13*Math.cos(u) - 5*Math.cos(2*u) - 2*Math.cos(3*u) - Math.cos(4*u))
-  };
-}
-function _ij(o,U,V){ const cols=V+1; return { i:Math.floor(o/cols), j:o%cols }; }
-export function heart3D_x(o, steps, scale=0.30, U=140, V=96){
-  const {i,j}=_ij(o,U,V); const u=(i/U)*Math.PI, phi=(j/V)*TAU;
-  const r=Math.max(_heartProfile(u,scale).x,0);
-  return r*Math.cos(phi);
-}
-export function heart3D_y(o, steps, scale=0.30, U=140, V=96){
-  const {i}=_ij(o,U,V); const u=(i/U)*Math.PI;
-  return _heartProfile(u,scale).y;
-}
-export function heart3D_z(o, steps, scale=0.30, U=140, V=96){
-  const {i,j}=_ij(o,U,V); const u=(i/U)*Math.PI, phi=(j/V)*TAU;
-  const r=Math.max(_heartProfile(u,scale).x,0);
-  return r*Math.sin(phi);
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-/** Cross (Latin) */
-// ──────────────────────────────────────────────────────────────────────────────
-export function latinCrossVertices(
-  cx = 300, cy = 360,
-  H = 240, stemW = 60,
-  barW = 200, barT = 60,
-  barCenterY = -H/6, theta = 0
-){
-  const H2 = H/2, s = stemW/2, b = barW/2, th = barT/2, yb = barCenterY;
-  const raw = [
-    [-s, -H2],[ s, -H2],[ s, yb - th],[ b, yb - th],
-    [ b,  yb + th],[ s,  yb + th],[ s,  H2],[-s,  H2],
-    [-s,  yb + th],[-b, yb + th],[-b, yb - th],[-s, yb - th],
-  ];
-  const c = Math.cos(theta), sn = Math.sin(theta);
-  return raw.map(([x,y]) => [ cx + x*c - y*sn, cy + x*sn + y*c ]);
-}
-export function crossX(o, stepsPerEdge = 30, ...cfg){
-  const v = latinCrossVertices(...cfg), n = v.length;
-  const edge = Math.floor(o / stepsPerEdge) % n;
-  const t = (o % stepsPerEdge) / stepsPerEdge;
-  const [x1] = v[edge], [x2] = v[(edge+1) % n];
-  return (1 - t) * x1 + t * x2;
-}
-export function crossY(o, stepsPerEdge = 30, ...cfg){
-  const v = latinCrossVertices(...cfg), n = v.length;
-  const edge = Math.floor(o / stepsPerEdge) % n;
-  const t = (o % stepsPerEdge) / stepsPerEdge;
-  const [,y1] = v[edge], [,y2] = v[(edge+1) % n];
-  return (1 - t) * y1 + t * y2;
-}
-export function crossZ(
-  o, steps,
-  cx, cy,
-  hLen, hThick,
-  vLen, vThick,
-  amp = 0, phase = 0,
-  zCenter = 0, pitch = 0
-){
-  const t = (o / steps) * TAU;
-  return zCenter + amp * Math.sin(t + phase) + pitch * (t / TAU);
-}
-export const crossZFlat = () => 0;
-
-// ──────────────────────────────────────────────────────────────────────────────
-/** Pyramid wireframe (projected)
- *  Backward compatible with your positional params AND a safer config object:
- *  _pyramidProjectedPoint(o, stepsPerEdge, { cx, cy, base, height, rx, ry, rz, dist, scale })
+/*
+ * Funebra Math‑Art Engine — Shapes Module (Full Library)
+ * Version: 1.0.0 (2025-10-25)
+ * Author: pLabs Entertainment · Funebra™
+ *
+ * What this module provides
+ * -------------------------
+ * 1) A canonical registry of 41 common shapes (2D & 3D) with ids, names, type, tags
+ * 2) Pure JS geometry factories:
+ *    - For 2D: returns either SVG <path> data (d) or a ready <svg> string via toSVG()
+ *    - For 3D: returns a Three.js BufferGeometry if THREE is available, otherwise a JSON recipe you can feed later
+ * 3) Utilities to make regular polygons, stars, rings, hearts, crescents, arrows, crosses, kites, trapezoids, etc.
+ * 4) Prism & pyramid constructors for any n‑gon base
+ *
+ * Usage
+ * -----
+ * import {
+ *   SHAPES, shapeByName, draw2D, build3D, toSVG, regularPolygonPath,
+ *   starPath, ringPath, heartPath, crescentPath, trapezoidPath, kitePath
+ * } from './script.module.js';
+ *
+ * // 2D example (SVG path d)
+ * const d = regularPolygonPath({ sides: 6, r: 50 }); // hexagon path
+ * const svg = toSVG(d, 120, 120); // <svg> string
+ *
+ * // 3D example (Three.js)
+ * const geom = build3D('Hexagonal prism', { radius: 1, height: 2 });
+ * const mesh = new THREE.Mesh(geom, new THREE.MeshStandardMaterial({ color: 0xffffff }));
+ *
+ * Notes
+ * -----
+ * - All angles are in radians
+ * - 2D coordinate system is centered at (0,0) by default, y positive downward (SVG standard)
+ * - 3D units are arbitrary; scale as you like
  */
-// ──────────────────────────────────────────────────────────────────────────────
-function _pyramidProjectedPoint(o, stepsPerEdge = 40, ...rest){
-  // detect legacy vs object call
-  let cfg;
-  if (typeof rest[0] === 'object') {
-    cfg = { cx:300, cy:360, base:220, height:220, rx:-0.3, ry:0.6, rz:0, dist:700, scale:1, ...rest[0] };
-  } else {
-    const [cx=300, cy=360, base=220, height=220, rx=-0.3, ry=0.6, rz=0.0, dist=700, scale=1] = rest;
-    cfg = { cx, cy, base, height, rx, ry, rz, dist, scale };
-  }
 
-  const b = cfg.base / 2;
-  const V = [[-b,0,-b],[ b,0,-b],[ b,0, b],[-b,0, b],[0,-cfg.height,0]];
-  const E = [[0,1],[1,2],[2,3],[3,0],[4,0],[4,1],[4,2],[4,3]];
-  const nE = E.length;
+// -------------------------
+// Helper math
+// -------------------------
+const TAU = Math.PI * 2;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const lerp = (a, b, t) => a + (b - a) * t;
 
-  const edge = Math.floor(o / stepsPerEdge) % nE;
-  const t = (o % stepsPerEdge) / stepsPerEdge;
-
-  const [i1, i2] = E[edge];
-  let [x,y,z] = [0,0,0];
-  {
-    const [x1,y1,z1] = V[i1];
-    const [x2,y2,z2] = V[i2];
-    x = (1-t)*x1 + t*x2;
-    y = (1-t)*y1 + t*y2;
-    z = (1-t)*z1 + t*z2;
-  }
-
-  // rotations
-  {
-    const cxX = Math.cos(cfg.rx), sxX = Math.sin(cfg.rx);
-    const yx =  y*cxX - z*sxX; const zx =  y*sxX + z*cxX; y = yx; z = zx;
-
-    const cxY = Math.cos(cfg.ry), sxY = Math.sin(cfg.ry);
-    const xy =  x*cxY + z*sxY;   const zy = -x*sxY + z*cxY; x = xy; z = zy;
-
-    const cxZ = Math.cos(cfg.rz), sxZ = Math.sin(cfg.rz);
-    const xz = x*cxZ - y*sxZ;    const yz = x*sxZ + y*cxZ;  x = xz; y = yz;
-  }
-
-  const k = cfg.dist / (z + cfg.dist);
-  const X = cfg.cx + x * k * cfg.scale;
-  const Y = cfg.cy + y * k * cfg.scale;
-  return [X, Y];
-}
-export function pyramidX(o, stepsPerEdge = 40, ...cfg){ return _pyramidProjectedPoint(o, stepsPerEdge, ...cfg)[0]; }
-export function pyramidY(o, stepsPerEdge = 40, ...cfg){ return _pyramidProjectedPoint(o, stepsPerEdge, ...cfg)[1]; }
-export function pyramidZ(
-  o, stepsPerEdge,
-  cx, cy,
-  base, height,
-  rx, ry, rz, dist = 700, scale = 1,
-  zBase = 0, expo = 1
-){
-  // Simple height profile based on projected X/Y distance from center
-  const X = pyramidX(o, stepsPerEdge, cx, cy, base, height, rx, ry, rz, dist, scale);
-  const Y = pyramidY(o, stepsPerEdge, cx, cy, base, height, rx, ry, rz, dist, scale);
-
-  const dx = (X - cx) / (base/2);
-  const dy = (Y - cy) / (base/2);
-  const taper = Math.max(0, 1 - Math.max(Math.abs(dx), Math.abs(dy)));
-  return zBase + height * Math.pow(taper, expo);
+// Polar to cartesian in SVG coords (y down)
+function polar(r, a) {
+  return [r * Math.cos(a), r * Math.sin(a)];
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-/** THREE helpers */
-// ──────────────────────────────────────────────────────────────────────────────
-export function toThreeGeometry(raw){
-  if (raw && raw.isBufferGeometry) return raw;
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position",
-    new THREE.BufferAttribute(new Float32Array(raw.positions), 3));
-  if (raw.uvs)
-    geo.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(raw.uvs), 2));
-  if (raw.indices) geo.setIndex(raw.indices);
-  if (raw.normals)
-    geo.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(raw.normals), 3));
-  else
-    geo.computeVertexNormals();
-  return geo;
+// Path helpers
+function moveTo(x, y) { return `M ${x.toFixed(3)} ${y.toFixed(3)}`; }
+function lineTo(x, y) { return `L ${x.toFixed(3)} ${y.toFixed(3)}`; }
+function closePath() { return 'Z'; }
+
+// Convert path commands to <svg> string
+export function toSVG(d, w = 200, h = 200, stroke = '#fff', fill = 'none', strokeWidth = 2, viewBoxPad = 4) {
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${-w/2 - viewBoxPad} ${-h/2 - viewBoxPad} ${w + viewBoxPad*2} ${h + viewBoxPad*2}">\n  <path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>\n</svg>`;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-/** Parametric surfaces (3D) */
-// ──────────────────────────────────────────────────────────────────────────────
-export function makeParametric3D(fn, opts={}){
-  const { nu = 128, nv = 64, wrapU = true, wrapV = true } = opts;
-
-  const N = nu * nv;
-  const positions = new Float32Array(N * 3);
-  const uvs       = new Float32Array(N * 2);
-
-  let pk = 0, tk = 0;
-  for (let j = 0; j < nv; j++){
-    const vv = wrapV ? (j / nv) : (j/(nv-1));
-    for (let i = 0; i < nu; i++){
-      const uu = wrapU ? (i / nu) : (i/(nu-1));
-      const p = fn(uu, vv) || {x:0,y:0,z:0};
-      positions[pk++] = p.x; positions[pk++] = p.y; positions[pk++] = p.z;
-      uvs[tk++] = uu; uvs[tk++] = vv;
-    }
+// Regular polygon path (centered)
+export function regularPolygonPath({ sides = 5, r = 50, phase = -Math.PI / 2 } = {}) {
+  const n = Math.max(3, Math.floor(sides));
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const a = phase + TAU * (i / n);
+    const [x, y] = polar(r, a);
+    d += (i === 0 ? moveTo(x, y) : lineTo(x, y));
   }
-
-  const wrapIdx = (i, n) => (i < 0 ? i + n : (i >= n ? i - n : i));
-  const idx = [];
-  const nuMax = nu - 1, nvMax = nv - 1;
-  const lastU = wrapU ? nu : nuMax;
-  const lastV = wrapV ? nv : nvMax;
-
-  for (let j = 0; j < lastV; j++){
-    const jn = wrapV ? wrapIdx(j+1, nv) : (j+1);
-    if (!wrapV && j === nvMax) break;
-    for (let i = 0; i < lastU; i++){
-      const inx = wrapU ? wrapIdx(i+1, nu) : (i+1);
-      if (!wrapU && i === nuMax) break;
-
-      const a = j * nu + i;
-      const b = j * nu + inx;
-      const c = jn * nu + i;
-      const d = jn * nu + inx;
-      idx.push(a, c, b,  b, c, d);
-    }
-  }
-
-  if (THREE?.BufferGeometry) {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute("uv",       new THREE.BufferAttribute(uvs, 2));
-    geo.setIndex(idx);
-    geo.computeVertexNormals();
-    geo.userData.funebra = { nu, nv, wrapU, wrapV, fnName: fn.name || "anonymous" };
-    return geo;
-  }
-  return {
-    positions: Array.from(positions),
-    uvs:       Array.from(uvs),
-    indices:   idx
-  };
+  return d + closePath();
 }
 
-export const surfaces = {
-  torus({R=1.15, r=0.44} = {}){
-    return (u, v) => {
-      const U = u * TAU, V = v * TAU;
-      const cx = Math.cos(U), sx = Math.sin(U);
-      const cv = Math.cos(V), sv = Math.sin(V);
-      return { x: (R + r*cv) * cx, y: (R + r*cv) * sx, z: r * sv };
-    };
+// Star polygon path (e.g., 5‑point star)
+export function starPath({ points = 5, rOuter = 50, rInner = 22, phase = -Math.PI / 2 } = {}) {
+  const n = Math.max(3, Math.floor(points));
+  let d = '';
+  for (let i = 0; i < n * 2; i++) {
+    const r = (i % 2 === 0) ? rOuter : rInner;
+    const a = phase + TAU * (i / (n * 2));
+    const [x, y] = polar(r, a);
+    d += (i === 0 ? moveTo(x, y) : lineTo(x, y));
   }
+  return d + closePath();
+}
+
+// Ring/annulus path using two circles (uses even-odd fill rule)
+export function ringPath({ rOuter = 50, rInner = 30 } = {}) {
+  const rO = Math.max(rOuter, rInner);
+  const rI = Math.min(rOuter, rInner);
+  // Circles approximated by SVG circle commands via arc; simpler: use circles in a group
+  // Here: path with two arcs and evenodd fill
+  const c = (r) => `M ${(-r).toFixed(3)} 0 a ${r} ${r} 0 1 0 ${2*r} 0 a ${r} ${r} 0 1 0 ${-2*r} 0`;
+  return `${c(rO)} ${c(rI)}`; // Remember to set fill-rule: evenodd in consumer if you fill it
+}
+
+// Heart (parametric, smoothed)
+export function heartPath({ w = 100, h = 90 } = {}) {
+  const rx = w / 2, ry = h / 2;
+  // cubic Bezier approximation
+  const top = [0, -ry * 0.25];
+  const left = [-rx, -ry * 0.1];
+  const right = [rx, -ry * 0.1];
+  const bottom = [0, ry];
+  const c1 = [-rx * 0.8, -ry];
+  const c2 = [-rx, ry * 0.4];
+  const c3 = [rx, ry * 0.4];
+  const c4 = [rx * 0.8, -ry];
+  return [
+    moveTo(...top),
+    `C ${c1[0]} ${c1[1]} ${left[0]} ${left[1]} 0 0`,
+    `C ${right[0]} ${right[1]} ${c4[0]} ${c4[1]} ${top[0]} ${top[1]}`,
+    `C ${c1[0]} ${c1[1]} ${-rx} ${ry * 0.4} ${bottom[0]} ${bottom[1]}`,
+    `C ${rx} ${ry * 0.4} ${c4[0]} ${c4[1]} ${top[0]} ${top[1]}`,
+    closePath()
+  ].join(' ');
+}
+
+// Crescent (difference of circles)
+export function crescentPath({ r = 50, offset = 20 } = {}) {
+  const R = r, o = clamp(offset, -R, R);
+  const left = `M ${-R} 0 a ${R} ${R} 0 1 0 ${2*R} 0 a ${R} ${R} 0 1 0 ${-2*R} 0`;
+  const r2 = Math.abs(R - o);
+  const right = `M ${-o - r2} 0 a ${r2} ${r2} 0 1 1 ${2*r2} 0 a ${r2} ${r2} 0 1 1 ${-2*r2} 0`;
+  return `${left} ${right}`; // Use fill-rule:evenodd to punch the hole
+}
+
+// Trapezoid (US) / Trapezium (UK alt); we expose both
+export function trapezoidPath({ top = 60, bottom = 100, height = 70 } = {}) {
+  const t = top / 2, b = bottom / 2, h = height / 2;
+  return [
+    moveTo(-t, -h), lineTo(t, -h), lineTo(b, h), lineTo(-b, h), closePath()
+  ].join(' ');
+}
+
+export function kitePath({ w = 100, h = 120, midY = 0.1 } = {}) {
+  const rx = w / 2, ry = h / 2;
+  return [
+    moveTo(0, -ry),
+    lineTo(rx, midY * h - ry),
+    lineTo(0, ry),
+    lineTo(-rx, midY * h - ry),
+    closePath()
+  ].join(' ');
+}
+
+export function arrowPath({ w = 120, h = 80, head = 0.45 } = {}) {
+  const rx = w / 2, ry = h / 2, hh = clamp(head, 0.2, 0.8);
+  const shaft = (1 - hh) * w;
+  return [
+    moveTo(-rx, -ry * 0.3),
+    lineTo(-rx + shaft, -ry * 0.3),
+    lineTo(-rx + shaft, -ry),
+    lineTo(rx, 0),
+    lineTo(-rx + shaft, ry),
+    lineTo(-rx + shaft, ry * 0.3),
+    lineTo(-rx, ry * 0.3),
+    closePath()
+  ].join(' ');
+}
+
+export function crossPath({ w = 90, h = 120, bar = 0.28 } = {}) {
+  const rx = w / 2, ry = h / 2, b = clamp(bar, 0.15, 0.45);
+  const bw = w * b, bh = h * b;
+  return [
+    moveTo(-bw/2, -ry), lineTo(bw/2, -ry), lineTo(bw/2, -bh/2), lineTo(rx, -bh/2),
+    lineTo(rx, bh/2), lineTo(bw/2, bh/2), lineTo(bw/2, ry), lineTo(-bw/2, ry),
+    lineTo(-bw/2, bh/2), lineTo(-rx, bh/2), lineTo(-rx, -bh/2), lineTo(-bw/2, -bh/2),
+    closePath()
+  ].join(' ');
+}
+
+// Circle / ellipse
+export function circlePath({ r = 50 } = {}) {
+  return `M ${-r} 0 a ${r} ${r} 0 1 0 ${2*r} 0 a ${r} ${r} 0 1 0 ${-2*r} 0`;
+}
+export function ellipsePath({ rx = 60, ry = 40 } = {}) {
+  return `M ${-rx} 0 a ${rx} ${ry} 0 1 0 ${2*rx} 0 a ${rx} ${ry} 0 1 0 ${-2*rx} 0`;
+}
+
+// Rectangle / rounded rect
+export function rectPath({ w = 100, h = 60 } = {}) {
+  const rx = w/2, ry = h/2;
+  return [moveTo(-rx, -ry), lineTo(rx, -ry), lineTo(rx, ry), lineTo(-rx, ry), closePath()].join(' ');
+}
+
+// Right triangle
+export function rightTrianglePath({ w = 100, h = 80 } = {}) {
+  const rx = w/2, ry = h/2;
+  return [moveTo(-rx, -ry), lineTo(rx, -ry), lineTo(-rx, ry), closePath()].join(' ');
+}
+
+// Parallelogram
+export function parallelogramPath({ w = 120, h = 70, skew = 0.25 } = {}) {
+  const rx = w/2, ry = h/2, dx = w * skew * 0.5;
+  return [moveTo(-rx+dx, -ry), lineTo(rx+dx, -ry), lineTo(rx-dx, ry), lineTo(-rx-dx, ry), closePath()].join(' ');
+}
+
+// Rhombus (diamond)
+export function rhombusPath({ w = 90, h = 90 } = {}) {
+  const rx = w/2, ry = h/2;
+  return [moveTo(0, -ry), lineTo(rx, 0), lineTo(0, ry), lineTo(-rx, 0), closePath()].join(' ');
+}
+
+// Semicircle
+export function semicirclePath({ r = 50, up = false } = {}) {
+  const sign = up ? -1 : 1;
+  return `M ${-r} 0 a ${r} ${r} 0 0 ${up?0:1} ${2*r} 0 L ${r} 0 L ${-r} 0 Z`;
+}
+
+// -------------------------
+// 3D builders (Three.js if present)
+// -------------------------
+function hasTHREE() { return typeof THREE !== 'undefined' && THREE?.BufferGeometry; }
+
+// Helper: prism from n‑gon (extrude)
+function buildPrism({ sides = 6, radius = 1, height = 1 }) {
+  if (!hasTHREE()) return { kind: 'prism', sides, radius, height };
+  const shape = new THREE.Shape();
+  for (let i = 0; i < sides; i++) {
+    const a = -Math.PI/2 + TAU * (i / sides);
+    const x = radius * Math.cos(a);
+    const y = radius * Math.sin(a);
+    (i === 0 ? shape.moveTo(x, y) : shape.lineTo(x, y));
+  }
+  shape.closePath();
+  const geom = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false });
+  geom.translate(0, 0, -height/2);
+  return geom;
+}
+
+// Helper: pyramid from n‑gon base
+function buildPyramid({ sides = 4, radius = 1, height = 1 }) {
+  if (!hasTHREE()) return { kind: 'pyramid', sides, radius, height };
+  const geom = new THREE.ConeGeometry(radius, height, Math.max(3, sides));
+  return geom;
+}
+
+// Hemisphere
+function buildHemisphere({ radius = 1, widthSegments = 32, heightSegments = 16 }) {
+  if (!hasTHREE()) return { kind: 'hemisphere', radius, widthSegments, heightSegments };
+  return new THREE.SphereGeometry(radius, widthSegments, heightSegments, 0, TAU, 0, Math.PI/2);
+}
+
+// Public 3D builder
+export function build3D(name, opts = {}) {
+  switch ((name||'').toLowerCase()) {
+    case 'cube': return hasTHREE() ? new THREE.BoxGeometry(opts.size ?? 1, opts.size ?? 1, opts.size ?? 1) : { kind:'box', ...opts };
+    case 'cuboid':
+    case 'rectangular prism': return hasTHREE() ? new THREE.BoxGeometry(opts.w ?? 1.2, opts.h ?? 0.8, opts.d ?? 1) : { kind:'box', ...opts };
+    case 'cylinder': return hasTHREE() ? new THREE.CylinderGeometry(opts.r ?? 0.6, opts.r ?? 0.6, opts.height ?? 1.2, opts.segments ?? 32) : { kind:'cylinder', ...opts };
+    case 'sphere': return hasTHREE() ? new THREE.SphereGeometry(opts.r ?? 0.7, opts.widthSegments ?? 32, opts.heightSegments ?? 18) : { kind:'sphere', ...opts };
+    case 'hemisphere': return buildHemisphere(opts);
+    case 'cone': return hasTHREE() ? new THREE.ConeGeometry(opts.r ?? 0.6, opts.height ?? 1.2, opts.segments ?? 32) : { kind:'cone', ...opts };
+    case 'tetrahedron': return hasTHREE() ? new THREE.TetrahedronGeometry(opts.r ?? 0.8) : { kind:'tetra', ...opts };
+    case 'octahedron': return hasTHREE() ? new THREE.OctahedronGeometry(opts.r ?? 0.8) : { kind:'octa', ...opts };
+    case 'pyramid':
+    case 'square pyramid': return buildPyramid({ sides: 4, radius: opts.r ?? 0.7, height: opts.height ?? 1.2 });
+    case 'hexagonal pyramid': return buildPyramid({ sides: 6, radius: opts.r ?? 0.7, height: opts.height ?? 1.2 });
+    case 'triangular prism': return buildPrism({ sides: 3, radius: opts.radius ?? 0.7, height: opts.height ?? 1.2 });
+    case 'pentagonal prism': return buildPrism({ sides: 5, radius: opts.radius ?? 0.7, height: opts.height ?? 1.2 });
+    case 'prism': return buildPrism({ sides: opts.sides ?? 6, radius: opts.radius ?? 0.7, height: opts.height ?? 1.2 });
+    default:
+      return { kind: 'unknown', name, opts };
+  }
+}
+
+// -------------------------
+// 2D dispatcher by name -> path string
+// -------------------------
+export function draw2D(name, params = {}) {
+  const key = (name||'').toLowerCase();
+  switch (key) {
+    case 'circle': return circlePath({ r: params.r ?? 50 });
+    case 'semicircle': return semicirclePath({ r: params.r ?? 50, up: params.up ?? false });
+    case 'oval': return ellipsePath({ rx: params.rx ?? 60, ry: params.ry ?? 40 });
+    case 'ring': return ringPath({ rOuter: params.rOuter ?? 60, rInner: params.rInner ?? 40 });
+    case 'square': return rectPath({ w: params.w ?? 90, h: params.h ?? 90 });
+    case 'rectangle': return rectPath({ w: params.w ?? 120, h: params.h ?? 80 });
+    case 'triangle': return regularPolygonPath({ sides: 3, r: params.r ?? 60 });
+    case 'right triangle': return rightTrianglePath({ w: params.w ?? 120, h: params.h ?? 90 });
+    case 'rhombus':
+    case 'diamond': return rhombusPath({ w: params.w ?? 90, h: params.h ?? 90 });
+    case 'parallelogram': return parallelogramPath({ w: params.w ?? 120, h: params.h ?? 70, skew: params.skew ?? 0.25 });
+    case 'pentagon': return regularPolygonPath({ sides: 5, r: params.r ?? 60 });
+    case 'hexagon': return regularPolygonPath({ sides: 6, r: params.r ?? 60 });
+    case 'heptagon': return regularPolygonPath({ sides: 7, r: params.r ?? 60 });
+    case 'octagon': return regularPolygonPath({ sides: 8, r: params.r ?? 60 });
+    case 'nonagon': return regularPolygonPath({ sides: 9, r: params.r ?? 60 });
+    case 'decagon': return regularPolygonPath({ sides: 10, r: params.r ?? 60 });
+    case 'star': return starPath({ points: params.points ?? 5, rOuter: params.rOuter ?? 60, rInner: params.rInner ?? 26 });
+    case 'heart': return heartPath({ w: params.w ?? 100, h: params.h ?? 90 });
+    case 'semicircle': return semicirclePath({ r: params.r ?? 50, up: params.up ?? false });
+    case 'quadrilateral': return regularPolygonPath({ sides: 4, r: params.r ?? 60 });
+    case 'trapezoid': return trapezoidPath({ top: params.top ?? 70, bottom: params.bottom ?? 110, height: params.height ?? 80 });
+    case 'trapezium': return trapezoidPath({ top: params.top ?? 70, bottom: params.bottom ?? 110, height: params.height ?? 80 });
+    case 'kite': return kitePath({ w: params.w ?? 100, h: params.h ?? 120, midY: params.midY ?? 0.1 });
+    case 'arrow': return arrowPath({ w: params.w ?? 120, h: params.h ?? 80, head: params.head ?? 0.45 });
+    case 'cross': return crossPath({ w: params.w ?? 90, h: params.h ?? 120, bar: params.bar ?? 0.28 });
+    case 'crescent': return crescentPath({ r: params.r ?? 55, offset: params.offset ?? 20 });
+    default: return '';
+  }
+}
+
+// -------------------------
+// Registry
+// -------------------------
+export const SHAPES = [
+  { id: 1,  name: 'Circle', type: '2d', tags: ['round','curve'] },
+  { id: 2,  name: 'Square', type: '2d', tags: ['polygon','4'] },
+  { id: 3,  name: 'Rectangle', type: '2d', tags: ['quad'] },
+  { id: 4,  name: 'Triangle', type: '2d', tags: ['polygon','3'] },
+  { id: 5,  name: 'Right triangle', type: '2d', tags: ['polygon','3','right'] },
+  { id: 6,  name: 'Rhombus', type: '2d', tags: ['diamond','quad'] },
+  { id: 7,  name: 'Parallelogram', type: '2d', tags: ['quad'] },
+  { id: 8,  name: 'Cube', type: '3d', tags: ['box'] },
+  { id: 9,  name: 'Cuboid', type: '3d', tags: ['rectangular prism'] },
+  { id:10,  name: 'Cylinder', type: '3d', tags: ['round'] },
+  { id:11,  name: 'Sphere', type: '3d', tags: ['round'] },
+  { id:12,  name: 'Hemisphere', type: '3d', tags: ['round'] },
+  { id:13,  name: 'Cone', type: '3d', tags: [] },
+  { id:14,  name: 'Diamond', type: '2d', tags: ['rhombus'] },
+  { id:15,  name: 'Star', type: '2d', tags: ['polygon'] },
+  { id:16,  name: 'Heart', type: '2d', tags: [] },
+  { id:17,  name: 'Pentagon', type: '2d', tags: ['polygon','5'] },
+  { id:18,  name: 'Hexagon', type: '2d', tags: ['polygon','6'] },
+  { id:19,  name: 'Heptagon', type: '2d', tags: ['polygon','7'] },
+  { id:20,  name: 'Octagon', type: '2d', tags: ['polygon','8'] },
+  { id:21,  name: 'Nonagon', type: '2d', tags: ['polygon','9'] },
+  { id:22,  name: 'Decagon', type: '2d', tags: ['polygon','10'] },
+  { id:23,  name: 'Semicircle', type: '2d', tags: ['half circle'] },
+  { id:24,  name: 'Quadrilateral', type: '2d', tags: ['polygon','4'] },
+  { id:25,  name: 'Pyramid', type: '3d', tags: ['generic'] },
+  { id:26,  name: 'Prism', type: '3d', tags: ['generic'] },
+  { id:27,  name: 'Trapezium', type: '2d', tags: ['UK','quad'] },
+  { id:28,  name: 'Trapezoid', type: '2d', tags: ['US','quad'] },
+  { id:29,  name: 'Oval', type: '2d', tags: ['ellipse'] },
+  { id:30,  name: 'Ring', type: '2d', tags: ['annulus'] },
+  { id:31,  name: 'Kite', type: '2d', tags: ['quad'] },
+  { id:32,  name: 'Arrow', type: '2d', tags: ['symbol'] },
+  { id:33,  name: 'Cross', type: '2d', tags: ['symbol'] },
+  { id:34,  name: 'Crescent', type: '2d', tags: ['moon'] },
+  { id:35,  name: 'Tetrahedron', type: '3d', tags: ['polyhedron'] },
+  { id:36,  name: 'Octahedron', type: '3d', tags: ['polyhedron'] },
+  { id:37,  name: 'Square pyramid', type: '3d', tags: ['pyramid'] },
+  { id:38,  name: 'Hexagonal pyramid', type: '3d', tags: ['pyramid'] },
+  { id:39,  name: 'Triangular prism', type: '3d', tags: ['prism'] },
+  { id:40,  name: 'Rectangular prism', type: '3d', tags: ['prism'] },
+  { id:41,  name: 'Pentagonal prism', type: '3d', tags: ['prism'] },
+];
+
+export function shapeByName(name) {
+  const key = (name||'').toLowerCase();
+  return SHAPES.find(s => s.name.toLowerCase() === key || s.tags?.some(t => t.toLowerCase() === key));
+}
+
+// -------------------------
+// Pre-made thumbnails (SVG) for all 2D shapes
+// -------------------------
+export function makeShapeSVG(name, opts = {}, size = 160) {
+  const d = draw2D(name, opts);
+  if (!d) return '';
+  return toSVG(d, size, size, '#fff', 'none', 3);
+}
+
+// Convenience: inline <svg> strings for a set of names
+export function makeSVGIndex(names = SHAPES.filter(s=>s.type==='2d').map(s=>s.name)) {
+  return names.map(n => ({ name: n, svg: makeShapeSVG(n) }));
+}
+
+// -------------------------
+// Example factory presets (so callers can quickly build)
+// -------------------------
+export const PRESETS_2D = {
+  Circle: { r: 56 },
+  Square: { w: 110, h: 110 },
+  Rectangle: { w: 140, h: 90 },
+  Triangle: { r: 70 },
+  'Right triangle': { w: 140, h: 100 },
+  Rhombus: { w: 110, h: 110 },
+  Parallelogram: { w: 150, h: 90, skew: 0.25 },
+  Star: { points: 5, rOuter: 70, rInner: 28 },
+  Heart: { w: 120, h: 96 },
+  Pentagon: { r: 70 },
+  Hexagon: { r: 70 },
+  Heptagon: { r: 70 },
+  Octagon: { r: 70 },
+  Nonagon: { r: 70 },
+  Decagon: { r: 70 },
+  Semicircle: { r: 70, up: false },
+  Quadrilateral: { r: 70 },
+  Trapezoid: { top: 90, bottom: 140, height: 100 },
+  Trapezium: { top: 90, bottom: 140, height: 100 },
+  Oval: { rx: 80, ry: 52 },
+  Ring: { rOuter: 80, rInner: 52 },
+  Kite: { w: 120, h: 140, midY: 0.12 },
+  Arrow: { w: 160, h: 100, head: 0.44 },
+  Cross: { w: 110, h: 140, bar: 0.28 },
+  Crescent: { r: 74, offset: 26 },
 };
 
-// ──────────────────────────────────────────────────────────────────────────────
-/** 2D pipeline used by legacy demos */
-// ──────────────────────────────────────────────────────────────────────────────
-export function makeParametric(spec={}){
-  const { x, y, steps=0, close=false, color, stroke, lineWidth } = spec;
-  if (typeof x !== 'function' || typeof y !== 'function')
-    throw new Error('makeParametric: x and y must be functions');
-  if (!Number.isFinite(steps) || steps <= 0)
-    throw new Error('makeParametric: steps must be a positive integer');
-  return { kind:'param2d', x, y, steps: Math.floor(steps), close, color, stroke, lineWidth };
-}
-
-export function render(items=[], opts={}){
-  const canvas = opts.canvas || document.querySelector('canvas') || (()=>{ const c = document.createElement('canvas'); document.body.appendChild(c); return c; })();
-  const ctx = canvas.getContext('2d');
-
-  // auto-fit to viewport when overlay-ish
-  if (canvas === opts.canvas && (canvas.style.position === 'fixed' || canvas.style.position === 'absolute')){
-    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-    const w = (opts.width  ?? window.innerWidth);
-    const h = (opts.height ?? window.innerHeight);
-    const bw = Math.floor(w * dpr), bh = Math.floor(h * dpr);
-    if (canvas.width !== bw || canvas.height !== bh) {
-      canvas.width = bw; canvas.height = bh;
-      canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-  }
-
-  if (opts.clear !== false) ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const doFill = (v)=> v === true || typeof v === 'string';
-  for (const it of items){
-    if (!it || it.kind !== 'param2d') continue;
-    const p = new Path2D();
-    for (let i=0;i<it.steps;i++){
-      const X = it.x(i); const Y = it.y(i);
-      if (i===0) p.moveTo(X, Y); else p.lineTo(X, Y);
-    }
-    if (it.close) p.closePath();
-
-    const strokeColor = it.stroke ?? opts.stroke;
-    const lw          = it.lineWidth ?? opts.lineWidth ?? 1;
-    if (strokeColor){ ctx.strokeStyle = strokeColor; ctx.lineWidth = lw; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke(p); }
-
-    const fillFlag = it.color ?? opts.fill;
-    if (doFill(fillFlag)){ ctx.fillStyle = (typeof fillFlag === 'string') ? fillFlag : (opts.fillStyle || '#000'); ctx.fill(p); }
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Default export bundle
-// ──────────────────────────────────────────────────────────────────────────────
-const Funebra = {
-  // 2D
-  makeParametric, render,
-  // 3D
-  makeParametric3D, surfaces,
-  // helpers
-  lineX, lineY, lineSegmentX, lineSegmentY,
-  circleX, circleY, ellipseX, ellipseY,
-  polygonX, polygonY, starX, starY,
-  bezierPoint1D, bezierPoint2D,
-  bezierQuadX, bezierQuadY,
-  bezierCubicX, bezierCubicY,
-  polyBezierX, polyBezierY, polyBezierToSVGPath,
-  resampleEven,
-  squareWave, wave, waveX, waveY,
-  curwaveX, curwaveY,
-  triX, triY,
-  cube,
-  heart2D_x, heart2D_y, heart3D_steps, heart3D_x, heart3D_y, heart3D_z,
-  latinCrossVertices, crossX, crossY, crossZ, crossZFlat,
-  pyramidX, pyramidY, pyramidZ,
-  toThreeGeometry,
+export const PRESETS_3D = {
+  Cube: { size: 1 },
+  Cuboid: { w: 1.4, h: 0.9, d: 1.1 },
+  Cylinder: { r: 0.6, height: 1.2, segments: 32 },
+  Sphere: { r: 0.7, widthSegments: 32, heightSegments: 18 },
+  Hemisphere: { radius: 0.7, widthSegments: 32, heightSegments: 16 },
+  Cone: { r: 0.6, height: 1.2, segments: 32 },
+  Tetrahedron: { r: 0.8 },
+  Octahedron: { r: 0.8 },
+  Pyramid: { sides: 4, radius: 0.7, height: 1.2 },
+  'Square pyramid': { sides: 4, radius: 0.7, height: 1.2 },
+  'Hexagonal pyramid': { sides: 6, radius: 0.7, height: 1.2 },
+  'Triangular prism': { sides: 3, radius: 0.7, height: 1.2 },
+  Prism: { sides: 6, radius: 0.7, height: 1.2 },
+  'Rectangular prism': { sides: 4, radius: 0.7, height: 1.2 },
+  'Pentagonal prism': { sides: 5, radius: 0.7, height: 1.2 },
 };
-export default Funebra;
+
+// -------------------------
+// Minimal CSS (optional export string if embedding)
+// -------------------------
+export const SHAPE_CSS = `
+svg { display: block; }
+path { vector-effect: non-scaling-stroke; }
+`;
+
+// Default export (for convenience in simple imports)
+export default {
+  SHAPES,
+  PRESETS_2D,
+  PRESETS_3D,
+  shapeByName,
+  draw2D,
+  build3D,
+  toSVG,
+  // path helpers
+  regularPolygonPath,
+  starPath,
+  ringPath,
+  heartPath,
+  crescentPath,
+  trapezoidPath,
+  kitePath,
+  arrowPath,
+  crossPath,
+  circlePath,
+  ellipsePath,
+  rectPath,
+  rightTrianglePath,
+  parallelogramPath,
+  rhombusPath,
+  semicirclePath,
+  // utilities
+  lerp, clamp, TAU,
+};
