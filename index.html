@@ -120,7 +120,12 @@
     window.initEURWave = async function () { /* noop fallback */ };
   }
 </script>
- 
+ <script type="module">
+  import Funebra, * as F from './script.module.js';
+  window.Funebra = Funebra; // expose to console
+  Object.assign(window, F); // expose all functions globally (polygonX, circleY, etc.)
+  console.log("EUR data ready!!");
+</script>
   
   
 <!--  https://plabsfill.com/res/tool2021-04-04-1916.js -->
@@ -167,6 +172,8 @@
   })();
   </script>
 
+  <!--
+/*
   <script type="module">
    import Funebra from "https://funebra.github.io/math-art-engine/script.module-old.js";
 const { makeParametric } = Funebra;
@@ -194,8 +201,8 @@ const { makeParametric } = Funebra;
     addEventListener('resize', () => { /* Funebra handles size on render */ });
     window.Funebra = Funebra;
 
-  </script>
-
+  </script> */
+-->
 
 <body style="background:rgb(200, 200, 230);color:red;" onClick="osc2()" onLoad="initEURWave().then(() => {console.log('EUR data ready!');});">
 
