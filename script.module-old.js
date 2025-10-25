@@ -451,3 +451,133 @@ export default {
   // utilities
   lerp, clamp, TAU,
 };
+
+// ==========================
+// Compatibility Layer — Math‑Art Engine 1.0 (polygonX/Y/Z, circleX/Y/Z, ...)
+// Semantics: X -> 2D points [{x,y}], Y -> SVG path `d`, Z -> 3D geometry/recipe
+// This section adds legacy‑style function names without changing the modern API above.
+
+function pointsRegularPolygon(n, r, phase){
+  const out = []; const nn = Math.max(3, Math.floor(n)); const ph = (phase==null?-Math.PI/2:phase);
+  for(let i=0;i<nn;i++){ const a = ph + 2*Math.PI*(i/nn); out.push({x:r*Math.cos(a), y:r*Math.sin(a)}); }
+  return out;
+}
+
+export function polygonY(p){ return regularPolygonPath({sides:(p&&p.sides)||5, r:(p&&p.r)||60, phase:(p&&p.phase)!=null?p.phase: -Math.PI/2}); }
+export function polygonX(p){ return pointsRegularPolygon((p&&p.sides)||5, (p&&p.r)||60, (p&&p.phase)!=null?p.phase: -Math.PI/2); }
+export function polygonZ(p){ return buildPrism({sides:(p&&p.sides)||5, radius:(p&&p.radius)||(p&&p.r)||0.7, height:(p&&p.height)||1.2}); }
+
+export function circleY(p){ return circlePath({ r:(p&&p.r)||50 }); }
+export function circleX(p){ const r=(p&&p.r)||50, N=(p&&p.samples)||96; const out=[]; for(let i=0;i<N;i++){const a=2*Math.PI*(i/N); out.push({x:r*Math.cos(a), y:r*Math.sin(a)});} return out; }
+export function circleZ(p){ const mode=(p&&p.mode||'sphere').toLowerCase(); return mode==='cylinder' ? build3D('Cylinder',{ r:(p&&p.r)||0.6, height:(p&&p.height)||1.2, segments:(p&&p.segments)||32 }) : build3D('Sphere',{ r:(p&&p.r)||0.7, widthSegments:(p&&p.widthSegments)||32, heightSegments:(p&&p.heightSegments)||18 }); }
+
+export function ringY(p){ return ringPath({ rOuter:(p&&p.rOuter)||60, rInner:(p&&p.rInner)||40 }); }
+export function ringX(p){ const rO=(p&&p.rOuter)||60, rI=(p&&p.rInner)||40, N=(p&&p.samples)||128; const out=[]; for(let i=0;i<N;i++){const a=2*Math.PI*(i/N); out.push({x:rO*Math.cos(a), y:rO*Math.sin(a)});} for(let i=N-1;i>=0;i--){const a=2*Math.PI*(i/N); out.push({x:rI*Math.cos(a), y:rI*Math.sin(a)});} return out; }
+export function ringZ(p){ return build3D('Cylinder',{ r:(p&&p.rOuter)||0.6, height:(p&&p.height)||0.1, segments:(p&&p.segments)||48 }); }
+
+export function ovalY(p){ return ellipsePath({ rx:(p&&p.rx)||60, ry:(p&&p.ry)||40 }); }
+export function ovalX(p){ const rx=(p&&p.rx)||60, ry=(p&&p.ry)||40, N=(p&&p.samples)||96; const out=[]; for(let i=0;i<N;i++){const a=2*Math.PI*(i/N); out.push({x:rx*Math.cos(a), y:ry*Math.sin(a)});} return out; }
+export function ovalZ(p){ return build3D('Cylinder',{ r:Math.max((p&&p.rx)||0.6,(p&&p.ry)||0.4), height:(p&&p.height)||0.1, segments:(p&&p.segments)||48 }); }
+
+export function semicircleY(p){ return semicirclePath({ r:(p&&p.r)||50, up:(p&&p.up)||false }); }
+export function semicircleX(p){ const r=(p&&p.r)||50, N=(p&&p.samples)||64, up=(p&&p.up)||false; const out=[]; const start=up?Math.PI:0; const end=up?0:Math.PI; const dir=up?-1:1; for(let i=0;i<=N;i++){const t=i/N; const a=start+dir*Math.PI*t; out.push({x:r*Math.cos(a), y:r*Math.sin(a)});} out.push({x:r, y:0}); out.push({x:-r, y:0}); return out; }
+export function semicircleZ(p){ return build3D('Cylinder',{ r:(p&&p.r)||0.6, height:(p&&p.height)||0.6, segments:(p&&p.segments)||32 }); }
+
+export function starY(p){ return starPath({ points:(p&&p.points)||5, rOuter:(p&&p.rOuter)||60, rInner:(p&&p.rInner)||26, phase:(p&&p.phase)!=null?p.phase: -Math.PI/2 }); }
+export function starX(p){ const n=(p&&p.points)||5, rO=(p&&p.rOuter)||60, rI=(p&&p.rInner)||26, ph=(p&&p.phase)!=null?p.phase:-Math.PI/2; const out=[]; for(let i=0;i<n*2;i++){const r=(i%2===0)?rO:rI; const a=ph+2*Math.PI*(i/(n*2)); out.push({x:r*Math.cos(a), y:r*Math.sin(a)});} return out; }
+export function starZ(p){ return polygonZ({ sides:(p&&p.points)||5, radius:(p&&p.rOuter)||0.7, height:(p&&p.height)||0.1 }); }
+
+export function heartY(p){ return heartPath({ w:(p&&p.w)||100, h:(p&&p.h)||90 }); }
+export function heartX(p){ const d=heartY(p); const N=(p&&p.samples)||128; const out=[]; for(let i=0;i<N;i++){const a=2*Math.PI*(i/N); const x=16*Math.pow(Math.sin(a),3); const y=-(13*Math.cos(a)-5*Math.cos(2*a)-2*Math.cos(3*a)-Math.cos(4*a)); out.push({x:((p&&p.w)||100)*x*0.02, y:((p&&p.h)||90)*y*0.02}); } return out; }
+export function heartZ(p){ return build3D('Prism',{ sides:32, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2 }); }
+
+export function crescentY(p){ return crescentPath({ r:(p&&p.r)||55, offset:(p&&p.offset)||20 }); }
+export function crescentX(p){ const r=(p&&p.r)||55, off=(p&&p.offset)||20, N=(p&&p.samples)||96; const out=[]; for(let i=0;i<N;i++){const a=2*Math.PI*(i/N); out.push({x:r*Math.cos(a), y:r*Math.sin(a)});} for(let i=N;i>=0;i--){const a=2*Math.PI*(i/N); const rr=Math.abs(r-off); out.push({x:(rr)*Math.cos(a)-off, y:(rr)*Math.sin(a)});} return out; }
+export function crescentZ(p){ return build3D('Cylinder',{ r:(p&&p.r)||0.6, height:(p&&p.height)||0.1, segments:(p&&p.segments)||64 }); }
+
+export function trapezoidY(p){ return trapezoidPath({ top:(p&&p.top)||70, bottom:(p&&p.bottom)||110, height:(p&&p.height)||80 }); }
+export function trapezoidX(p){ const t=((p&&p.top)||70)/2, b=((p&&p.bottom)||110)/2, h=((p&&p.height)||80)/2; return [{x:-t,y:-h},{x:t,y:-h},{x:b,y:h},{x:-b,y:h}]; }
+export function trapezoidZ(p){ return polygonZ({ sides:4, radius:(((p&&p.bottom)||110)/2)||0.7, height:(p&&p.depth)||0.2 }); }
+
+export function kiteY(p){ return kitePath({ w:(p&&p.w)||100, h:(p&&p.h)||120, midY:(p&&p.midY)!=null?p.midY:0.1 }); }
+export function kiteX(p){ const w=(p&&p.w)||100, h=(p&&p.h)||120, my=(p&&p.midY)!=null?p.midY:0.1; const rx=w/2, ry=h/2; return [{x:0,y:-ry},{x:rx,y:my*h-ry},{x:0,y:ry},{x:-rx,y:my*h-ry}]; }
+export function kiteZ(p){ return polygonZ({ sides:4, radius:Math.max(((p&&p.w)||1),((p&&p.h)||1))/2, height:(p&&p.depth)||0.2 }); }
+
+export function arrowY(p){ return arrowPath({ w:(p&&p.w)||120, h:(p&&p.h)||80, head:(p&&p.head)||0.45 }); }
+export function arrowX(p){ const w=(p&&p.w)||120, h=(p&&p.h)||80, hh=Math.max(0.2,Math.min(0.8,(p&&p.head)||0.45)); const rx=w/2, ry=h/2, shaft=(1-hh)*w; return [{x:-rx,y:-ry*0.3},{x:-rx+shaft,y:-ry*0.3},{x:-rx+shaft,y:-ry},{x:rx,y:0},{x:-rx+shaft,y:ry},{x:-rx+shaft,y:ry*0.3},{x:-rx,y:ry*0.3}]; }
+export function arrowZ(p){ return polygonZ({ sides:7, radius:Math.max(((p&&p.w)||1),((p&&p.h)||1))/2, height:(p&&p.depth)||0.2 }); }
+
+export function crossY(p){ return crossPath({ w:(p&&p.w)||90, h:(p&&p.h)||120, bar:(p&&p.bar)||0.28 }); }
+export function crossX(p){ const w=(p&&p.w)||90, h=(p&&p.h)||120, b=Math.max(0.15,Math.min(0.45,(p&&p.bar)||0.28)), rx=w/2, ry=h/2, bw=w*b, bh=h*b; return [{x:-bw/2,y:-ry},{x:bw/2,y:-ry},{x:bw/2,y:-bh/2},{x:rx,y:-bh/2},{x:rx,y:bh/2},{x:bw/2,y:bh/2},{x:bw/2,y:ry},{x:-bw/2,y:ry},{x:-bw/2,y:bh/2},{x:-rx,y:bh/2},{x:-rx,y:-bh/2},{x:-bw/2,y:-bh/2}]; }
+export function crossZ(p){ return polygonZ({ sides:4, radius:Math.max(((p&&p.w)||1),((p&&p.h)||1))/2, height:(p&&p.depth)||0.2 }); }
+
+// Named polygon helpers
+export const triangleY = (p)=>regularPolygonPath({sides:3, r:(p&&p.r)||60});
+export const triangleX = (p)=>pointsRegularPolygon(3, (p&&p.r)||60, -Math.PI/2);
+export const triangleZ = (p)=>polygonZ({sides:3, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2});
+
+export const pentagonY = (p)=>regularPolygonPath({sides:5, r:(p&&p.r)||60});
+export const pentagonX = (p)=>pointsRegularPolygon(5, (p&&p.r)||60, -Math.PI/2);
+export const pentagonZ = (p)=>polygonZ({sides:5, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2});
+
+export const hexagonY = (p)=>regularPolygonPath({sides:6, r:(p&&p.r)||60});
+export const hexagonX = (p)=>pointsRegularPolygon(6, (p&&p.r)||60, -Math.PI/2);
+export const hexagonZ = (p)=>polygonZ({sides:6, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2});
+
+export const heptagonY = (p)=>regularPolygonPath({sides:7, r:(p&&p.r)||60});
+export const heptagonX = (p)=>pointsRegularPolygon(7, (p&&p.r)||60, -Math.PI/2);
+export const heptagonZ = (p)=>polygonZ({sides:7, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2});
+
+export const octagonY = (p)=>regularPolygonPath({sides:8, r:(p&&p.r)||60});
+export const octagonX = (p)=>pointsRegularPolygon(8, (p&&p.r)||60, -Math.PI/2);
+export const octagonZ = (p)=>polygonZ({sides:8, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2});
+
+export const nonagonY = (p)=>regularPolygonPath({sides:9, r:(p&&p.r)||60});
+export const nonagonX = (p)=>pointsRegularPolygon(9, (p&&p.r)||60, -Math.PI/2);
+export const nonagonZ = (p)=>polygonZ({sides:9, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2});
+
+export const decagonY = (p)=>regularPolygonPath({sides:10, r:(p&&p.r)||60});
+export const decagonX = (p)=>pointsRegularPolygon(10, (p&&p.r)||60, -Math.PI/2);
+export const decagonZ = (p)=>polygonZ({sides:10, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2});
+
+// 3D names (Z only)
+export const cubeZ = (p)=>build3D('Cube', p||{});
+export const cuboidZ = (p)=>build3D('Cuboid', p||{});
+export const cylinderZ = (p)=>build3D('Cylinder', p||{});
+export const coneZ = (p)=>build3D('Cone', p||{});
+export const sphereZ = (p)=>build3D('Sphere', p||{});
+export const hemisphereZ = (p)=>build3D('Hemisphere', p||{});
+export const prismZ = (p)=>buildPrism({ sides:(p&&p.sides)||6, radius:(p&&p.radius)||0.7, height:(p&&p.height)||1.2 });
+export const pyramidZ = (p)=>buildPyramid({ sides:(p&&p.sides)||4, radius:(p&&p.radius)||0.7, height:(p&&p.height)||1.2 });
+export const polyhedronZ = (p)=>build3D(((p&&p.kind)||'Octahedron'), p||{});
+
+export const FunebraShapesCompat = {
+  polygonX, polygonY, polygonZ,
+  circleX, circleY, circleZ,
+  ringX, ringY, ringZ,
+  ovalX, ovalY, ovalZ,
+  semicircleX, semicircleY, semicircleZ,
+  starX, starY, starZ,
+  heartX, heartY, heartZ,
+  crescentX, crescentY, crescentZ,
+  trapezoidX, trapezoidY, trapezoidZ,
+  kiteX, kiteY, kiteZ,
+  arrowX, arrowY, arrowZ,
+  crossX, crossY, crossZ,
+  quadrilateralX: (p)=>pointsRegularPolygon(4, (p&&p.r)||60, -Math.PI/2),
+  quadrilateralY: (p)=>regularPolygonPath({sides:4, r:(p&&p.r)||60}),
+  quadrilateralZ: (p)=>polygonZ({sides:4, radius:(p&&p.radius)||0.7, height:(p&&p.height)||0.2}),
+  rectangleX, rectangleY, rectangleZ,
+  parallelogramX, parallelogramY, parallelogramZ,
+  rhombusX, rhombusY, rhombusZ,
+  triangleX, triangleY, triangleZ,
+  pentagonX, pentagonY, pentagonZ,
+  hexagonX, hexagonY, hexagonZ,
+  heptagonX, heptagonY, heptagonZ,
+  octagonX, octagonY, octagonZ,
+  nonagonX, nonagonY, nonagonZ,
+  decagonX, decagonY, decagonZ,
+  cubeZ, cuboidZ, cylinderZ, coneZ, sphereZ, hemisphereZ,
+  prismZ, pyramidZ, polyhedronZ,
+};
+
