@@ -634,7 +634,7 @@ export function trapezoidVertices(topW, bottomW, h, cx=0, cy=0, theta=0){
   const t=topW/2, b=bottomW/2, ry=h/2; let v=[[-t,-ry],[t,-ry],[b,ry],[-b,ry]]; if(theta) v=_rot(v,theta); return _translate(v,cx,cy);
 }
 //export function trapezoidX(o, topW, bottomW, h, cx=0, cy=0, stepsPerEdge=22, theta=0){ return _polyPathX(o, trapezoidVertices(topW,bottomW,h,cx,cy,theta), stepsPerEdge); }
-export function trapezoidY(o, topW, bottomW, h, cx=0, cy=0, stepsPerEdge=22, theta=0){ return _polyPathY(o, trapezoidVertices(topW,bottomW,h,cx,cy,theta), stepsPerEdge); }
+//export function trapezoidY(o, topW, bottomW, h, cx=0, cy=0, stepsPerEdge=22, theta=0){ return _polyPathY(o, trapezoidVertices(topW,bottomW,h,cx,cy,theta), stepsPerEdge); }
 export const trapeziumX = trapezoidX; export const trapeziumY = trapezoidY;
 
 // Kite (two isosceles triangles sharing a base)
