@@ -581,3 +581,130 @@ export const FunebraShapesCompat = {
   prismZ, pyramidZ, polyhedronZ,
 };
 
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Additional 2D shape families (Funebra 1.0 signature: X/Y functions)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Generic poly path sampler (N-vertex, closed)
+function _polyPathX(o, verts, stepsPerEdge){
+  const n = verts.length; const e = Math.floor(o/stepsPerEdge)%n; const t=(o%stepsPerEdge)/stepsPerEdge;
+  const [x1] = verts[e]; const [x2] = verts[(e+1)%n];
+  return (1-t)*x1 + t*x2;
+}
+function _polyPathY(o, verts, stepsPerEdge){
+  const n = verts.length; const e = Math.floor(o/stepsPerEdge)%n; const t=(o%stepsPerEdge)/stepsPerEdge;
+  const [,y1] = verts[e]; const [,y2] = verts[(e+1)%n];
+  return (1-t)*y1 + t*y2;
+}
+
+function _rot(v, theta){ const c=Math.cos(theta), s=Math.sin(theta); return v.map(([x,y])=>[x*c - y*s, x*s + y*c]); }
+function _translate(v, cx, cy){ return v.map(([x,y])=>[x+cx,y+cy]); }
+
+// Rectangle / Square
+export function rectangleVertices(w, h, cx=0, cy=0, theta=0){
+  const rx=w/2, ry=h/2; let v=[[-rx,-ry],[rx,-ry],[rx,ry],[-rx,ry]]; if(theta) v=_rot(v,theta); return _translate(v,cx,cy);
+}
+export function rectangleX(o, w, h, cx=0, cy=0, stepsPerEdge=20, theta=0){ return _polyPathX(o, rectangleVertices(w,h,cx,cy,theta), stepsPerEdge); }
+export function rectangleY(o, w, h, cx=0, cy=0, stepsPerEdge=20, theta=0){ return _polyPathY(o, rectangleVertices(w,h,cx,cy,theta), stepsPerEdge); }
+export function squareX(o, size, cx=0, cy=0, stepsPerEdge=20, theta=0){ return rectangleX(o, size, size, cx, cy, stepsPerEdge, theta); }
+export function squareY(o, size, cx=0, cy=0, stepsPerEdge=20, theta=0){ return rectangleY(o, size, size, cx, cy, stepsPerEdge, theta); }
+
+// Right triangle (axis-aligned before rotation)
+export function rightTriangleVertices(w, h, cx=0, cy=0, theta=0){
+  let v=[[-w/2, h/2],[ -w/2, -h/2 ], [ w/2, h/2 ]]; // right angle at (-w/2, h/2)
+  if(theta) v=_rot(v,theta); return _translate(v,cx,cy);
+}
+export function rightTriangleX(o, w, h, cx=0, cy=0, stepsPerEdge=30, theta=0){ return _polyPathX(o, rightTriangleVertices(w,h,cx,cy,theta), stepsPerEdge); }
+export function rightTriangleY(o, w, h, cx=0, cy=0, stepsPerEdge=30, theta=0){ return _polyPathY(o, rightTriangleVertices(w,h,cx,cy,theta), stepsPerEdge); }
+
+// Rhombus (diamond) and Parallelogram
+export function rhombusVertices(w, h, cx=0, cy=0, theta=0){ let v=[[0,-h/2],[w/2,0],[0,h/2],[-w/2,0]]; if(theta) v=_rot(v,theta); return _translate(v,cx,cy); }
+export function rhombusX(o, w, h, cx=0, cy=0, stepsPerEdge=24, theta=0){ return _polyPathX(o, rhombusVertices(w,h,cx,cy,theta), stepsPerEdge); }
+export function rhombusY(o, w, h, cx=0, cy=0, stepsPerEdge=24, theta=0){ return _polyPathY(o, rhombusVertices(w,h,cx,cy,theta), stepsPerEdge); }
+
+export function parallelogramVertices(w, h, skew=0.25, cx=0, cy=0, theta=0){
+  const dx = w*skew*0.5; let v=[[-w/2+dx,-h/2],[w/2+dx,-h/2],[w/2-dx,h/2],[-w/2-dx,h/2]]; if(theta) v=_rot(v,theta); return _translate(v,cx,cy);
+}
+export function parallelogramX(o, w, h, skew=0.25, cx=0, cy=0, stepsPerEdge=24, theta=0){ return _polyPathX(o, parallelogramVertices(w,h,skew,cx,cy,theta), stepsPerEdge); }
+export function parallelogramY(o, w, h, skew=0.25, cx=0, cy=0, stepsPerEdge=24, theta=0){ return _polyPathY(o, parallelogramVertices(w,h,skew,cx,cy,theta), stepsPerEdge); }
+
+// Trapezoid / Trapezium
+export function trapezoidVertices(topW, bottomW, h, cx=0, cy=0, theta=0){
+  const t=topW/2, b=bottomW/2, ry=h/2; let v=[[-t,-ry],[t,-ry],[b,ry],[-b,ry]]; if(theta) v=_rot(v,theta); return _translate(v,cx,cy);
+}
+export function trapezoidX(o, topW, bottomW, h, cx=0, cy=0, stepsPerEdge=22, theta=0){ return _polyPathX(o, trapezoidVertices(topW,bottomW,h,cx,cy,theta), stepsPerEdge); }
+export function trapezoidY(o, topW, bottomW, h, cx=0, cy=0, stepsPerEdge=22, theta=0){ return _polyPathY(o, trapezoidVertices(topW,bottomW,h,cx,cy,theta), stepsPerEdge); }
+export const trapeziumX = trapezoidX; export const trapeziumY = trapezoidY;
+
+// Kite (two isosceles triangles sharing a base)
+export function kiteVertices(w, h, midY=0.1, cx=0, cy=0, theta=0){
+  const rx=w/2, ry=h/2; let v=[[0,-ry],[rx,midY*h-ry],[0,ry],[-rx,midY*h-ry]]; if(theta) v=_rot(v,theta); return _translate(v,cx,cy);
+}
+export function kiteX(o, w, h, midY=0.1, cx=0, cy=0, stepsPerEdge=20, theta=0){ return _polyPathX(o, kiteVertices(w,h,midY,cx,cy,theta), stepsPerEdge); }
+export function kiteY(o, w, h, midY=0.1, cx=0, cy=0, stepsPerEdge=20, theta=0){ return _polyPathY(o, kiteVertices(w,h,midY,cx,cy,theta), stepsPerEdge); }
+
+// Arrow (chevron head + shaft)
+export function arrowVertices(w, h, head=0.45, cx=0, cy=0, theta=0){
+  const rx=w/2, ry=h/2, hh=Math.max(0.2,Math.min(0.8,head)), shaft=(1-hh)*w; let v=[[-rx,-ry*0.3],[-rx+shaft,-ry*0.3],[-rx+shaft,-ry],[rx,0],[-rx+shaft,ry],[-rx+shaft,ry*0.3],[-rx,ry*0.3]]; if(theta) v=_rot(v,theta); return _translate(v,cx,cy);
+}
+export function arrowX(o, w, h, head=0.45, cx=0, cy=0, stepsPerEdge=18, theta=0){ return _polyPathX(o, arrowVertices(w,h,head,cx,cy,theta), stepsPerEdge); }
+export function arrowY(o, w, h, head=0.45, cx=0, cy=0, stepsPerEdge=18, theta=0){ return _polyPathY(o, arrowVertices(w,h,head,cx,cy,theta), stepsPerEdge); }
+
+// Semicircle (arc + base line)
+export function semicircleX(o, r, cx=0, cy=0, totalSteps=180, up=false){
+  if (o < totalSteps) { const th=(o/totalSteps)*Math.PI; const a=up?Math.PI - th: th; return cx + r*Math.cos(a); }
+  const t=(o-totalSteps)/totalSteps; return cx + (1-t)*r + t*(-r);
+}
+export function semicircleY(o, r, cx=0, cy=0, totalSteps=180, up=false){
+  if (o < totalSteps) { const th=(o/totalSteps)*Math.PI; const a=up?Math.PI - th: th; return cy + r*Math.sin(up?-a:a); }
+  return cy;
+}
+
+// Oval (alias of ellipse with rotation/offset)
+export function ovalX(o, rx, ry, cx=0, cy=0, totalSteps=360, rotation=0, offset=0){ return ellipseX(o, rx, ry, cx, cy, totalSteps, rotation, offset); }
+export function ovalY(o, rx, ry, cx=0, cy=0, totalSteps=360, rotation=0, offset=0){ return ellipseY(o, rx, ry, cx, cy, totalSteps, rotation, offset); }
+
+// Ring (outer circle then inner reversed)
+export function ringX(o, rOuter, rInner, cx=0, cy=0, totalSteps=720){ const half=totalSteps>>1; return (o<half)?circleX(o, rOuter, cx, half, 0):circleX(half-1-(o-half), rInner, cx, half, 0); }
+export function ringY(o, rOuter, rInner, cx=0, cy=0, totalSteps=720){ const half=totalSteps>>1; return (o<half)?circleY(o, rOuter, cy, half, 0):circleY(half-1-(o-half), rInner, cy, half, 0); }
+
+// Crescent (difference of two circles; outline = outer arc + inner arc reversed)
+export function crescentX(o, r=60, offset=20, cx=0, cy=0, totalSteps=512){ const half=totalSteps>>1; if(o<half) return circleX(o, r, cx, half, 0); const r2=Math.abs(r-offset); return circleX(half-1-(o-half), r2, cx - offset, half, 0); }
+export function crescentY(o, r=60, offset=20, cx=0, cy=0, totalSteps=512){ const half=totalSteps>>1; if(o<half) return circleY(o, r, cy, half, 0); const r2=Math.abs(r-offset); return circleY(half-1-(o-half), r2, cy, half, 0); }
+
+// Named polygon wrappers
+export function pentagonX(o, radius, cx=0, stepsPerEdge=20){ return polygonX(o, 5, radius, cx, stepsPerEdge); }
+export function pentagonY(o, radius, cy=0, stepsPerEdge=20){ return polygonY(o, 5, radius, cy, stepsPerEdge); }
+export function hexagonX(o, radius, cx=0, stepsPerEdge=20){ return polygonX(o, 6, radius, cx, stepsPerEdge); }
+export function hexagonY(o, radius, cy=0, stepsPerEdge=20){ return polygonY(o, 6, radius, cy, stepsPerEdge); }
+export function heptagonX(o, radius, cx=0, stepsPerEdge=20){ return polygonX(o, 7, radius, cx, stepsPerEdge); }
+export function heptagonY(o, radius, cy=0, stepsPerEdge=20){ return polygonY(o, 7, radius, cy, stepsPerEdge); }
+export function octagonX(o, radius, cx=0, stepsPerEdge=20){ return polygonX(o, 8, radius, cx, stepsPerEdge); }
+export function octagonY(o, radius, cy=0, stepsPerEdge=20){ return polygonY(o, 8, radius, cy, stepsPerEdge); }
+export function nonagonX(o, radius, cx=0, stepsPerEdge=20){ return polygonX(o, 9, radius, cx, stepsPerEdge); }
+export function nonagonY(o, radius, cy=0, stepsPerEdge=20){ return polygonY(o, 9, radius, cy, stepsPerEdge); }
+export function decagonX(o, radius, cx=0, stepsPerEdge=20){ return polygonX(o,10, radius, cx, stepsPerEdge); }
+export function decagonY(o, radius, cy=0, stepsPerEdge=20){ return polygonY(o,10, radius, cy, stepsPerEdge); }
+
+// Extend default export object with new APIs
+try { Object.assign(Funebra, {
+  rectangleX, rectangleY, squareX, squareY,
+  rightTriangleX, rightTriangleY,
+  rhombusX, rhombusY,
+  parallelogramX, parallelogramY,
+  trapezoidX, trapezoidY, trapeziumX, trapeziumY,
+  kiteX, kiteY,
+  arrowX, arrowY,
+  semicircleX, semicircleY,
+  ovalX, ovalY,
+  ringX, ringY,
+  crescentX, crescentY,
+  pentagonX, pentagonY,
+  hexagonX, hexagonY,
+  heptagonX, heptagonY,
+  octagonX, octagonY,
+  nonagonX, nonagonY,
+  decagonX, decagonY,
+}); } catch(e) { /* ignored if Funebra not declared yet */ }
+
