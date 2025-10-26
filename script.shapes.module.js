@@ -379,6 +379,7 @@ export default {
   lineSegmentX, lineSegmentY // ← add these two lines
 };
 
-//export default Shapes;
+export default Shapes;
+
 
 
