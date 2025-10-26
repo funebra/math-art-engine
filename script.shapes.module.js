@@ -1,25 +1,21 @@
 // script.shapes.module.js — Clean, working build (Numeric 1.0 + Compat namespace)
 // ------------------------------------------------------------------------------
 
-const TAU = Math.PI * 2;
+export const TAU = Math.PI * 2;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Numeric helpers (Funebra 1.0 semantics) — every function returns a Number()
 // ──────────────────────────────────────────────────────────────────────────────
-
 
 // Simple line segment parametric (for connecting points, etc.)
 export function lineSegmentX(i, steps = 100, x1 = 0, y1 = 0, x2 = 100, y2 = 0) {
   const t = i / (steps - 1);
   return (1 - t) * x1 + t * x2;
 }
-
 export function lineSegmentY(i, steps = 100, x1 = 0, y1 = 0, x2 = 100, y2 = 0) {
   const t = i / (steps - 1);
   return (1 - t) * y1 + t * y2;
 }
-
-
 
 export function lineX(o, centerX, radius, direction, stepsPerEdge){
   const t = (o % stepsPerEdge) / stepsPerEdge;
@@ -249,7 +245,7 @@ export const decagonY   = (o, r, cy=0, s=20)=>_regularPolyY(o,10,r,cy,s);
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 3D builders (THREE optional)
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────-
 function _hasTHREE(){ return typeof THREE !== 'undefined' && THREE?.BufferGeometry; }
 
 function buildPrism({ sides=6, radius=1, height=1 }){
@@ -294,9 +290,9 @@ export function build3D(name, opts={}){
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Object-arg compatibility API (no name collisions with numeric functions)
-// Access via: FunebraShapesCompat.*
-// ──────────────────────────────────────────────────────────────────────────────
+/** Object-arg compatibility API (no name collisions with numeric functions)
+ * Access via: FunebraShapesCompat.*
+ */
 function _pointsRegularPolygon(n, r, phase=-Math.PI/2){
   const out=[]; const nn=Math.max(3, n|0);
   for(let i=0;i<nn;i++){ const a=phase + TAU*(i/nn); out.push({x:r*Math.cos(a), y:r*Math.sin(a)}); }
@@ -340,7 +336,9 @@ const FunebraShapesCompat = {
 
 export { FunebraShapesCompat };
 
+// ──────────────────────────────────────────────────────────────────────────────
 // Default export bundle (handy namespace)
+// ─────────────────────────────────────────────────────────────────────────────-
 const Shapes = {
   // numeric 2D
   lineX, lineY,
@@ -365,23 +363,18 @@ const Shapes = {
   octagonX, octagonY,
   nonagonX, nonagonY,
   decagonX, decagonY,
+
   // 3D
   build3D,
-  
-  SHAPES, PRESETS_2D, PRESETS_3D,
-  shapeByName, draw2D, build3D, toSVG,
-  regularPolygonPath, starPath, ringPath, heartPath,
-  trapezoidPath, kitePath, arrowPath, crossPath,
-  circlePath, ellipsePath, rectPath, rightTrianglePath,
-  parallelogramPath, rhombusPath, semicirclePath,
-  lerp, clamp, TAU,
-  lineSegmentX, lineSegmentY, // ← add these two lines
+
+  // constants
+  TAU,
+
+  // line segment helpers
+  lineSegmentX, lineSegmentY,
+
+  // compat (namespaced)
+  FunebraShapesCompat,
 };
 
-
 export default Shapes;
-
-
-
-
-
