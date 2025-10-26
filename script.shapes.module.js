@@ -367,8 +367,7 @@ const Shapes = {
   decagonX, decagonY,
   // 3D
   build3D,
-};
-export default {
+  
   SHAPES, PRESETS_2D, PRESETS_3D,
   shapeByName, draw2D, build3D, toSVG,
   regularPolygonPath, starPath, ringPath, heartPath,
@@ -379,7 +378,9 @@ export default {
   lineSegmentX, lineSegmentY // ← add these two lines
 };
 
+
 export default Shapes;
+
 
 
 
