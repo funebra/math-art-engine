@@ -6,6 +6,21 @@ const TAU = Math.PI * 2;
 // ──────────────────────────────────────────────────────────────────────────────
 // Numeric helpers (Funebra 1.0 semantics) — every function returns a Number()
 // ──────────────────────────────────────────────────────────────────────────────
+
+
+// Simple line segment parametric (for connecting points, etc.)
+export function lineSegmentX(i, steps = 100, x1 = 0, y1 = 0, x2 = 100, y2 = 0) {
+  const t = i / (steps - 1);
+  return (1 - t) * x1 + t * x2;
+}
+
+export function lineSegmentY(i, steps = 100, x1 = 0, y1 = 0, x2 = 100, y2 = 0) {
+  const t = i / (steps - 1);
+  return (1 - t) * y1 + t * y2;
+}
+
+
+
 export function lineX(o, centerX, radius, direction, stepsPerEdge){
   const t = (o % stepsPerEdge) / stepsPerEdge;
   return centerX + Math.cos(direction) * radius * t;
@@ -353,4 +368,16 @@ const Shapes = {
   // 3D
   build3D,
 };
+export default {
+  SHAPES, PRESETS_2D, PRESETS_3D,
+  shapeByName, draw2D, build3D, toSVG,
+  regularPolygonPath, starPath, ringPath, heartPath,
+  trapezoidPath, kitePath, arrowPath, crossPath,
+  circlePath, ellipsePath, rectPath, rightTrianglePath,
+  parallelogramPath, rhombusPath, semicirclePath,
+  lerp, clamp, TAU,
+  lineSegmentX, lineSegmentY // ← add these two lines
+};
+
 export default Shapes;
+
