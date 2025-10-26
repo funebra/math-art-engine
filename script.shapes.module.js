@@ -375,11 +375,12 @@ const Shapes = {
   circlePath, ellipsePath, rectPath, rightTrianglePath,
   parallelogramPath, rhombusPath, semicirclePath,
   lerp, clamp, TAU,
-  lineSegmentX, lineSegmentY // ← add these two lines
+  lineSegmentX, lineSegmentY, // ← add these two lines
 };
 
 
 export default Shapes;
+
 
 
 
