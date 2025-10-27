@@ -826,3 +826,7 @@ const Funebra = {
 };
 
 export default Funebra;
+// Ensure Funebra exposes THREE for all dependent scripts
+export { THREE };
+
+
