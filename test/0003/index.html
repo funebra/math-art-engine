@@ -1,0 +1,508 @@
+
+<head>  
+  <!-- Import map to resolve bare module specifiers used by dependencies (e.g., "three") -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  
+  <!-- Anti-flicker -->
+  <script>
+    (function(timeout,id){
+      var s=document.createElement("style");
+      s.id=id; s.textContent="body{opacity:0}";
+      document.head.appendChild(s);
+      function rm(){ var n=document.getElementById(id); if(n&&n.parentNode) n.parentNode.removeChild(n); }
+      window.addEventListener('DOMContentLoaded', rm, { once:true });
+      setTimeout(rm, timeout);
+    })(3000, "abhide");
+  </script>
+
+  
+  <!-- DOM snapshot lib for PNG/GIF capture -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    html,body { height:100% }
+    body { margin:0; background:rgb(200,200,230); color:red; }
+    #funebraCanvas{position:fixed; inset:0; pointer-events:none; z-index:0; }
+    #testPanel{position:fixed; top:8px; right:8px; background:rgba(0,0,0,.6); color:#cfe9cf; padding:.5rem .75rem; border-radius:.5rem; font:12px/1.4 system-ui,Segoe UI,Arial}
+    #testPanel b{color:#fff}
+    .ok{color:#9fff9f}
+    .fail{color:#ff9f9f}
+    #exportBar {
+      position:fixed; right:10px; bottom:10px; z-index:99999;
+      display:flex; gap:8px; align-items:center;
+      background:rgba(0,0,0,.5); padding:8px 10px; border-radius:8px; color:#fff;
+      font:14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    }
+    #exportBar button { border:0; border-radius:6px; padding:6px 10px; cursor:pointer; }
+    #btnPng { background:#0ea5e9; color:#fff }
+    #btnGif { background:#22c55e; color:#000 }
+    #btnCancel { background:#ef4444; color:#fff; display:none }
+  </style>
+  
+  
+<!--  https://plabsfill.com/res/tool2021-04-04-1916.js -->
+<script language="javascript" src="https://plabs.at.ua/game/aftermath.1.6.4/tool-2022-11-22-13-03-Tir.js"></script>
+<script language="javascript" src="https://plabs.at.ua/res/math.js"></script>
+    <script language="javascript" src="http://plabs.at.ua/res/regulators.js"></script>
+<script language="javascript" src="https://plabs.at.ua/res/bgspec0012o021o.js"></script>
+<SCRIPT language="javascript" src="https://plabs.at.ua/res/defObj.js"></script>
+<script src=""></script>
+<script src="https://plabs.at.ua/res/partner/jquery-1.9.1.min.js">
+</script>
+
+
+<!-- https://plabs.at.ua/game/home/tool2021-04-07-1958.js  section 2022 update-->
+<script language="javascript" src="https://plabs.at.ua/game/home/matter.js"></script>
+<script language="javascript" src="https://plabs.at.ua/res/maths001o017o.js"></script>
+<script language="javascript" src="https://plabs.at.ua/res/maths001o021o.js"></script>
+<script src="https://plabs.at.ua/game/sacred/defCon.js"></script>
+  
+
+  <script>
+  if (typeof window.initEURWave !== 'function') {
+    window.initEURWave = async function () { /* noop fallback */ };
+  }
+</script>
+
+
+
+  <!-- Global helpers -->
+  <script>
+    // Provide a global initEURWave fallback (legacy hook)
+    if (typeof window.initEURWave !== 'function') {
+      window.initEURWave = async function(){};
+    }
+    // Make onReady global for modules
+    window.onReady = function (fn) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn, { once:true });
+      } else { fn(); }
+    };
+    // Minimal mvx stub so smoke test passes (replace with real impl if needed)
+    window.mvx = window.mvx || function(){ console.log('mvx() stub invoked'); };
+  </script>
+
+
+
+
+</head>
+<body>
+  
+ 
+  <!-- ===== Quick self-tests ===== -->
+  <div id="testPanel">
+    <b>Smoke Tests</b>
+    <ul id="tests" style="margin:.25rem 0 0 .9rem; padding:0"></ul>
+  </div>
+
+  <!-- Export toolbar (PNG / GIF) -->
+  <div id="exportBar" data-export-ignore>
+    <button id="btnPng">📸 Export PNG</button>
+    <button id="btnGif">🎞️ Export GIF</button>
+    <button id="btnCancel">⏹ Cancel</button>
+    <span id="expStatus" style="margin-left:6px;opacity:.9"></span>
+  </div>
+ 
+  
+  
+  
+  
+  <!-- Ensure overlay canvas exists ASAP -->
+  <script>
+    (function ensureCanvas(){
+      var cvs = document.getElementById('funebraCanvas');
+      if (!cvs){
+        cvs = document.createElement('canvas');
+        cvs.id = 'funebraCanvas';
+        cvs.style.position = 'fixed';
+        cvs.style.inset = 0;
+        cvs.style.pointerEvents = 'none';
+        document.body.appendChild(cvs);
+      }
+    })();
+  </script>
+
+  
+  
+   <!-- Smoke tests -->
+  <script type="module">
+    const T = document.getElementById('tests');
+    const pass = (msg)=>{ const li=document.createElement('li'); li.className='ok'; li.textContent='✓ '+msg; T.appendChild(li); };
+    const fail = (msg,e)=>{ const li=document.createElement('li'); li.className='fail'; li.textContent='✗ '+msg+ (e? ' — '+(e.message||e):''); T.appendChild(li); };
+
+    // Test 1: import map works
+    try {
+      const THREE = await import('three');
+      if (THREE.Vector3) {
+        const v = new THREE.Vector3(1,2,3);
+        pass('three import resolved (Vector3 length='+v.length().toFixed(3)+')');
+      } else fail('three import missing Vector3');
+    } catch(e){ fail('three import failed', e); }
+
+    // Test 2: Funebra available OR fallback
+    try {
+      const mod = await import('https://funebra.github.io/math-art-engine/script.module.js');
+      if (mod && typeof mod.default?.render === 'function') pass('Funebra available');
+      else pass('Funebra not available — using canvas fallback');
+    } catch(e){ pass('Funebra import error — using canvas fallback'); }
+
+    // Test 3: Canvas injected
+    try {
+      const c = document.getElementById('funebraCanvas');
+      if (c) pass('funebraCanvas present'); else fail('funebraCanvas missing');
+    } catch(e){ fail('Canvas test failed', e); }
+
+    // Test 4: Animation ticking
+    try {
+      let frames=0; let id=0;
+      const r = ()=>{ frames++; if(frames>10){ pass('animation ticking'); cancelAnimationFrame(id);} else { id=requestAnimationFrame(r);} };
+      id = requestAnimationFrame(r);
+      setTimeout(()=>{ if(frames<=1) fail('animation did not tick'); }, 1000);
+    } catch(e){ fail('Animation test failed', e); }
+
+    // Test 5: mvx global
+    try { (typeof window.mvx === 'function') ? pass('mvx is globally available') : fail('mvx is not on window'); }
+    catch(e){ fail('mvx availability test failed', e); }
+  </script>
+  
+  
+  
+  
+  <script type="module">
+   import Funebra from "https://funebra.github.io/math-art-engine/script.shapes.module.js";
+    window.Funebra = Funebra;
+
+  </script>
+  
+    <div id='pcontrol' style='background:url(https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg);width:410px;color:black;'>
+        <input type='button' value='PaintV..X' onClick='mvx()'><b id='oo'></b>
+        
+        <input id='steps' value='3' type='text' style='width:30;'><b style='background-color:silver;cursor:hand;' onClick='tul(stepper)'>:  o  </b>
+        <input id='eLoop' type='checkbox' checked='false'><br><div id='stepper' style='background:black;visibility:hidden;'>
+            <input id='stpStart' value='0' type='text' style='width:30;'><---><input id='stpEnd' value='537' type='text' style='width:45;'>
+                <b style='background-color:silver;cursor:hand;' onClick='tul(stepper)'>: Steps</b></div><br>
+        
+        <input id='scodeX' type='text' value='rings[u*3]+window.innerWidth/2' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :x</b><br>
+        <input id='scodeY' type='text' value='rings[u*3+1]+200' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :y</b><br>
+        <input id='clor' type='text' value='"rgb("+(cos(iu*cz/120)*360+255)/2+", "+125+","+(cos(iu*gta/120)*360+255)/2+")"' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'>
+        <b style='background-color:silver'> :Color</b>
+      <br>
+        <div id='tool' style='position:absolute;left:252px;top:16px;visibility:hidden;z-Index:1000;background:url(https://plabs.at.ua/bluetooth/trans/still/leaf.gif);'>
+            <table collSpacing=0 CollPadding=0 RowSpacing=0 RowPadding=0 vAlign=0><td><select id='selo' onSelect='alert(this.id)'>
+                <option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/still/leaf.gif")>A Leaf ---color<option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/mot/leaf_0_0_0.gif")>A Leaf 0.0.0 ---gif<option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/mot/leaves_0_0_0.gif")>Leaves 0.0.0 ---gif<option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/mot/leaves_0_0_1.gif")>Leaves 0.0.1 ---gif<option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/mot/leaves_0_0_2.gif")>Leaves 0.0.2 ---gif<option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/mot/dot_0_0_0.gif")>A dot 0.0.0 ---gif<option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/mot/dot_0_0_1.gif")>A dot 0.0.1 ---gif<option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/mot/fire_0_0_0.gif")>fire 0.0.0 ---gif<option id='leaf' value=url("https://plabs.at.ua/bluetooth/trans/mot/rainyday_0_0_0.gif")>Rainy Day 0.0.0 ---gif<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/black.png")>A Black Square rdBorder ---background+color<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg")>Block 0.0.0 ---background+color<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/black_0_0_0.png")>A Black Point ---color_0.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/black_0_0_1.png")>A Black Point ---color_0.0.1<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/black_0_0_2.png")>A Black Point ---color_0.0.2<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/yellow_0_0_0.png")>A Yellow Point --- color_0.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/circlegradient_0_0_0.png")>A Circle Gradient --- color_0.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/clouds_0_0_0.png")>Clouds --- color_0.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/clouds_0_0_1.png")>Clouds --- color_0.0.1<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/clouds_0_0_3.png")>Clouds --- color_0.0.3<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/comet_0_0_0.png")>Comet --- color_0.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/blue_0_0_0.png")>A Blue Point --- color_0.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/blue_3_0_0.png")>A Blue Point --- color_3.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/bluelight_0_0_0.png")>A Blue Light --- color_0.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/bluelight_0_0_1.png")>A Blue Light --- color_0.0.1<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/red_0_0_0.png")>A Red Point --- color_0.0.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/red_0_0_1.png")>A Red Point ---background+color_0.0.1<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/red_0_0_2.png")>A Red Point ---background+color_0.0.2<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/red_0_0_5.png")>A Red Point ---background+color_0.0.5<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/red_0_0_6.png")>A Red Point ---background+color_0.0.6<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/red_0_1_0.png")>A Red Point ---background+color_0.1.0<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/red_0_1_1.png")>A Red Point ---background+color_0.1.1<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/htmbg_0_0_2.gif")>Old Time School Sheet ---background<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/old_0_0_0.png")>Old Time School 0_0_0 ---background<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/utee.png")>A 3D Still Bubble ---color+background<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/point.gif")>A Green 3D Still Point ---color<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/fractalligh_0_0_0.png")>Fractallight 0.0.0 ---color<option id='' value=url("https://plabs.at.ua/bluetooth/trans/mot/trans_lily_0_0_1.gif")>Animated Lily Flower ---color<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/sqr_0_0_1.png")>A Pl Useful 3D Square ---color+background<option id='' value=url("https://plabs.at.ua/bluetooth/trans/mot/trans_petunia_0_0_2.gif")>A Petunia ---color<option id='' value=url("https://plabs.at.ua/bluetooth/graphics/food/46.gif")>Food 46---color<option id='' value=url("https://plabs.at.ua/bluetooth/graphics/fire/31.gif")>Fire 31---color<option id='' value=url("https://plabs.at.ua/bluetooth/graphics/fun/40.gif")>Fun 40---color<option id='' value=url("https://plabs.at.ua/bluetooth/graphics/sport/14.gif")>Sport 14---gif*<option id='' value=url("https://plabs.at.ua/bluetooth/trans/still/football_0_0_0.png")>Sport football 0.0.0---gif*<option id='' value=url("https://plabs.at.ua/bluetooth/graphics/smilies/70.gif")>Smilies 70---color<option id='' value=url("https://plabs.at.ua/bluetooth/graphics/lights/37.gif")>Lights 37---color<option id='' value=url("https://plabs.at.ua/bluetooth/graphics/technick/80.gif")>Technick 80---color<option id='' value=url("./bluetooth/bg/1_107.gif")>BackGround 256x256---gif*<option id='' value=url("./bluetooth/bg/ani_water.gif")>Underwater reTURNIII---background<option id='' value=url("./bluetooth/bg/rotating_globe.gif")>Global0 reTURNIII---gif*<option id='' value=url("./bluetooth/bg/rotating_earth.gif")>Global1 reTURNIII---gif*<option id='' value=url("./bluetooth/trans/mot/aquarium_0_0_0.gif")>Aquarium eyeReBourneII---gif*<option id='' value=url("./bluetooth/bg/aquarium_0_0_0.jpg")>Aquarium II eyeReBourneII---jpg*<option id='' value=url("./bpot/water/afish.gif")>Anime Fish reTURNIII---color<option id='' value=url("./bluetooth/trans/mot/afish_0_0_0.gif")>Anime Fish reFurBed---color<option id='' value=url("./bluetooth/trans/mot/angelfish_0_0_0.gif")>Angelfish Fish reFurBed---color<option id='' value=url("./bluetooth/trans/mot/bfish_0_0_1.gif")>B Fish reFurBed---color<option id='' value=url("./bluetooth/trans/mot/clownfish_0_0_0.gif")>Clown Fish reFurBed---color<option id='' value=url("./bluetooth/trans/mot/discusfish_0_0_0.gif")>Discus Fish reFurBed---color<option id='' value=url("./bluetooth/trans/mot/discusfish_0_0_1.gif")>Discus II Fish reFurBed---color<option id='' value=url("./bluetooth/trans/mot/discusfish_0_0_2.gif")>Discus III Fish reFurBed---color<option id='' value=url("./bluetooth/trans/mot/dolphin_0_0_0.gif")>Dolphin 0.0.0 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/dolphin_0_0_1.gif")>Dolphin 0.0.1 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/dolphin_0_0_2.gif")>Dolphin 0.0.2 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/dolphin_0_1_1.gif")>Dolphin 0.1.1 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/dolphin_0_1_2.gif")>Dolphin 0.1.2 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/dolphin_0_1_3.gif")>Dolphin 0.1.3 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/guppie_0_0_0.gif")>Guppie 0.0.0 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/guppie_0_0_1.gif")>Guppie 0.0.1 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/guppie_0_2_0.gif")>Guppie 0.2.0 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/guppie_0_2_1.gif")>Guppie 0.2.1 reFurBed---color<option id='' value=url("./bluetooth/trans/mot/tigerfish_0_0_0.gif")>tiger fish 0.0.0 reFurBed---color<option id='' value=url("./bpot/water/bfish.gif")>3D Fish reTURNIII---color<option id='' value=url("./bluetooth/bg/quake_0_0_1.jpg")>Quake 0.0.1 ---background<option id='' value=url("./sc900.jpg")>Counter Strike ---background<option id='' value=url("./bluetooth/trans/counter_strike/counterplay_0_0_0.jpg")>Counter Strike 0.0.0 ---background<option id='' value=url("./bluetooth/trans/counter_strike/counterplay_0_0_1.jpg")>Counter Strike 0.0.1 ---background<option id='' value=url("./bluetooth/trans/counter_strike/counterplay_0_0_2.jpg")>Counter Strike 0.0.2 ---background<option id='' value=url("./bluetooth/bg/blue_gradient_0_0_0.jpg")>Blue Gradient 0.0.0 ---background<option id='' value=url("./bluetooth/bg/earth_0_0_0.jpg")>Blue Earth 0.0.0 ---background<option id='leaf' value=url("./bluetooth/trans/mot/rainyday_0_0_0.gif")>Rainy Day 0.0.0 ---gif<option id='leaf' value=url("./bluetooth/trans/mot/R0010217_20160708075807.jpg")>VR 360 Museum 0.0.0 ---gif<option id='' value='rgb(255,255,255)'>White ---background only<option id='' value=lightgray>LightGray ---background only<option id='' value=gray>Gray ---background only<option id='' value=rgb(0,0,0)>Black ---background only</select><input type='button' value='change' onClick='opaz()'><input id='chk' type='checkbox' checked=true><input type='button' value='colors' onClick='tul(page01)'></td><tr><td><input id='wL' type='text' value='cos(o/38.6)*120'><input id='hT' type='text' value='i/74'><img src='https://plabs.at.ua/res/icos/ur.gif' style='position:relative;top:8;width:12;height:24;' title='Undo/Redo or simply input position level'><input id='mPosition' type='text' value='0' style='width:45;'><input type='button' value='moVE' onClick='detrm()'></td></tr><td><input id='bo' type='text' value='rgb(200, 200,230)'><input type='button' value='fillBG' onClick='chngBG20()'><input type='button' value='fillB2' onClick='chngBaG()'><input type='button' value='SetFill' onClick='bo.value = "url("+clor.value+")";'><input type='button' value='Advanced :(-_-)' onClick='tul(cntrForm1);'></td></tr></table><br></div><div id='cntrForm1' style='position:absolute;top:135;z-Index:1000;left:10;background:brown;visibility:hidden;'><input type='button' value='AutoExe' style='background:rgb(230, 200, 200);' onClick='tul(objDef);'><br><input type='button' value='close=)' onClick='tul(cntrForm1)'><br><input type='button' id='pgl' value='<Page0' onClick='tul(page01);tul(page02);'>
+      <input type='button' id='pgr' value='Page1>' onClick='tul(page02);tul(page03);'><input type='button' id='pcoords' value='Coords' onClick='tul(page03);tul(page04);'><br><b style='cursor:pointer;color:gold;' id='mod2025' onClick='mod = 2024;if(this.id.split(&quot;mod&quot;)[1] >= mod){alert(&quot;welcome 2026 :)&quot;)}'>2025</b><div id='a20250001' style='enabled:false;height:;'> 2 parallel circles<br><b id='a20250001stepsEnd' onclick='stpEnd.value = this.innerText;'> 119 </b><br><b id='a20250001steps' onclick='steps.value = this.innerText;'> 1 </b><br><b id='a20250001x' onclick='scodeX.value = this.innerText;'> cos(o*PI/30)*120+ (o > 60 ? 600 : 300) </b><br><b id='a20250001y' onclick='scodeY.value = this.innerText;'> sin(o*PI/30) * 120+360 </b><br><a href='https://chatgpt.com/s/t_68ada052ed0c8191a6bafbac92b18ea2' target='_blank'>info</a></div><div id='a20250002' style='enabled:false;'> a pentagon<br><b id='a20250002stepsEnd' onclick='stpEnd.value = this.innerText;'> 100 </b><br><b id='a20250002steps' onclick='steps.value = this.innerText;'> 1 </b><br><b id='a20250002x' onclick='scodeX.value = this.innerText;'> edge = floor(o/20);<br>t = (o % 20)/20;<br>x1 = cos(edge*2*PI/5)*120 + 300;<br>x2 = cos((edge+1)*2*PI/5)*120 + 300;<br>(1-t)*x1 + t*x2</b><br><b id='a20250002y' onclick='scodeY.value = this.innerText;'>y1 = sin(edge*2*PI/5)*120 + 360;<br>y2 = sin((edge+1)*2*PI/5)*120 + 360;<br>(1-t)*y1 + t*y2</b><br><a href='https://chatgpt.com/s/t_68ada052ed0c8191a6bafbac92b18ea2' target='_blank'>info</a></div></div><div id='objDef' style='position:absolute;top:135px;z-Index:1000;left:200px;background:brown;visibility:hidden;'><textarea id='oDef' style='Width:300px;height:230px;'><table style='position:absolute;left:400px;top:480px;'><tr><td>&lt;div style='width:400;height:100;'&gt;&lt;textarea id='ttxt' style='position:;left:;top:;width:400;height:100;' onClick='this.value = scodeZ.value;' &gt;&lt;/textarea&gt;&lt;br&gt;&lt;input type='button' value='Change'&gt;&gt;getTime()&lt;&lt;/div&gt;</td><td><input type='button' value='Run' onClick='if(ttxt.value != ""){eval(ttext.value)}else{alert("code is empty");}'></td></tr></table></textarea><br><input type='button' value='Change' onclick='eval(oDef.value)'><input type='button' value='Clear' onclick='oDef.value =&quot;&quot;'><input type='button' value='Run Code' style='background:green;border-radius:10%;border-bottom:3px dotted orange;' onclick='execon()'></div><div id='page01' style='visibility:hidden;background:black;width:300;height:400;position:absolute;right:3px;top:0px;'><b style=''><br><center><img src='https://plabs.at.ua/bluetooth/gallery/pplay0001.gif'></center><a href='http://info.flagcounter.com/1xp7'><img src='//s01.flagcounter.com/count2/1xp7/bg_F1FFB8/txt_000000/border_CCCCCC/columns_4/maxflags_12/viewers_0/labels_0/pageviews_1/flags_0/percent_0/' alt='Flag Counter' border='0'></a><div id='page01p1'></div><br><input type='button' value='Play Music' onClick='eval(lista)'><br><center><input type='button' value='000<' onClick='' ><input type='text' id='pgindex' style='width:30;' value='0'><input type='button' value='>000' onClick='' ></center></b>&nbsp;</div> <div id='page02' style='visibility:hidden;width:360px;'><b style='position:absolute;right:3px;top:0px;'><div style='background:gray;'><b id='mvx1control' onClick='oDef.value=mvx1control.innerText;execon();' style='position:absolute;right:0px;align:right;background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;font-family:wingdings;width:60px;height:20px;color:rgb(200, 200, 230);'>mvx()</b><b id='stepwireX' onClick='scodeX.value = this.innerText;' style='cursor:hand;color:blue;'>[gta+u*cz*3]/120+400</b><br><b id='stepwireY' onClick='scodeY.value = this.innerText;' style='cursor:hand;color:blue;'>apple(o*u/cz)*apple(o*cz+1)*(1.0/cz)+280</b><br><img onClick='scodeY.value = stepwireY.innerText;oDef.value=machine.innerText;execon();' src='https://plabs.at.ua/bluetooth/trans/still/lime.png' style='cursor:hand;color:blue;'>Application starts today 2021-04-06 11:03<br>apple(o*u/cz)*apple(o*cz+1)*(1.0/cz)+280</img><br><b id='machine' onClick='execon();' style='cursor:hand;color:blue;'>mvx()</b><br></div><br><div style='background:lightgray;'>Still researching in a better performance.<br>try to add the following treat formula <br>to se reactions...<br><b onClick='scodeY.value = this.innerText;' style='cursor:hand;color:blue;'>[gta+u*cz*cos(cz/10)]/180*apple(o*cz+1)*(1.0/cz)+280</b><br><b onClick='scodeY.value = this.innerText;' style='cursor:hand;color:blue;'>[gta+u*cz*sin(cz/10)*120]/180*cos(o*cz/80)*(3.0/cz)+280</b><br>2021-04-06 11:49[*-O]<br><b id='image1control' onClick='eval(image1resource.value);' style='position:absolute;right:0px;align:right;background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;font-family:wingdings;width:60px;height:20px;color:rgb(200, 200, 230);'>black</b><input type='text' id='image1resource' value='https://plabs.at.ua/bpot/cioX/gamebrooke/Molly.gif' style='border-radius:10px;'><br><div id='image1container'><img id='image1' src='https://plabs.at.ua/tools/values/drop_0_0_0.gif' style='width:360;height:120;'></div><br><b onClick='scodeY.value = this.innerText;' style='cursor:hand;color:rgb(200 , 200, 230);background:url(https://plabs.at.ua/bluetooth/trans/still/black.png);'>[gta+u*cz*sin(o/12.0)]/120*[gta+u+cz+cos(cz/120)]/400+280</b><br>2021-04-06 12:43[*-O]<br><b onClick='scodeY.value = this.innerText;' style='cursor:hand;color:blue;'>cos(gta+o/70)*sin(o/12)*120+[gta+u-zx*cz]/164+280</b><br>2021-04-06 14:20[*-O]<br></div><br><div style='background:gray;'><b onClick='scodeZ.value = this.innerText;' style='cursor:hand;color:blue;'>triangle(point)*120</b><br><b onClick='scodeZ.value = this.innerText;' style='cursor:hand;color:blue;'>triangle1(point)</b><br></div><br><div style='background:rgb(30,30,120);color:orange;'>This ObMoves...:<br><b onClick='scodeZ.value = this.innerText;' style='cursor:hand;color:;'>puff(120, 50)*120</b><br><b onClick='scodeZ.value = this.innerText;' style='cursor:hand;color:;'>puff(150, 60)*120</b><br><b onClick='scodeZ.value = this.innerText;' style='cursor:hand;color:;'>puff(150, 90)*120</b><br><b onClick='scodeZ.value = this.innerText;' style='cursor:hand;color:;'>psf(point+240)*120</b><br></div><br><div style='background:lightgray;color:green;'>Plasta [01]...:<br><b onClick='scodeZ.value = this.innerText;' style='cursor:hand;color:;'>logo1(point)</b><br><b onClick='scodeZ.value = this.innerText;' style='cursor:hand;color:;'>logo2(point)</b><br>eval(</div><br><div style='background:gray;color:gold;'>Mag Hornz..[02]...:<br>eval(cos(o+ceil(11.9720)^2) * 200)+408<br>eval(tan(o) * 190^PI/sin(7.30)^5)+212</div><br><div style='background:lightgray;color:green;'>By Logical[01]Lady...:<br>eval(cos(o+ceil(12.9720)^2) * 200)+408<br>eval(tan(o) * 190^PI/sin(7.30)^5)+212<br><div id='cp_widget_3a6fa25a-6129-48d3-836b-34eba3189075'>...</div></div><br></b></div><div id='page03' style='visibility:hidden;'><b style='position:absolute;right:3px;top:0px;'><div style='background:gray;'><input type='button' value='Export' onclick='download(document.getElementById("kordstxt").innerHTML, "pExports"+Math.floor((Math.random()*9999999)+1000000)+".html", "text/html");'><input type='button' value='Import' onclick='fread()'><input type='button' value='Clear' onClick='isIndex=[0];'><br><textarea id='kordstxt' value='Trying'  onClick='this.innerText = isIndex;' style='width:300;height:400;'></textarea></div><br><div style='background:lightgray;'>A Little Square:<br>eval(floor(cos(o/22)*PI*2))+412<br>eval(floor(cos(o/16)*PI*2))+412</div><br><div style='background:gray;'>Pow fakt:<br>eval(cos(o) * 213)+412<br>eval(sin(o) * 176/pow(42))+240<br>pow() acts strange as saving function</div><br><div style='background:lightgray;'>Objective Look At This Circle:<br>eval(cos(o) * 150^3.7)+412<br>eval(sin(o) *130^ceil(tan(41.2)))+240</div><br><div style='background:rgb(30,30,120);color:orange;'>Play on...:<br>eval(o * 340 / Math.PI * 2 / 360)+290<br>eval(cos(o) * 190^sin(9.22))+412</div><br><div style='background:lightgray;color:green;'>Play on[01]...:<br>eval(o * 600 / Math.PI * 2 / 400)+290<br>eval(cos(o) * 190^PI/sin(7.30)^5)+412</div><br><div style='background:gray;color:gold;'>Play on[02]...:<br>eval(cos(o) * 220)+412<br>eval(cos(o/tan(0.372)) * 190^sin(9.22))+412</div><br><div style='background:lightgray;color:green;'>By Logical[01]...:<br>eval(cos(o) * 220)+408<br>eval(sin(o/ceil(PI)) * 120)+408</div><br></b></div><div id='page04' style='visibility:hidden;'><b style='position:absolute;right:3px;top:0px;'><div style='background:gray;'>By Logics [02]_Circlez:<br>eval(cos(o+ceil(16.9720)^2) * 200)+408<br>eval(sin(o+ceil(16.9720)^2) * 200)+208</div><br></b></div><input id='itext' type='text' style='width:340px;' value='"&#9787;"'><b style='background-color:silver'> :iText</b><br><input type='button' value='toolz' onClick='tul(tool);tul(page01);if(eLoop.checked == false){tul(pl80);tul(demLim)}'><input type='button' value ='Cleanup' onclick ='bn1.innerHTML=&quot;&quot;'><br><input type='text' id='dta' value='2048' style='width:40;background:url(https://plabs.at.ua/bluetooth/trans/still/green.png);'></div><div id='pl80' style='position:absolute;background:lightblue;visibility:hidden;width:200;height:160;z-Index:2;'>
+            <div id="ui">
+  <div class="panel">
+    <h3>Radar sweep</h3>
+    <div class="row"><label>Speed</label><input id="speed" type="range" min="0.05" max="3" step="0.05" value="1.0"><span id="speedVal">1.0×</span></div>
+    <div class="row"><label>Width</label><input id="width" type="range" min="0.02" max="0.35" step="0.005" value="0.09"><span id="widthVal">0.09</span></div>
+    <div class="row"><label>Glow</label><input id="glow" type="range" min="0" max="2.5" step="0.05" value="1.2"><span id="glowVal">1.2</span></div>
+    <div class="row"><label>Grid</label><input id="grid" type="range" min="0" max="1" step="0.01" value="0.35"><span id="gridVal">0.35</span></div>
+  </div>
+  <div class="panel">
+    <h3>Stream</h3>
+    <div class="row"><button id="btnMock">Start mock stream</button><button id="btnBurst">Burst ×200</button><button id="btnClear">Clear</button></div>
+    <div class="row"><label>Window</label><input id="windowSec" type="range" min="10" max="600" step="10" value="60"><span id="windowVal">60s</span></div>
+  </div>
+  <div class="panel">
+    <h3>JSON live</h3>
+    <div class="row" style="flex-wrap:wrap; gap:6px 10px; max-width:560px">
+      <label style="width:80px">POST URL</label><input id="postUrl" style="flex:1; min-width:280px" placeholder="https://api.example.com/v1/fgpp">
+      <label style="width:80px">Stream URL</label><input id="streamUrl" style="flex:1; min-width:280px" placeholder="wss://api…/stream or https://…/sse">
+      <label style="width:80px">Token</label><input id="authToken" style="flex:1; min-width:180px" placeholder="optionalBearerOrQuery">
+    </div>
+    <div class="row">
+      <button id="btnConnectSSE">Connect SSE</button>
+      <button id="btnConnectWS">Connect WS</button>
+      <button id="btnSendJSON">Send JSON test</button>
+      <span id="liveState" style="margin-left:8px; color:#9fb3ff">disconnected</span>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Export</h3>
+    <div class="row"><button id="btnShot">PNG snapshot</button></div>
+    <small>Privacy-first demo: locations are synthetic or coarse-jittered; no PII.</small>
+  </div>
+</div>
+      
+                </div>
+
+    
+
+    
+<script>
+
+
+var x = 0; y = 0; i=600; iCount = 0;pCounter=new Array();
+var deg2radians = Math.PI *2 / 360;amountOfp=-2;
+
+
+h =0;
+oi = 'DIV';
+if(typeof oi == 'undefined'){oi = 'object';}
+function chngBG(){
+document.body.style.background = selo.options[selo.selectedIndex].value;
+}
+
+
+var  ca=1;cb=324;cz=0;
+function gear(){
+if(ca <= 322){ca +=2;cz=ca;}
+setTimeout("gear()",200);
+}gear()
+
+function osc1(){
+if(ca == 323){if(cb > 1)
+cb -= 1; cz = cb;
+}if(cb == 1){cb = 324;ca=1;}
+window.setTimeout("osc1()", 200);
+}osc1();
+
+function osc2(){}
+
+var bod ='';
+function printit(){
+pTool1();
+if(h < 1024){
+   h=h+1;status=h;
+
+ojy = document.createElement(oi);
+ojy.style.position = 'absolute';
+ojy.id = 'bn'+h;
+ojy.onclick= function() { mPosition.value = this.id.substring(2, this.id.Length); oDef.innerText = eval('bn'+this.id.substring(2, this.id.Length)).innerHTML;}
+ojy.style.cursor='hand';
+document.body.appendChild(ojy);
+if(h == 20)bod += "<div id='pcontrol' style='background:url(https://plabs.at.ua/bluetooth/trans/still/block_0_0_0.jpg);width:410px;color:black;'><input type='button' value='PaintV..X' onClick='mvx()'><b id='oo'></b>"+
+   "<input id='steps' value='3' type='text' style='width:30;'><b style='background-color:silver;cursor:hand;' onClick='tul("+'stepper'+")'>:  o  </b><input id='eLoop' type='checkbox' checked='false'><br>"+
+"<div id='stepper' style='background:black;visibility:hidden;'><input id='stpStart' value='0' type='text' style='width:30;'><---><input id='stpEnd' value='717' type='text' style='width:45;'><b style='background-color:silver;cursor:hand;' onClick='tul("+'stepper'+")'>: Steps</b></div><br>"+
+   "<input id='scodeX' type='text' value='rings[u+zx+3]+180' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :x</b><br>"+
+   "<input id='scodeY' type='text' value='rings[u+zx+4]+360' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :y</b><br>"+
+   "<input id='clor' type='text' value='"+'"rgb("+(cos(iu*cz/120)*360+255)/2+", "+125+","+(cos(iu*gta/120)*360+255)/2+")"'+"' style='background:url(https://plabs.at.ua/bluetooth/trans/still/black.png)100% 100%/100% 100%;color:rgb(200, 200, 230);width:340px;'><b style='background-color:silver'> :Color</b>"+lev+
+   "<input id='itext' type='text' style='width:340px;' value='"+'"&#9787;"'+"'><b style='background-color:silver'> :iText</b><br>"+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   "<input type='button' value='toolz' onClick='tul("+'tool'+");tul("+'page01'+");"+
+   "if(eLoop.checked == false){tul("+'pl80'+");tul("+'demLim'+")}'>"+
+  "<input type='button' value ='Cleanup' onclick ='bn1.innerHTML=&quot;&quot;'>"+
+
+"<br><input type='text' id='dta' value='2048' style='width:40;background:url(https://plabs.at.ua/bluetooth/trans/still/green.png);'>"+
+
+
+"</div><div id='pl80' style='position:absolute;background:lightblue;visibility:hidden;width:200;height:160;z-Index:2;'></div>";
+   window.setTimeout("printit()",50);
+ }
+}
+o =0;var lTmer =0;hPntz =0;
+function detrm(){
+o = eval(mPosition.value);
+}
+function def(){
+eval('bn'+mPosition.value).innerHTML = oDef.value;
+}
+var isIndex = [];
+ob =0;isId = 0;u=0;iu=600;zx=0;
+function mvx(){
+
+
+if(eLoop.checked = 'true' && steps.value >= 0 ){;status=x;}
+if(o <= Math.floor(eval(stpEnd.value) / eval(steps.value))){o = o+eval(eval(stpStart.value)+eval(steps.value));m='bn'+o;oo.innerText=o;ob=ob+1;isId +=1;u+=1;
+             iu = u*3;zx=zx+1*2;
+             i = i-eval(steps.value);
+              iCount += 3.1415;
+                                  rad = iCount * deg2radians;
+with(Math){      costheta = cos(rad);
+                                  sintheta = sin(rad);
+                                         x = x + costheta;
+                                         y = y + sintheta;
+  if(chk.checked == true){
+document.getElementById(m).style.zIndex = o;
+
+if(clor.value.substring(1, 4)=='rgb'){
+document.getElementById(m).innerHTML=eval(itext.value);
+document.getElementById(m).style.fontSize='14pt';
+document.getElementById(m).style.color = eval(clor.value);
+//document.getElementById(m).style.width = eval(wL.value); document.getElementById(m).style.height = eval(hT.value);
+}  
+
+if(clor.value.substring(3,7)=='blue'){
+document.getElementById(m).innerHTML = "<img id='io"+ob+"' src='"+eval(clor.value)+"' width='"+eval(wL.value)+
+                                       "' height='"+eval(hT.value)+"'>";}
+if(clor.value.substring(1,5)=='http'){
+document.getElementById(m).innerHTML = "<img id='io"+ob+"' src='"+eval(clor.value)+"' width='"+eval(wL.value)+
+                                       "' height='"+eval(hT.value)+"'>";}  
+document.getElementById(m).style.top = eval(scodeY.value) + "px";
+document.getElementById(m).style.left = eval(scodeX.value) + "px";
+isIndex[isId]=round(eval(m).style.top.substring(0,eval(m).style.top.length-2))+','+round(eval(m).style.left.substring(0,eval(m).style.left.length-2))+','+round(eval(m).style.left.substring(0,eval(m).style.left.length-2));
+}};setTimeout("mvx()", eval(dta.value));
+}else{o = 0;x = 0;i = 600;y = 0;ob = 0;u=0;iu=600;zx=0;}
+}
+
+
+/*
+var falso = new ActiveXObject("Scripting.FileSystemObject");
+function mSave(){
+var a = falso.CreateTextFile(".\\3Dcoords.txt", true);
+    a.WriteLine(isIndex);
+    a.Close();
+}  */
+
+
+
+scounter = 0;
+
+
+function xIt(){lvel = steps.value +3;}
+function opaz(){msp = selo.options[selo.selectedIndex].value;
+
+clor.value = msp.substring(4, msp.length -1);}
+function tul(ctr){
+if(ctr.style.visibility == 'hidden'){
+//page01.style.visibility = '';
+ctr.style.visibility ="";
+}else{ctr.style.visibility = 'hidden';}}
+
+printit();
+
+function printpetit(soda){
+if(soda==0){printit();}
+          else{soda=soda-1;}
+}
+ gta = 360;
+function execon(){
+if(gta > 0){
+    gta = gta-1;
+eval(oDef.value);
+window.setTimeout("execon()", dta.value);
+}else{
+       gta = 360;
+}
+}
+</script>
+<script src="https://plabs.at.ua/res/partner/download.js">
+</script>
+
+
+  <!-- ===== PNG / GIF Exporter (one consolidated module) ===== -->
+  <script type="module">
+    const stage = document.getElementById('stage') || document.body;
+    const expStatus = document.getElementById('expStatus');
+    const btnPng = document.getElementById('btnPng');
+    const btnGif = document.getElementById('btnGif');
+    const btnCancel = document.getElementById('btnCancel');
+
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+    const commonCaptureOpts = {
+      useCORS: true,
+      backgroundColor: null, // keep transparency for both PNG and GIF
+      scale: dpr,
+      // hide any element explicitly marked to ignore
+      ignoreElements: (el) => el && (el.id === 'exportBar' || el.hasAttribute('data-export-ignore'))
+    };
+
+    async function captureOnce(){
+      if(typeof html2canvas!=="function"){ throw new Error('html2canvas not available'); }
+      return html2canvas(stage, commonCaptureOpts);
+    }
+
+    // ------ PNG ------
+    btnPng.addEventListener('click', async ()=>{
+      try {
+        expStatus.textContent = ' Capturing PNG…';
+        const canvas = await captureOnce();
+        canvas.toBlob(b => {
+          const a=document.createElement('a');
+          a.href=URL.createObjectURL(b); a.download='funebra_snapshot.png'; a.click();
+          URL.revokeObjectURL(a.href);
+        }, 'image/png');
+        expStatus.textContent = ' ✅ PNG saved';
+      } catch(err){ console.error(err); expStatus.textContent=' ⚠️ PNG failed'; }
+    });
+
+    // ------ GIF ------
+    let cancelGif = false;
+
+    function getTotalFrames(){
+      // Derive from step controls: frames = floor((end - start)/step) + 1
+      const steps = Number(document.getElementById('steps')?.value || 1);
+      const start = Number(document.getElementById('stpStart')?.value || 0);
+      const end = Number(document.getElementById('stpEnd')?.value || 0);
+      const safeStep = Math.max(1, Math.floor(steps));
+      const span = Math.max(0, end - start);
+      return Math.floor(span / safeStep) + 1;
+    }
+
+    async function loadGifLib(){
+      await import('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js');
+      const res = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
+      if(!res.ok) throw new Error('Failed to fetch gif.worker.js');
+      const workerUrl = URL.createObjectURL(await res.blob());
+      return workerUrl;
+    }
+
+    btnGif.addEventListener('click', async ()=>{
+      if(btnGif.disabled) return; cancelGif=false; btnGif.disabled=true; btnPng.disabled=true; btnCancel.style.display='';
+      try {
+        expStatus.textContent=' Measuring stage…';
+        const first = await captureOnce();
+        const width = first.width, height = first.height;
+
+        expStatus.textContent=' Preparing encoder…';
+        const workerUrl = await loadGifLib();
+        const gif = new window.GIF({ workers: 4, workerScript: workerUrl, quality: 10, width, height });
+        gif.on('finished', blob => { URL.revokeObjectURL(workerUrl); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`funebra_animation_${new Date().toISOString().replace(/[:.]/g,'-')}.gif`; a.click(); URL.revokeObjectURL(url); expStatus.textContent=' ✅ GIF saved'; });
+        gif.on('progress', p => { expStatus.textContent = ` Encoding… ${Math.round(p*100)}%`; });
+
+        const frames = Math.max(1, getTotalFrames());
+        const delayMs = 40; // ~25fps
+
+        // Kick mvx if idle to sync animation steps
+        if(!window.__funebraRunning){ try{ window.__funebraRunning=true; mvx(); }catch(_){}}
+
+        // First frame (already captured)
+        expStatus.textContent=` Recording 1/${frames}…`;
+        gif.addFrame(first, { copy:true, delay: delayMs });
+
+        // Cancel handler
+        btnCancel.onclick = ()=>{ cancelGif=true; expStatus.textContent=' Cancelling…'; };
+
+        for(let i=1;i<frames;i++){
+          if(cancelGif) break;
+          expStatus.textContent=` Recording ${i+1}/${frames}…`;
+          // wait either for the engine step or timeout to avoid deadlocks
+          await Promise.race([
+            new Promise(r => { window.__onFunebraStep = r; }),
+            new Promise(r => setTimeout(r, dta.value))
+          ]);
+          const c = await captureOnce();
+          gif.addFrame(c, { copy:true, delay: delayMs });
+        }
+
+        if(!cancelGif){ expStatus.textContent=' Finalizing GIF…'; gif.render(); } else { expStatus.textContent=' ❎ GIF cancelled'; }
+      } catch(err){ console.error(err); expStatus.textContent=' ⚠️ GIF failed (see console)'; }
+      finally { btnGif.disabled=false; btnPng.disabled=false; btnCancel.style.display='none'; btnCancel.onclick=null; cancelGif=false; }
+    });
+  </script>
+
+</body>  
