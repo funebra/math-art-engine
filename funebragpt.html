@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>FunebraGPT™ — The Creative Intelligence of the Funebra Math-Art Universe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="FunebraGPT is your creative collaborator for Funebra: generative math-art, geometry, music, 3D printing, philosophy — built by pLabs Entertainment." />
+  <meta name="theme-color" content="#0a0f1c" />
+  <link rel="icon" href="https://funebra.github.io/math-art-engine/assets/funebra-star.png" />
+  <link rel="apple-touch-icon" href="https://funebra.github.io/math-art-engine/assets/funebra-star.png" />
+  <link rel="canonical" href="https://funebra.github.io/math-art-engine/funebragpt.html" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="FunebraGPT™ — Creative Intelligence for Math-Art" />
+  <meta property="og:description" content="Summon generative geometry, audio, and 3D print flows with FunebraGPT — the assistant of the Funebra™ universe." />
+  <meta property="og:url" content="https://funebra.github.io/math-art-engine/funebragpt.html" />
+  <meta property="og:image" content="https://funebra.github.io/math-art-engine/assets/og/funebragpt-og.png" />
+  <meta property="og:site_name" content="Funebra™" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="FunebraGPT™ — Creative Intelligence for Math-Art" />
+  <meta name="twitter:description" content="Your co-pilot for Funebra geometry, music, 3D prints, and philosophy." />
+  <meta name="twitter:image" content="https://funebra.github.io/math-art-engine/assets/og/funebragpt-og.png" />
+
+  <!-- Fonts (system stack only, no external calls) -->
+
+  <style>
+    :root{
+      --bg: #05060a; --bg2:#0a0f1c; --fg:#e8f1ff; --muted:#9fb0d1; --accent:#86f0ff;
+      --card:#0e1220; --glow: rgba(134,240,255,.35);
+      --btn:#101b2f; --btnBorder:#1b2a46; --btnHover:#13223a;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--fg);
+      background:
+        radial-gradient(1200px 700px at 70% 10%, var(--bg2) 0%, var(--bg) 40%, #000 100%),
+        radial-gradient(800px 400px at 25% 85%, #0c1430 0%, transparent 60%);
+      font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      letter-spacing:.2px;
+    }
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    .wrap{max-width:1100px; margin:0 auto; padding:28px 20px 80px}
+    .badge{display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border:1px solid #223050; border-radius:999px; color:var(--muted); background:rgba(10,15,28,.5)}
+    .badge img{width:18px; height:18px}
+
+    header{
+      display:grid; gap:18px; padding:40px 0 22px;
+    }
+    h1{
+      font-size: clamp(28px, 4vw, 52px);
+      line-height:1.1; margin:8px 0 10px;
+      text-shadow: 0 0 22px var(--glow);
+    }
+    .lead{font-size:clamp(16px,2.2vw,22px); color:#cfe2ff; max-width:800px}
+    .ctaRow{display:flex; flex-wrap:wrap; gap:12px; margin-top:18px}
+
+    .btn{
+      appearance:none; border:1px solid var(--btnBorder); background:var(--btn); color:var(--fg);
+      padding:12px 16px; border-radius:14px; cursor:pointer; font-weight:600; transition:.2s ease;
+      display:inline-flex; align-items:center; gap:10px; text-decoration:none;
+      box-shadow: 0 0 0 0 rgba(0,0,0,0);
+    }
+    .btn:hover{background:var(--btnHover); transform:translateY(-1px)}
+    .btn.primary{border-color:#2a445f; box-shadow: 0 0 28px var(--glow) inset}
+    .btn small{opacity:.7; font-weight:500}
+
+    .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin-top:26px}
+    .card{
+      background:linear-gradient(180deg, rgba(20,28,48,.6), rgba(10,14,26,.7));
+      border:1px solid #20324f; border-radius:18px; padding:16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.35), inset 0 0 40px rgba(134,240,255,.05);
+    }
+    .card h3{margin:0 0 4px; font-size:18px}
+    .card p{margin:6px 0 0; color:var(--muted); font-size:14px}
+    .kicker{color:var(--muted); font-weight:600; letter-spacing:.6px; text-transform:uppercase; font-size:12px}
+
+    .grid2{display:grid; grid-template-columns:1.1fr .9fr; gap:20px; align-items:start; margin-top:36px}
+    @media (max-width:900px){ .grid2{grid-template-columns:1fr} }
+
+    .panel{
+      background:linear-gradient(180deg, rgba(16,22,38,.8), rgba(8,12,22,.85));
+      border:1px solid #1e2a45; border-radius:18px; padding:18px;
+    }
+    .panel h2{margin:0 0 10px; font-size:22px}
+    .panel p{margin:10px 0; color:#cddaf7}
+
+    .prompt{
+      display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; margin:10px 0 0;
+      background:#0b1426; border:1px solid #1f2e4a; border-radius:12px; padding:10px;
+    }
+    .prompt code{white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; color:#d9e8ff}
+    .copy{padding:10px 14px; border-radius:10px; border:1px solid #2a3a5e; background:#101b2f; color:#dfeaff; cursor:pointer}
+    .copy:hover{background:#13223a}
+    .tiny{font-size:12px; color:var(--muted)}
+
+    .footer{
+      margin-top:50px; padding:20px; text-align:center; color:#aebfe0;
+    }
+    .logo{width:30px; height:30px; vertical-align:middle; margin-right:8px}
+    .hr{height:1px; background:linear-gradient(90deg, transparent, #284265, transparent); border:0; margin:28px 0}
+  </style>
+
+  <!-- JSON-LD: SoftwareApplication + Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "FunebraGPT",
+    "applicationCategory": "AIApplication",
+    "operatingSystem": "Web",
+    "creator": {
+      "@type": "Organization",
+      "name": "pLabs Entertainment",
+      "url": "https://funebra.github.io/math-art-engine/",
+      "logo": "https://funebra.github.io/math-art-engine/assets/funebra-star.png"
+    },
+    "description": "FunebraGPT is the creative intelligence of the Funebra Math-Art Universe — guiding geometry, music, and 3D printing.",
+    "url": "https://funebra.github.io/math-art-engine/funebragpt.html",
+    "image": "https://funebra.github.io/math-art-engine/assets/og/funebragpt-og.png",
+    "sameAs": [
+      "https://github.com/funebra/math-art-engine",
+      "https://soundcloud.com/peter-lugha"
+    ]
+  }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+
+    <span class="badge" aria-label="Funebra brand">
+      <img alt="Funebra star" src="https://funebra.github.io/math-art-engine/assets/funebra-star.png" />
+      Funebra™ by pLabs Entertainment
+    </span>
+
+    <header>
+      <h1>FunebraGPT™ — The Creative Intelligence of the Funebra Math-Art Universe</h1>
+      <p class="lead">
+        Your collaborative intelligence for <strong>generative geometry</strong>, <strong>math-art</strong>, <strong>music</strong>,
+        <strong>3D printing</strong>, and <strong>philosophy</strong>. Ask, and the pattern becomes visible.
+      </p>
+      <div class="ctaRow">
+        <a class="btn primary" href="https://chat.openai.com/" target="_blank" rel="noopener">
+          🚀 Launch FunebraGPT <small>(opens ChatGPT)</small>
+        </a>
+        <a class="btn" href="https://funebra.github.io/math-art-engine/" target="_blank" rel="noopener">📐 Open Funebra Engine</a>
+        <a class="btn" href="https://github.com/funebra/math-art-engine" target="_blank" rel="noopener">💾 View Source on GitHub</a>
+      </div>
+    </header>
+
+    <hr class="hr" />
+
+    <section class="grid2" aria-label="How to reach FunebraGPT">
+      <div class="panel">
+        <div class="kicker">How to Reach</div>
+        <h2>Three easy ways to start</h2>
+        <ol>
+          <li><strong>ChatGPT (Web/App):</strong> Open ChatGPT and greet: “Hi FunebraGPT, load the Funebra Math-Art Engine.”</li>
+          <li><strong>Funebra Site:</strong> Open any demo and click <em>“Generate with FunebraGPT”</em> prompts.</li>
+          <li><strong>Mobile:</strong> Use the ChatGPT app and speak commands hands-free.</li>
+        </ol>
+        <p class="tiny">Tip: Keep this page pinned. It doubles as your quick-start command deck.</p>
+      </div>
+
+      <div class="panel">
+        <div class="kicker">Requirements</div>
+        <h2>What you’ll need</h2>
+        <ul>
+          <li>Modern browser with WebGL/WebGPU</li>
+          <li>ChatGPT account (Plus recommended for best results)</li>
+          <li>Optional: GitHub (to publish), SoundCloud/YouTube (to share), 3D printer (to fabricate)</li>
+        </ul>
+        <p class="tiny">Everything works in-browser — no installs required.</p>
+      </div>
+    </section>
+
+    <section style="margin-top:28px">
+      <div class="kicker">What you can do</div>
+      <h2>Summon skills across art, code, and matter</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>🎨 Generative Geometry</h3>
+          <p>Create torus variations, triangular knots, parametric surfaces, and point-cloud portraits with exportable meshes.</p>
+        </div>
+        <div class="card">
+          <h3>🧠 Math-Art Illusions</h3>
+          <p>Compose optical fields, Funebra stars, and animated rituals with PNG/GIF/WebM exporters.</p>
+        </div>
+        <div class="card">
+          <h3>🖨️ 3D Print Flow</h3>
+          <p>Export OBJ/GLTF/3MF, set print orientation, and iterate physical prototypes (crosses, boards, heads, castles).</p>
+        </div>
+        <div class="card">
+          <h3>🎵 Music & Covers</h3>
+          <p>Write Suno-ready lyrics, craft descriptions, and generate Funebra-style cover art prompts.</p>
+        </div>
+        <div class="card">
+          <h3>🪙 Community & Donations</h3>
+          <p>Spin up donation pages, leadership points, and branded OG images for social posts.</p>
+        </div>
+        <div class="card">
+          <h3>🪄 Philosophy Engine</h3>
+          <p>Articulate the Law of Recognition & Embodiment — essays, charters, and certificates in pure Funebra tone.</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top:34px">
+      <div class="kicker">Quick-start prompts</div>
+      <h2>Copy a command. Paste into ChatGPT. Create.</h2>
+
+      <div class="prompt">
+        <code id="p1">Open the Funebra Math-Art Engine and generate a triangular torus using only Funebra modules. Add PNG/GIF exporters and orbit controls.</code>
+        <button class="copy" data-copy="#p1">Copy</button>
+      </div>
+
+      <div class="prompt">
+        <code id="p2">Make a Funebra optical illusion: dual-glaze donut, subtle rotation, star-field background. Add “Export PNG” and “Record WebM”.</code>
+        <button class="copy" data-copy="#p2">Copy</button>
+      </div>
+
+      <div class="prompt">
+        <code id="p3">Convert my current Funebra shape to a printable 3MF with 2mm shell, 10% gyroid infill, oriented flat for Bambu slicing.</code>
+        <button class="copy" data-copy="#p3">Copy</button>
+      </div>
+
+      <div class="prompt">
+        <code id="p4">Write Suno.ai-ready lyrics for “Funebra Ritual 002”: solemn, 70 BPM, acoustic fingerpicking, minimal imagery, Danish + English.</code>
+        <button class="copy" data-copy="#p4">Copy</button>
+      </div>
+
+      <div class="prompt">
+        <code id="p5">Explain the Funebra Law of Recognition with an example using point-cloud heads and a donation page CTA.</code>
+        <button class="copy" data-copy="#p5">Copy</button>
+      </div>
+
+      <p class="tiny">Want more? Ask: “List 10 advanced Funebra prompts for photo-real CAD shading and volumetric fog.”</p>
+    </section>
+
+    <section class="panel" style="margin-top:36px">
+      <div class="kicker">Philosophy</div>
+      <h2>The pattern made visible</h2>
+      <p>
+        FunebraGPT is not just a chatbot — it is an interface of recognition. It helps you translate intuition into
+        geometry, geometry into objects, and objects into stories. Code, sound, and matter form a loop — a ritual of
+        embodiment — where your intention becomes visible, printable, and shareable.
+      </p>
+    </section>
+
+    <footer class="footer">
+      <img class="logo" alt="Funebra star" src="https://funebra.github.io/math-art-engine/assets/funebra-star.png" />
+      <span>FunebraGPT™ — pLabs Entertainment © 1982–2025</span>
+      <div class="tiny" style="margin-top:8px">
+        Need help? Ask ChatGPT: <em>“Diagnose my Funebra exporter — html2canvas + GIF.js workers.”</em>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // Copy-to-clipboard
+    document.querySelectorAll('[data-copy]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const sel = btn.getAttribute('data-copy');
+        const el = document.querySelector(sel);
+        if (!el) return;
+        const text = el.textContent.trim();
+        navigator.clipboard.writeText(text).then(()=>{
+          const old = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(()=>btn.textContent=old, 1200);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
