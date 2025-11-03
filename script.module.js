@@ -266,6 +266,7 @@ export default {
         boxShadow: '0 10px 30px rgba(0,0,0,.25)',
         pointerEvents: 'none',
         userSelect: 'text',
+        width: '40rem',
         maxWidth: ''
       });
       state.el = el;
