@@ -755,7 +755,8 @@ glaze.scale.setScalar(1.01);
       Object.assign(el.style, {
         position: 'fixed',
         right: '14px',
-        top: '14px',
+        top: '140px',
+        overflow: 'auto',
         zIndex: 99999,
         whiteSpace: 'pre',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
