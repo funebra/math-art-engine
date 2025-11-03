@@ -725,14 +725,15 @@ glaze.scale.setScalar(1.01);
 })(typeof window !== "undefined" ? window : globalThis);
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Funebra.DebugOverlay — toggleable HUD with persistence + hotkey (Alt+D)
-// ─────────────────────────────────────────────────────────────────────────────-
+// Funebra.DebugOverlay — Enhanced HUD (FPS + Memory + Copy Code)
+// Toggle: Alt+D  (or call Funebra.DebugOverlay.toggle())
+// Persistent across sessions (localStorage)
+// ──────────────────────────────────────────────────────────────────────────────
 (function (root, factory) {
   const ns = (root.Funebra ||= {});
   ns.DebugOverlay = factory(root, ns);
 })(typeof globalThis !== 'undefined' ? globalThis : window, function (root, Funebra) {
   const LS_KEY = 'funebra.debugOverlay.enabled';
-
   const ids = ['steps','stpStart','stpEnd','scodeX','scodeY','clor','wL','hT','bo','itext'];
   const get = (id) => document.getElementById(id) || document.querySelector(`[name="${id}"]`);
   const read = (n) => (n && (n.value ?? n.textContent)) || '—';
@@ -741,48 +742,61 @@ glaze.scale.setScalar(1.01);
     enabled: false,
     el: null,
     raf: 0,
-    anchors: {}
+    anchors: {},
+    fps: { frame: 0, last: performance.now(), value: 0 },
   };
 
+  // ─── Core Rendering ─────────────────────────────────────────────────────────
   function mount() {
-    if (!state.el) {
-      let el = document.getElementById('bn600');
-      if (!el) {
-        el = document.createElement('pre');
-        el.id = 'bn600';
-        document.body.appendChild(el);
-      }
-      Object.assign(el.style, {
-        position: 'fixed',
-        right: '14px',
-        top: '140px',
-        overflow: 'auto',
-        
-        zIndex: 99999,
-        whiteSpace: 'pre',
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-        fontSize: '12px',
-        lineHeight: '1.35',
-        background: 'rgba(0,0,0,.55)',
-        color: '#ffb347',
-        padding: '8px 10px',
-        borderRadius: '10px',
-        border: '1px solid rgba(255,179,71,.6)',
-        boxShadow: '0 10px 30px rgba(0,0,0,.25)',
-        pointerEvents: 'none',
-        userSelect: 'text',
-        width: '40rem',
-        maxWidth: ''
-      });
-      state.el = el;
-    }
-    state.anchors = {};
-    ids.forEach(k => state.anchors[k] = get(k));
+    if (state.el) return;
+    const el = document.createElement('div');
+    el.id = 'funebraDebugOverlay';
+    el.innerHTML = `
+      <pre id="funebraDebugText" style="margin:0;"></pre>
+      <button id="funebraCopyBtn" title="Copy scode to clipboard"
+        style="margin-top:6px; padding:2px 6px; font:11px monospace; color:#111; background:#ffb347;
+               border:0; border-radius:4px; cursor:pointer;">Copy scode</button>`;
+    document.body.appendChild(el);
+    Object.assign(el.style, {
+      position: 'fixed',
+      right: '14px',
+      top: '14px',
+      zIndex: 99999,
+      background: 'rgba(0,0,0,.55)',
+      color: '#ffb347',
+      padding: '8px 10px',
+      borderRadius: '10px',
+      border: '1px solid rgba(255,179,71,.6)',
+      font: '12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      boxShadow: '0 10px 30px rgba(0,0,0,.25)',
+      userSelect: 'text',
+      pointerEvents: 'auto',
+      maxWidth: '40rem',
+    });
+
+    const btn = el.querySelector('#funebraCopyBtn');
+    btn.addEventListener('click', () => {
+      const a = state.anchors;
+      const code = read(a.itext);
+      navigator.clipboard.writeText(code)
+        .then(() => {
+          btn.textContent = '✔ Copied!';
+          setTimeout(() => (btn.textContent = 'Copy scode'), 1500);
+        })
+        .catch(() => (btn.textContent = '❌ Failed'));
+    });
+
+    state.el = el;
+    state.textEl = el.querySelector('#funebraDebugText');
+    ids.forEach(k => (state.anchors[k] = get(k)));
   }
 
   function text() {
     const a = state.anchors;
     const now = new Date().toLocaleTimeString();
+    const mem = root.performance?.memory
+      ? `${(performance.memory.usedJSHeapSize / 1048576).toFixed(1)} MB`
+      : '—';
     return `Step:   ${Number(read(a.steps)) || 0}
 Start:  ${Number(read(a.stpStart)) || 0}
 End:    ${Number(read(a.stpEnd)) || 0}
@@ -792,16 +806,32 @@ Color:  ${read(a.clor)}
 Width:  ${read(a.wL)}
 Height: ${read(a.hT)}
 Scene:  ${read(a.bo)}
-scode:  ${read(a.itext)}
+scode:  ${read(a.itext).slice(0,140).replace(/\n/g,' ')}...
+──────────────
+FPS:    ${state.fps.value.toFixed(1)}
+Memory: ${mem}
 Stamp:  ${now}`;
+  }
+
+  // ─── FPS loop ───────────────────────────────────────────────────────────────
+  function measureFPS() {
+    const now = performance.now();
+    state.fps.frame++;
+    if (now - state.fps.last >= 1000) {
+      state.fps.value = state.fps.frame * 1000 / (now - state.fps.last);
+      state.fps.frame = 0;
+      state.fps.last = now;
+    }
   }
 
   function loop() {
     if (!state.enabled) return;
-    state.el.textContent = text();
+    measureFPS();
+    if (state.textEl) state.textEl.textContent = text();
     state.raf = root.requestAnimationFrame(loop);
   }
 
+  // ─── Controls ───────────────────────────────────────────────────────────────
   function enable() {
     if (state.enabled) return true;
     state.enabled = true;
@@ -816,9 +846,9 @@ Stamp:  ${now}`;
     state.enabled = false;
     localStorage.removeItem(LS_KEY);
     if (state.raf) cancelAnimationFrame(state.raf);
-    state.raf = 0;
-    if (state.el && state.el.parentNode) state.el.parentNode.removeChild(state.el);
+    if (state.el && state.el.parentNode) state.el.remove();
     state.el = null;
+    state.raf = 0;
     return true;
   }
 
@@ -830,11 +860,10 @@ Stamp:  ${now}`;
   function isEnabled() { return !!state.enabled; }
 
   function setStyle(opts = {}) {
-    if (!state.el) return;
-    Object.assign(state.el.style, opts);
+    if (state.el) Object.assign(state.el.style, opts);
   }
 
-  // Hotkey: Alt+D  (also Ctrl+Shift+D fallback)
+  // ─── Hotkey ─────────────────────────────────────────────────────────────────
   root.addEventListener('keydown', (e) => {
     const k = (e.key || '').toLowerCase();
     if ((e.altKey && k === 'd') || (e.ctrlKey && e.shiftKey && k === 'd')) {
@@ -842,9 +871,8 @@ Stamp:  ${now}`;
     }
   });
 
-  // Auto-restore from previous session
+  // ─── Auto-restore ───────────────────────────────────────────────────────────
   if (localStorage.getItem(LS_KEY) === '1') {
-    // wait till DOM is ready so input anchors exist
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', enable, { once: true });
     } else {
@@ -852,13 +880,5 @@ Stamp:  ${now}`;
     }
   }
 
-  // Public API
-  return {
-    enable,
-    disable,
-    toggle,
-    isEnabled,
-    setStyle,
-    _state: state
-  };
+  return { enable, disable, toggle, isEnabled, setStyle, _state: state };
 });
