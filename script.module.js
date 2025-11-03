@@ -220,3 +220,115 @@ export default {
   makeParametric3D,
   makeMesh,
 };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Funebra DebugOverlay (HUD)
+// - Toggle: Alt+D  (or call Funebra.DebugOverlay.toggle())
+// - Reuses IDs: steps, stpStart, stpEnd, scodeX, scodeY, clor, wL, hT, bo, itext
+// ──────────────────────────────────────────────────────────────────────────────
+(function (root, factory) {
+  if (typeof module === 'object' && typeof module.exports === 'object') {
+    module.exports = factory();
+  } else {
+    (root.Funebra ||= {}).DebugOverlay = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window, function () {
+  const state = { on: false, el: null, anchors: {} };
+  const q = (id) => document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+
+  function findAnchors() {
+    const ids = ['steps','stpStart','stpEnd','scodeX','scodeY','clor','wL','hT','bo','itext'];
+    const out = {};
+    ids.forEach(k => (out[k] = q(k)));
+    return out;
+  }
+
+  function mount() {
+    if (state.el) return;
+    let el = document.getElementById('bn600');
+    if (!el) {
+      el = document.createElement('pre');
+      el.id = 'bn600';
+      document.body.appendChild(el);
+    }
+    Object.assign(el.style, {
+      position: 'fixed',
+      right: '14px',
+      top: '14px',
+      zIndex: 99999,
+      padding: '8px 10px',
+      background: 'rgba(0,0,0,.55)',
+      color: '#ffb347',
+      font: '12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      border: '1px solid rgba(255,179,71,.6)',
+      borderRadius: '10px',
+      boxShadow: '0 10px 30px rgba(0,0,0,.25)',
+      userSelect: 'text',
+      whiteSpace: 'pre',
+      maxWidth: '36rem'
+    });
+    state.el = el;
+  }
+
+  const read = (n) => (n && (n.value ?? n.textContent)) || '—';
+
+  function text() {
+    const a = state.anchors;
+    return `Step:   ${Number(read(a.steps)) || 0}
+Start:  ${Number(read(a.stpStart)) || 0}
+End:    ${Number(read(a.stpEnd)) || 0}
+scodeX: ${read(a.scodeX)}
+scodeY: ${read(a.scodeY)}
+Color:  ${read(a.clor)}
+Width:  ${read(a.wL)}
+Height: ${read(a.hT)}
+Scene:  ${read(a.bo)}
+scode:  ${read(a.itext)}`;
+  }
+
+  let raf = 0;
+  function update() {
+    if (!state.on || !state.el) return;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => (state.el.textContent = text()));
+  }
+
+  function bind() {
+    state.anchors = findAnchors();
+    const inputs = Object.values(state.anchors).filter(Boolean);
+    inputs.forEach((n) => n.addEventListener('input', update, { passive: true }));
+
+    // also refresh after typical action buttons (Change / Run Code)
+    const btns = Array.from(document.querySelectorAll('button,input[type="button"],[role="button"]'));
+    btns
+      .filter((b) => /change|run|apply|update/i.test((b.textContent || b.value || '')))
+      .forEach((b) => b.addEventListener('click', update));
+  }
+
+  function destroy() {
+    state.on = false;
+    if (state.el && state.el.parentNode) state.el.parentNode.removeChild(state.el);
+    state.el = null;
+  }
+
+  function toggle(force) {
+    state.on = force != null ? !!force : !state.on;
+    if (state.on) {
+      mount(); bind(); update();
+    } else {
+      destroy();
+    }
+    return state.on;
+  }
+
+  // Hotkey: Alt + D  (also works with Ctrl+Shift+D)
+  window.addEventListener('keydown', (e) => {
+    const k = e.key && e.key.toLowerCase();
+    if ((e.altKey && k === 'd') || (e.ctrlKey && e.shiftKey && k === 'd')) {
+      toggle();
+    }
+  });
+
+  return { toggle, update, destroy, _state: state };
+});
+
