@@ -1,5 +1,4 @@
 
-````markdown
 <p align="center">
   <img src="funebra-banner-useful-helpers.png" width="800" alt="Funebra™ Math-Art Engine — Useful Helpers">
 </p>
