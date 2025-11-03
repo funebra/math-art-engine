@@ -253,7 +253,6 @@ export default {
         right: '14px',
         top: '140px',
         zIndex: 99999,
-        overflow: 'hidden',
         whiteSpace: 'pre',
         text-overflow: 'clip',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
