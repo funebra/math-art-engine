@@ -255,6 +255,7 @@ export default {
         zIndex: 99999,
         overflow: 'auto',
         whiteSpace: 'wrap',
+        text-overflow: 'clip',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
         fontSize: '12px',
         lineHeight: '1.35',
