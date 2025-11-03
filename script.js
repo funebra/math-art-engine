@@ -725,58 +725,61 @@ glaze.scale.setScalar(1.01);
 })(typeof window !== "undefined" ? window : globalThis);
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Funebra DebugOverlay (HUD)
-// - Toggle: Alt+D  (or call Funebra.DebugOverlay.toggle())
-// - Reuses IDs: steps, stpStart, stpEnd, scodeX, scodeY, clor, wL, hT, bo, itext
-// ──────────────────────────────────────────────────────────────────────────────
+// Funebra.DebugOverlay — toggleable HUD with persistence + hotkey (Alt+D)
+// ─────────────────────────────────────────────────────────────────────────────-
 (function (root, factory) {
-  if (typeof module === 'object' && typeof module.exports === 'object') {
-    module.exports = factory();
-  } else {
-    (root.Funebra ||= {}).DebugOverlay = factory();
-  }
-})(typeof globalThis !== 'undefined' ? globalThis : window, function () {
-  const state = { on: false, el: null, anchors: {} };
-  const q = (id) => document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+  const ns = (root.Funebra ||= {});
+  ns.DebugOverlay = factory(root, ns);
+})(typeof globalThis !== 'undefined' ? globalThis : window, function (root, Funebra) {
+  const LS_KEY = 'funebra.debugOverlay.enabled';
 
-  function findAnchors() {
-    const ids = ['steps','stpStart','stpEnd','scodeX','scodeY','clor','wL','hT','bo','itext'];
-    const out = {};
-    ids.forEach(k => (out[k] = q(k)));
-    return out;
-  }
+  const ids = ['steps','stpStart','stpEnd','scodeX','scodeY','clor','wL','hT','bo','itext'];
+  const get = (id) => document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+  const read = (n) => (n && (n.value ?? n.textContent)) || '—';
+
+  const state = {
+    enabled: false,
+    el: null,
+    raf: 0,
+    anchors: {}
+  };
 
   function mount() {
-    if (state.el) return;
-    let el = document.getElementById('bn600');
-    if (!el) {
-      el = document.createElement('pre');
-      el.id = 'bn600';
-      document.body.appendChild(el);
+    if (!state.el) {
+      let el = document.getElementById('bn600');
+      if (!el) {
+        el = document.createElement('pre');
+        el.id = 'bn600';
+        document.body.appendChild(el);
+      }
+      Object.assign(el.style, {
+        position: 'fixed',
+        right: '14px',
+        top: '14px',
+        zIndex: 99999,
+        whiteSpace: 'pre',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+        fontSize: '12px',
+        lineHeight: '1.35',
+        background: 'rgba(0,0,0,.55)',
+        color: '#ffb347',
+        padding: '8px 10px',
+        borderRadius: '10px',
+        border: '1px solid rgba(255,179,71,.6)',
+        boxShadow: '0 10px 30px rgba(0,0,0,.25)',
+        pointerEvents: 'none',
+        userSelect: 'text',
+        maxWidth: '40rem'
+      });
+      state.el = el;
     }
-    Object.assign(el.style, {
-      position: 'fixed',
-      right: '14px',
-      top: '14px',
-      zIndex: 99999,
-      padding: '8px 10px',
-      background: 'rgba(0,0,0,.55)',
-      color: '#ffb347',
-      font: '12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-      border: '1px solid rgba(255,179,71,.6)',
-      borderRadius: '10px',
-      boxShadow: '0 10px 30px rgba(0,0,0,.25)',
-      userSelect: 'text',
-      whiteSpace: 'pre',
-      maxWidth: '36rem'
-    });
-    state.el = el;
+    state.anchors = {};
+    ids.forEach(k => state.anchors[k] = get(k));
   }
-
-  const read = (n) => (n && (n.value ?? n.textContent)) || '—';
 
   function text() {
     const a = state.anchors;
+    const now = new Date().toLocaleTimeString();
     return `Step:   ${Number(read(a.steps)) || 0}
 Start:  ${Number(read(a.stpStart)) || 0}
 End:    ${Number(read(a.stpEnd)) || 0}
@@ -786,52 +789,73 @@ Color:  ${read(a.clor)}
 Width:  ${read(a.wL)}
 Height: ${read(a.hT)}
 Scene:  ${read(a.bo)}
-scode:  ${read(a.itext)}`;
+scode:  ${read(a.itext)}
+Stamp:  ${now}`;
   }
 
-  let raf = 0;
-  function update() {
-    if (!state.on || !state.el) return;
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => (state.el.textContent = text()));
+  function loop() {
+    if (!state.enabled) return;
+    state.el.textContent = text();
+    state.raf = root.requestAnimationFrame(loop);
   }
 
-  function bind() {
-    state.anchors = findAnchors();
-    const inputs = Object.values(state.anchors).filter(Boolean);
-    inputs.forEach((n) => n.addEventListener('input', update, { passive: true }));
-
-    // also refresh after typical action buttons (Change / Run Code)
-    const btns = Array.from(document.querySelectorAll('button,input[type="button"],[role="button"]'));
-    btns
-      .filter((b) => /change|run|apply|update/i.test((b.textContent || b.value || '')))
-      .forEach((b) => b.addEventListener('click', update));
+  function enable() {
+    if (state.enabled) return true;
+    state.enabled = true;
+    localStorage.setItem(LS_KEY, '1');
+    mount();
+    loop();
+    return true;
   }
 
-  function destroy() {
-    state.on = false;
+  function disable() {
+    if (!state.enabled) return false;
+    state.enabled = false;
+    localStorage.removeItem(LS_KEY);
+    if (state.raf) cancelAnimationFrame(state.raf);
+    state.raf = 0;
     if (state.el && state.el.parentNode) state.el.parentNode.removeChild(state.el);
     state.el = null;
+    return true;
   }
 
   function toggle(force) {
-    state.on = force != null ? !!force : !state.on;
-    if (state.on) {
-      mount(); bind(); update();
-    } else {
-      destroy();
-    }
-    return state.on;
+    const next = force == null ? !state.enabled : !!force;
+    return next ? enable() : disable();
   }
 
-  // Hotkey: Alt + D  (also works with Ctrl+Shift+D)
-  window.addEventListener('keydown', (e) => {
-    const k = e.key && e.key.toLowerCase();
+  function isEnabled() { return !!state.enabled; }
+
+  function setStyle(opts = {}) {
+    if (!state.el) return;
+    Object.assign(state.el.style, opts);
+  }
+
+  // Hotkey: Alt+D  (also Ctrl+Shift+D fallback)
+  root.addEventListener('keydown', (e) => {
+    const k = (e.key || '').toLowerCase();
     if ((e.altKey && k === 'd') || (e.ctrlKey && e.shiftKey && k === 'd')) {
       toggle();
     }
   });
 
-  return { toggle, update, destroy, _state: state };
-});
+  // Auto-restore from previous session
+  if (localStorage.getItem(LS_KEY) === '1') {
+    // wait till DOM is ready so input anchors exist
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', enable, { once: true });
+    } else {
+      enable();
+    }
+  }
 
+  // Public API
+  return {
+    enable,
+    disable,
+    toggle,
+    isEnabled,
+    setStyle,
+    _state: state
+  };
+});
