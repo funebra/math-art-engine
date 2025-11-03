@@ -252,8 +252,7 @@ export default {
         position: 'fixed',
         right: '14px',
         top: '140px',
-        overflow: 'auto', 
-        
+        overflow: 'auto',
         zIndex: 99999,
         whiteSpace: 'pre',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
