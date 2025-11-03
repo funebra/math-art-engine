@@ -254,7 +254,6 @@ export default {
         top: '140px',
         zIndex: 99999,
         whiteSpace: 'wrap',
-        text-overflow: 'clip',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
         fontSize: '12px',
         lineHeight: '1.35',
@@ -267,7 +266,7 @@ export default {
         pointerEvents: 'none',
         userSelect: 'text',
         width: '40rem',
-        maxWidth: ''
+        maxWidth: '40rem'
       });
       state.el = el;
     }
