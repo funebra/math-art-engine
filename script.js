@@ -757,6 +757,7 @@ glaze.scale.setScalar(1.01);
         right: '14px',
         top: '140px',
         overflow: 'auto',
+        overflow-wrap: 'break-word',
         zIndex: 99999,
         whiteSpace: 'pre',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
