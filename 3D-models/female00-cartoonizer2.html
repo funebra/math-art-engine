@@ -151,28 +151,36 @@ function applyMaterials(root){
   const mode = shading.value;
 
   root.traverse(o=>{
-    if(!o.isMesh) return;
-    if (o.userData.isOutline) return;           // never process outline meshes
+    if (!o.isMesh) return;
+    if (o.userData.isOutline) return; // never process outline meshes
 
     // main material
     o.material = (mode === 'toon') ? toonMat : pbrMat;
 
-    // remove any previous outline children
-    o.children = o.children.filter(c => !c.userData?.isOutline);
+    // ---- safely remove previous outlines
+    const toRemove = [];
+    for (const c of o.children) {
+      if (c.userData && c.userData.isOutline) toRemove.push(c);
+    }
+    for (const c of toRemove) {
+      if (c.geometry) c.geometry.dispose();
+      o.remove(c); // IMPORTANT: keep the scene-graph consistent
+    }
 
-    // add outline if needed
+    // ---- add outline if needed
     const thickness = parseFloat(outline.value) || 0;
     if (thickness > 0.01) {
       const back = new THREE.Mesh(o.geometry.clone(), outlineMat);
       back.userData.isOutline = true;
       back.scale.setScalar(1.0 + thickness / 1000.0);
-      back.renderOrder = o.renderOrder - 1;
+      back.renderOrder = (o.renderOrder || 0) - 1;
       o.add(back);
     }
   });
 
   root.updateMatrixWorld(true);
 }
+
 
 function applySubdivision(root){
   const iterations = parseInt(subd.value,10) || 0;
