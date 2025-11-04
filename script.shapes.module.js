@@ -976,6 +976,11 @@ if (typeof window !== "undefined") {
   window.Funebra = window.Funebra || Funebra;
 }
 
+const polylineXh = "Funebra.polylineX(u, 24, 320,220, 380,180, 460,220, 520,300)";
+const polylineYh = "Funebra.polylineY(u, 24, 320,220, 380,180, 460,220, 520,300)";
+const polylineClosedXh = "Funebra.polylineClosedX(u, 28, 360,160, 480,200, 460,300, 340,280)";
+const polylineClosedYh = "Funebra.polylineClosedY(u, 28, 360,160, 480,200, 460,300, 340,280)";
+
 
 
 
