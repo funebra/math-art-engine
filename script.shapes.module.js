@@ -53,6 +53,48 @@ export function Polyline(points = [], { close = false, color = "#fff", width = 1
   };
 }
 
+
+
+
+// ── Numeric Polyline (open) ─────────────────────────────────────────────────
+export function polylineX(o, stepsPerEdge /*, x1,y1, x2,y2, ... */){
+  const coords = Array.prototype.slice.call(arguments, 2);
+  const verts = [];
+  for (let i=0; i+1<coords.length; i+=2) verts.push([Number(coords[i]), Number(coords[i+1])]);
+  if (verts.length < 2) return 0;
+  return _polyPathX(o, verts, stepsPerEdge|0 || 20);
+}
+export function polylineY(o, stepsPerEdge /*, x1,y1, x2,y2, ... */){
+  const coords = Array.prototype.slice.call(arguments, 2);
+  const verts = [];
+  for (let i=0; i+1<coords.length; i+=2) verts.push([Number(coords[i]), Number(coords[i+1])]);
+  if (verts.length < 2) return 0;
+  return _polyPathY(o, verts, stepsPerEdge|0 || 20);
+}
+
+// ── Numeric Polyline (closed polygon loop) ───────────────────────────────────
+export function polylineClosedX(o, stepsPerEdge /*, x1,y1, x2,y2, ... */){
+  const coords = Array.prototype.slice.call(arguments, 2);
+  const verts = [];
+  for (let i=0; i+1<coords.length; i+=2) verts.push([Number(coords[i]), Number(coords[i+1])]);
+  if (verts.length < 3) return 0;
+  // append first vertex to close
+  verts.push(verts[0]);
+  return _polyPathX(o, verts, stepsPerEdge|0 || 20);
+}
+export function polylineClosedY(o, stepsPerEdge /*, x1,y1, x2,y2, ... */){
+  const coords = Array.prototype.slice.call(arguments, 2);
+  const verts = [];
+  for (let i=0; i+1<coords.length; i+=2) verts.push([Number(coords[i]), Number(coords[i+1])]);
+  if (verts.length < 3) return 0;
+  verts.push(verts[0]);
+  return _polyPathY(o, verts, stepsPerEdge|0 || 20);
+}
+
+
+
+
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Core Funebra 2D numerics (lines, circles, ellipses, polygons, stars)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -873,6 +915,7 @@ const Funebra = {
 
   // Numeric 2D
   id, pointX, pointY, zero,Point, Polyline,
+  polylineX, polylineY, polylineClosedX, polylineClosedY,
   lineX, lineY, lineSegmentX, lineSegmentY,
   circleX, circleY, ellipseX, ellipseY,
   polygonX, polygonY, starX, starY,
@@ -932,6 +975,7 @@ export default Funebra;
 if (typeof window !== "undefined") {
   window.Funebra = window.Funebra || Funebra;
 }
+
 
 
 
