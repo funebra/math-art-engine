@@ -96,7 +96,7 @@ function fitCameraToObject(obj, padding=1.25){
 // ——— load both OBJs (case-sensitive!) ———
 Promise.all([
   loader.loadAsync('cube.obj').catch(e=>{throw new Error('Failed to load cube.obj: '+e)}),
-  loader.loadAsync('female00.obj').catch(e=>{
+  loader.loadAsync('Female00.obj').catch(e=>{
     throw new Error('Failed to load female00.obj (note lowercase). '+e);
   })
 ]).then(([cubeObj, headObj])=>{
