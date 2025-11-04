@@ -216,6 +216,14 @@ async function loadFromText(text){
   scene.add(obj);
   applySubdivision(obj);
   applyMaterials(obj);
+  // --- auto-frame camera around model ---
+const center = new THREE.Vector3();
+const box2 = new THREE.Box3().setFromObject(obj);
+box2.getCenter(center);
+controls.target.copy(center);
+camera.position.copy(center).add(new THREE.Vector3(0, 0.6, 2.2)); // adjust for good angle
+controls.update();
+
 }
 
 async function loadFromURL(url){
