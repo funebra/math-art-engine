@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Funebra™ PointForge — Anime Entity (points→geometry)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "funebra/exporters": "./funebra.exporters.module.js"
+  }
+}
+</script>
+<style>html,body{margin:0;height:100%;background:#0a0c10;overflow:hidden} #ui{position:fixed;top:10px;left:10px;background:#111a;color:#eef;padding:8px 12px;border-radius:10px}</style>
+</head>
+<body>
+<div id="ui">
+  Funebra PointForge — Anime Entity
+  <div style="margin-top:6px;">
+    <button id="mode">mode: POINTS</button>
+    <button id="export">PNG</button>
+  </div>
+</div>
+<canvas id="stage"></canvas>
+
+<script type="module">
+import * as THREE from 'three';
+import { exportPNG, stamp } from 'funebra/exporters';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ———————————————————————————————————
+// Scene
+// ———————————————————————————————————
+const renderer = new THREE.WebGLRenderer({ canvas: stage, antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x0a0c10);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.05, 200);
+camera.position.set(0,1.3,3.7);
+new OrbitControls(camera, renderer.domElement);
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ———————————————————————————————————
+// 1) POINT FIELDS (procedural)
+// ———————————————————————————————————
+
+// helpers
+const tmp = new THREE.Vector3();
+const pts = { eyes:[], hair:[], body:[], bg:[] };
+
+// Eyes: Lissajous discs (expressive)
+function eyePoints(cx, cy, cz, r, n, phase){
+  for(let i=0;i<n;i++){
+    const t = i/n * Math.PI*2;
+    const x = r*Math.sin(3*t + phase);
+    const y = r*0.65*Math.sin(2*t);
+    pts.eyes.push(new THREE.Vector3(cx+x, cy+y, cz));
+  }
+}
+eyePoints(-0.35, 0.85, 0.7, 0.22, 600, 0.0);
+eyePoints( 0.35, 0.85, 0.7, 0.22, 600, Math.PI*0.33);
+
+// Hair: interference wave ribbons (points only)
+function hairField(rows=18, cols=140){
+  const W=1.8, L=2.2, yBase=1.25;
+  for(let j=0;j<rows;j++){
+    for(let i=0;i<cols;i++){
+      const u = i/(cols-1), v = j/(rows-1);
+      const x = -W/2 + u*W;
+      const z = -0.15 + Math.sin(u*10.0 + v*3.0)*0.08;
+      const y = yBase + (1.0-v)*0.7 + 0.09*Math.sin(u*8.0 + v*6.0);
+      pts.hair.push(new THREE.Vector3(x,y,z));
+    }
+  }
+}
+hairField();
+
+// Body silhouette: rose/lemniscate loft guide (for later surfacing)
+function bodySpine(samples=160){
+  for(let i=0;i<samples;i++){
+    const t = i/(samples-1);
+    const y = -0.8 + t*1.9;
+    const r = 0.35 + 0.25*Math.sin(2.5*t* Math.PI) - 0.1*Math.cos(6.0*t*Math.PI);
+    pts.body.push(new THREE.Vector3(0, y, 0).add(new THREE.Vector3(r,0,0)));
+  }
+}
+bodySpine();
+
+// Optical background: symmetric polar lattice
+function bgPolar(n=2400){
+  for(let i=0;i<n;i++){
+    const t = i/n * Math.PI*12.0;
+    const r = 2.8 * Math.sin(3*t) * Math.cos(2*t);
+    const x = r*Math.cos(t), y = r*Math.sin(t);
+    pts.bg.push(new THREE.Vector3(x, y*0.55, -2.6));
+  }
+}
+bgPolar();
+
+// ———————————————————————————————————
+// 2) RENDER AS POINTS (first mode)
+// ———————————————————————————————————
+const materials = {
+  eyes: new THREE.PointsMaterial({ size: 0.008, color: 0xff66bb }),
+  hair: new THREE.PointsMaterial({ size: 0.006, color: 0x7cf2ff }),
+  body: new THREE.PointsMaterial({ size: 0.01,  color: 0x88aaff }),
+  bg:   new THREE.PointsMaterial({ size: 0.007, color: 0x3344ff, transparent:true, opacity:0.8 })
+};
+
+function pointsMesh(list){
+  const geo = new THREE.BufferGeometry().setFromPoints(list);
+  return new THREE.Points(geo, materials[list === pts.eyes ? 'eyes' :
+                                         list === pts.hair ? 'hair' :
+                                         list === pts.body ? 'body':'bg']);
+}
+const eyesP = pointsMesh(pts.eyes);
+const hairP = pointsMesh(pts.hair);
+const bodyP = pointsMesh(pts.body);
+const bgP   = pointsMesh(pts.bg);
+scene.add(bgP, bodyP, hairP, eyesP);
+
+// ———————————————————————————————————
+// 3) DERIVE CURVES & SURFACES from points (second mode)
+//    - Eyes: Catmull-Rom curve tube
+//    - Hair: ribbons via sweep
+//    - Body: lathed surface from param radius field
+// ———————————————————————————————————
+const derived = new THREE.Group();
+
+function tubeFromPoints(list, radius=0.02, tubular=80){
+  const curve = new THREE.CatmullRomCurve3(list, true, 'centripetal', 0.25);
+  const geo = new THREE.TubeGeometry(curve, tubular, radius, 16, true);
+  const mat = new THREE.MeshStandardMaterial({ color:0xff66bb, emissive:0x882255, roughness:0.4, metalness:0.1 });
+  return new THREE.Mesh(geo, mat);
+}
+function hairRibbons(rows=14){
+  const g = new THREE.Group();
+  const cols = 140;
+  for(let j=0;j<rows;j++){
+    const row = [];
+    for(let i=0;i<cols;i++){
+      row.push( pts.hair[j*cols + i] );
+    }
+    const curve = new THREE.CatmullRomCurve3(row, false, 'chordal', 0.1);
+    const geo = new THREE.TubeGeometry(curve, 160, 0.008 + 0.004*Math.sin(j*0.7), 8, false);
+    const mat = new THREE.MeshStandardMaterial({ color:0x7cf2ff, emissive:0x113344, roughness:0.35, metalness:0.15 });
+    g.add(new THREE.Mesh(geo, mat));
+  }
+  return g;
+}
+function lathedBody(){
+  // radius field along Y derived from pts.body’s X
+  const ys = pts.body.map(p=>p.y);
+  const yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const samples = 160, prof=[];
+  for(let i=0;i<samples;i++){
+    const t = i/(samples-1);
+    const y = THREE.MathUtils.lerp(yMin, yMax, t);
+    // nearest point radius
+    let r = 0.28;
+    for(const p of pts.body){
+      const d = Math.abs(p.y - y);
+      if(d < 0.02){ r = Math.max(r, Math.abs(p.x)); }
+    }
+    prof.push(new THREE.Vector2(r, y));
+  }
+  const geo = new THREE.LatheGeometry(prof, 96);
+  const mat = new THREE.MeshStandardMaterial({ color:0x3355ff, roughness:0.45, metalness:0.2, emissive:0x0b0f2a });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.y += 0.15; // small lift
+  return m;
+}
+function bgSurface(){
+  const geo = new THREE.PlaneGeometry(16, 9, 200, 120);
+  const pos = geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const x = pos.getX(i), y = pos.getY(i);
+    const r = Math.hypot(x,y);
+    const k = Math.sin(r*2.2) * Math.cos((x-y)*1.6);
+    pos.setZ(i, -2.8 + 0.15*k);
+  }
+  pos.needsUpdate = true;
+  const mat = new THREE.MeshStandardMaterial({ color:0x222a66, metalness:0.1, roughness:0.8, emissive:0x111325 });
+  const m = new THREE.Mesh(geo, mat);
+  m.receiveShadow = false;
+  return m;
+}
+
+derived.add(bgSurface(), hairRibbons(), lathedBody());
+derived.add(tubeFromPoints(pts.eyes.slice(0, 400), 0.016),
+            tubeFromPoints(pts.eyes.slice(600, 1000), 0.016));
+
+// Lighting for surface mode
+const key = new THREE.DirectionalLight(0xffc9cf, 1.2); key.position.set(2,3,4);
+const rim = new THREE.DirectionalLight(0x7cf2ff, 0.8); rim.position.set(-3,1, -2);
+const amb = new THREE.AmbientLight(0x334, 0.6);
+derived.add(key, rim, amb);
+
+// ———————————————————————————————————
+// 4) Mode toggle (POINTS ↔ SURFACE)
+// ———————————————————————————————————
+let mode = 0; // 0 points, 1 surfaces
+function setMode(m){
+  mode = m;
+  if(mode===0){ scene.add(bgP, bodyP, hairP, eyesP); scene.remove(derived); }
+  else { scene.remove(bgP, bodyP, hairP, eyesP); scene.add(derived); }
+}
+setMode(0);
+document.getElementById('mode').onclick = ()=>{
+  setMode(1-mode);
+  document.getElementById('mode').textContent = 'mode: ' + (mode? 'SURFACE':'POINTS');
+};
+
+// ———————————————————————————————————
+document.getElementById('export').onclick = ()=> exportPNG(renderer.domElement, { filename: stamp('funebra-pointforge','png') });
+
+// Animate subtle emotion + background pulse
+let t=0;
+function tick(){
+  requestAnimationFrame(tick);
+  t += 0.016;
+  const emo = Math.sin(t*1.3)*Math.cos(t*0.7);
+  eyesP.rotation.z = emo*0.15;
+  derived.rotation.y = 0.1*Math.sin(t*0.8);
+  renderer.render(scene,camera);
+}
+tick();
+
+// Expose for quick hacking
+Object.assign(window, { THREE, scene, camera, renderer });
+</script>
+</body>
+</html>
