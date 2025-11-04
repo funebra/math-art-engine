@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Funebra Morph — cube → female00</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#0a0c10;overflow:hidden}
+  #ui{position:fixed;top:10px;left:10px;z-index:10;background:#111a;
+      color:#eee;font:13px system-ui;padding:8px 12px;border-radius:8px;}
+</style>
+</head>
+<body>
+<div id="ui">Funebra Morph — cube → female00<br><button id="morphBtn">Morph!</button></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.01, 50);
+camera.position.set(0,1.2,2.2);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// lights
+scene.add(new THREE.HemisphereLight(0xffffff,0x202020,1.0));
+const dLight = new THREE.DirectionalLight(0xffffff,0.8);
+dLight.position.set(1,1,1);
+scene.add(dLight);
+
+// load objects
+const loader = new OBJLoader();
+let cubeMesh, headMesh, cubeGeo, targetPositions = [];
+
+Promise.all([
+  loader.loadAsync('cube.obj'),
+  loader.loadAsync('female00.obj')
+]).then(([cubeObj, headObj])=>{
+  cubeMesh = cubeObj.children.find(m=>m.isMesh);
+  headMesh = headObj.children.find(m=>m.isMesh);
+  cubeMesh.material = new THREE.MeshStandardMaterial({color:0x6699ff,metalness:0.1,roughness:0.4});
+  headMesh.material = new THREE.MeshStandardMaterial({color:0xffcc99,wireframe:true});
+  headMesh.visible = false;
+  scene.add(cubeMesh, headMesh);
+  cubeGeo = cubeMesh.geometry = cubeMesh.geometry.toNonIndexed();
+  cubeGeo.attributes.position.setUsage(THREE.DynamicDrawUsage);
+
+  // prepare morph mapping using MeshSurfaceSampler
+  const sampler = new MeshSurfaceSampler(headMesh).build();
+  const pos = cubeGeo.attributes.position;
+  const count = pos.count;
+  for(let i=0;i<count;i++){
+    const target = new THREE.Vector3();
+    sampler.sample(target, new THREE.Vector3(), new THREE.Vector3());
+    targetPositions.push(target);
+  }
+  animate();
+});
+
+let t=0, morphing=false;
+document.getElementById('morphBtn').onclick=()=>{morphing=!morphing;};
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(cubeGeo && morphing){
+    t = Math.min(1, t+0.005);
+    const pos = cubeGeo.attributes.position;
+    const tmp = new THREE.Vector3();
+    for(let i=0;i<pos.count;i++){
+      tmp.fromBufferAttribute(pos,i);
+      tmp.lerp(targetPositions[i], t);
+      pos.setXYZ(i,tmp.x,tmp.y,tmp.z);
+    }
+    pos.needsUpdate=true;
+  }
+  renderer.render(scene,camera);
+}
+</script>
+</body>
+</html>
