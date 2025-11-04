@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Funebra — Head & Shoulders Point-Shader</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#0b0d12;color:#e8eefc;overflow:hidden}
+  #ui{position:fixed;top:12px;left:12px;z-index:10;background:#111a;border:1px solid #222;
+      padding:10px 12px;border-radius:12px;backdrop-filter:blur(2px);min-width:260px}
+  #ui label{display:block;font:12px/1.4 system-ui;margin:6px 0 2px;color:#b9c6ff}
+  #ui input[type="range"]{width:100%}
+  #credit{position:fixed;bottom:10px;left:12px;font:11px/1.3 system-ui;color:#98a1b3;opacity:.75}
+</style>
+</head>
+<body>
+<div id="ui">
+  <div style="margin-bottom:8px"><b>Point Shader — Head/Shoulders</b></div>
+  <input type="file" id="file" accept=".obj" />
+  <label>Point Size <span id="szv">4.0</span></label>
+  <input id="ptSize" type="range" min="1" max="20" step="0.1" value="4">
+  <label>Depth Fade <span id="dfv">0.65</span></label>
+  <input id="depthFade" type="range" min="0" max="2" step="0.01" value="0.65">
+  <label>Rim Strength <span id="rsv">0.8</span></label>
+  <input id="rimStrength" type="range" min="0" max="2" step="0.01" value="0.8">
+  <label>Twinkle Speed <span id="twv">0.7</span></label>
+  <input id="twinkle" type="range" min="0" max="4" step="0.01" value="0.7">
+  <label>Hue Shift <span id="hsv">0.1</span></label>
+  <input id="hueShift" type="range" min="-1" max="1" step="0.001" value="0.1">
+  <label><input id="useNormals" type="checkbox" checked> Use normals (if present)</label>
+  <label><input id="spin" type="checkbox" checked> Auto spin</label>
+</div>
+<div id="credit">Funebra™ point shader • Three.js 0.160 • Soft discs • Depth/rim/hue controls</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader }   from 'three/addons/loaders/OBJLoader.js';
+
+// ────────────────────────── Scene
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0d12);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 1000);
+camera.position.set(0.2, 0.15, 0.75);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const light = new THREE.DirectionalLight(0xffffff, 1.2);
+light.position.set(1,2,3);
+scene.add(light, new THREE.AmbientLight(0x445566, 0.35));
+
+// ────────────────────────── Shaders
+const vert = /* glsl */`
+  precision highp float;
+  uniform float uTime;
+  uniform float uPointSize;
+  uniform float uTwinkle;
+  uniform bool  uUseNormals;
+  varying float vDepth;
+  varying vec3  vViewPos;
+  varying vec3  vNormal;
+  varying float vTw;
+
+  void main(){
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vViewPos = -mv.xyz;
+    vDepth = -mv.z;
+
+    // Optional subtle animation ("breathing"/twinkle)
+    float tw = sin(dot(position.xyz, vec3(3.7,2.9,4.3)) + uTime * (0.5 + uTwinkle)) * 0.5 + 0.5;
+    vTw = tw;
+
+    // Point size attenuates with distance (approx perspective)
+    float size = uPointSize * (1.0 + tw * 0.4);
+    size *= clamp(300.0 / (1.0 + vDepth), 0.25, 10.0); // basic attenuation
+
+    gl_PointSize = size;
+    gl_Position = projectionMatrix * mv;
+
+    // Try to pass a reasonable normal in view space if available
+    vNormal = uUseNormals ? normalize(normalMatrix * normal) : vec3(0.0,0.0,1.0);
+  }
+`;
+
+const frag = /* glsl */`
+  precision highp float;
+  uniform float uTime;
+  uniform float uDepthFade;   // how quickly alpha fades with depth
+  uniform float uRimStrength;
+  uniform float uHueShift;
+
+  varying float vDepth;
+  varying vec3  vViewPos;
+  varying vec3  vNormal;
+  varying float vTw;
+
+  // Soft-disc mask
+  float softDisc(vec2 p){
+    float r = length(p*2.0 - 1.0);      // map gl_PointCoord [0..1]² to unit disc
+    float edge = smoothstep(1.0, 0.85, r);
+    return 1.0 - edge;
+  }
+
+  // Quick HSV->RGB
+  vec3 hsv2rgb(vec3 c){
+    vec3 p = abs(fract(c.xxx + vec3(0.0,2.0/3.0,1.0/3.0)) * 6.0 - 3.0);
+    vec3 rgb = c.z * mix(vec3(1.0), clamp(p-1.0, 0.0, 1.0), c.y);
+    return rgb;
+  }
+
+  void main(){
+    // Discard corners (round sprite)
+    float disc = softDisc(gl_PointCoord);
+    if(disc <= 0.01) discard;
+
+    // View direction (in view space, camera at (0,0,0) looking +Z)
+    vec3 V = normalize(vViewPos);
+
+    // Rim lighting enhances silhouette where N ⟂ V
+    float rim = pow(1.0 - abs(dot(normalize(vNormal), V)), 2.0) * uRimStrength;
+
+    // Depth based color ramp (closer → warmer); animate slightly
+    float d = clamp(vDepth * 0.0025, 0.0, 1.0);
+    float hue = mix(0.58, 0.04, d); // teal→orange
+    hue = fract(hue + uHueShift + vTw*0.07 + 0.03*sin(uTime*0.2));
+    float sat = mix(0.85, 0.55, d);
+    float val = mix(0.65, 1.00, rim*0.6 + 0.2);
+    vec3 base = hsv2rgb(vec3(hue, sat, val));
+
+    // Combine: soft-disc with rim boost
+    vec3 col = base + rim * vec3(1.0, 0.8, 0.6);
+
+    // Depth fade in alpha (thinner further away)
+    float alpha = disc * clamp(1.0 / (1.0 + uDepthFade * d), 0.2, 1.0);
+
+    gl_FragColor = vec4(col, alpha);
+    #ifdef GL_OES_standard_derivatives
+      // Optional: soft alpha fringe
+    #endif
+  }
+`;
+
+// ────────────────────────── Material + holders
+const uniforms = {
+  uTime:       { value: 0 },
+  uPointSize:  { value: 4.0 },
+  uDepthFade:  { value: 0.65 },
+  uRimStrength:{ value: 0.8 },
+  uTwinkle:    { value: 0.7 },
+  uHueShift:   { value: 0.10 },
+  uUseNormals: { value: true }
+};
+
+const mat = new THREE.ShaderMaterial({
+  uniforms,
+  vertexShader:   vert,
+  fragmentShader: frag,
+  depthWrite:     false,
+  blending:       THREE.AdditiveBlending,
+  transparent:    true
+});
+
+let pointsGroup = new THREE.Group();
+scene.add(pointsGroup);
+
+// ────────────────────────── Helpers
+function addAsPoints(object3D){
+  // Merge all child geometries’ vertices into one BufferGeometry of positions (and normals if present)
+  const positions = [];
+  const normals   = [];
+  object3D.traverse(n=>{
+    if(n.isMesh || n.isPoints){
+      const g = n.geometry;
+      const pos = g.getAttribute('position');
+      if(!pos) return;
+      for(let i=0;i<pos.count;i++){
+        positions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+      }
+      const nor = g.getAttribute('normal');
+      if(nor){
+        for(let i=0;i<nor.count;i++){
+          normals.push(nor.getX(i), nor.getY(i), nor.getZ(i));
+        }
+      }
+    }
+  });
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  if(normals.length === positions.length){
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  }else{
+    // Compute normals if missing (uses triangles; for scattered vertices, we’ll get averaged directions)
+    geo.computeBoundingSphere();
+    geo.computeBoundingBox();
+    // Try to infer a pseudo-normal via gradient of position → simple normalize of position from center
+    const c = new THREE.Vector3();
+    geo.computeBoundingBox();
+    geo.boundingBox.getCenter(c);
+    const pos = geo.getAttribute('position');
+    const arr = new Float32Array(pos.count*3);
+    for(let i=0;i<pos.count;i++){
+      const x=pos.getX(i)-c.x, y=pos.getY(i)-c.y, z=pos.getZ(i)-c.z;
+      const len = Math.hypot(x,y,z) || 1.0;
+      arr[i*3+0] = x/len; arr[i*3+1] = y/len; arr[i*3+2] = z/len;
+    }
+    geo.setAttribute('normal', new THREE.BufferAttribute(arr, 3));
+  }
+
+  // Normalize and center model to a nice view
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox;
+  const size = new THREE.Vector3().subVectors(bb.max, bb.min);
+  const center = new THREE.Vector3().addVectors(bb.min, bb.max).multiplyScalar(0.5);
+  const scale = 1.0 / Math.max(size.x, size.y, size.z);
+  const m = new THREE.Matrix4().makeScale(scale, scale, scale).multiply(new THREE.Matrix4().makeTranslation(-center.x, -center.y, -center.z));
+  geo.applyMatrix4(m);
+
+  const pts = new THREE.Points(geo, mat);
+  return pts;
+}
+
+// ────────────────────────── Loaders & UI
+const loader = new OBJLoader();
+
+document.getElementById('file').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const obj = loader.parse(reader.result);
+    // Replace current
+    pointsGroup.clear();
+    const pts = addAsPoints(obj);
+    pointsGroup.add(pts);
+  };
+  reader.readAsText(file);
+});
+
+// Controls
+const ptSize = document.getElementById('ptSize');
+const depthFade = document.getElementById('depthFade');
+const rimStrength = document.getElementById('rimStrength');
+const twinkle = document.getElementById('twinkle');
+const hueShift = document.getElementById('hueShift');
+const useNormals = document.getElementById('useNormals');
+const spin = document.getElementById('spin');
+
+const szv = document.getElementById('szv');
+const dfv = document.getElementById('dfv');
+const rsv = document.getElementById('rsv');
+const twv = document.getElementById('twv');
+const hsv = document.getElementById('hsv');
+
+ptSize.addEventListener('input', ()=>{ uniforms.uPointSize.value = +ptSize.value; szv.textContent=ptSize.value; });
+depthFade.addEventListener('input', ()=>{ uniforms.uDepthFade.value = +depthFade.value; dfv.textContent=depthFade.value; });
+rimStrength.addEventListener('input', ()=>{ uniforms.uRimStrength.value = +rimStrength.value; rsv.textContent=rimStrength.value; });
+twinkle.addEventListener('input', ()=>{ uniforms.uTwinkle.value   = +twinkle.value;   twv.textContent=twinkle.value;   });
+hueShift.addEventListener('input', ()=>{ uniforms.uHueShift.value = +hueShift.value;  hsv.textContent=hueShift.value;  });
+useNormals.addEventListener('change', ()=>{ uniforms.uUseNormals.value = useNormals.checked; });
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ────────────────────────── Loop
+let t0 = performance.now();
+function tick(){
+  const t = performance.now()*0.001;
+  uniforms.uTime.value = t;
+  controls.update();
+  if(spin.checked) pointsGroup.rotation.y = (t - t0*0.001) * 0.25;
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>
