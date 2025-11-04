@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Funebra — OBJ Viewer (Female00)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+
+<!-- Import map -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<style>
+  html,body{height:100%;margin:0;background:#0a0f16;color:#e7ecff;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;overflow:hidden}
+  canvas{display:block}
+  #ui{
+    position:fixed; top:10px; left:10px; z-index:10; min-width:260px;
+    padding:12px; border-radius:12px; backdrop-filter: blur(6px);
+    background: linear-gradient(180deg, rgba(18,22,32,.85), rgba(11,15,24,.85));
+    border:1px solid rgba(255,122,24,.35); box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  #ui h1{margin:0 0 6px; font-size:16px; letter-spacing:.2px}
+  #ui label{display:block;margin-top:8px}
+  #ui input[type="range"]{width:220px}
+  #ui button{margin-top:10px; padding:8px 12px; border:0; border-radius:10px;
+    background:linear-gradient(180deg,#ff8e3a,#ff6e00); color:#1b1007; font-weight:700; cursor:pointer}
+  #hint{position:fixed; right:12px; bottom:10px; opacity:.75; font-size:12px}
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>⚡ Funebra — Female00.obj</h1>
+  <label>Low-poly ratio: <span id="lblRatio">55%</span>
+    <input id="ratio" type="range" min="5" max="100" value="55">
+  </label>
+  <label>Exposure: <span id="lblExp">1.0</span>
+    <input id="exp" type="range" min="0.2" max="2.0" step="0.01" value="1.0">
+  </label>
+  <label>Env intensity: <span id="lblEnv">1.0</span>
+    <input id="env" type="range" min="0" max="2" step="0.01" value="1.0">
+  </label>
+  <label><input id="wire" type="checkbox"> Wireframe</label>
+  <label><input id="bg" type="checkbox" checked> Gradient background</label>
+  <div style="display:flex; gap:8px; flex-wrap:wrap">
+    <button id="btnShot">Screenshot</button>
+    <button id="btnReset">Reset view</button>
+  </div>
+  <div class="funebra-muted" style="margin-top:8px;font-size:12px;opacity:.8">
+    Tip: drag & drop .obj/.mtl files anywhere to preview.
+  </div>
+</div>
+<div id="hint">© Funebra / pLabs</div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { OBJLoader }     from "three/addons/loaders/OBJLoader.js";
+import { MTLLoader }     from "three/addons/loaders/MTLLoader.js";
+import { RGBELoader }    from "three/addons/loaders/RGBELoader.js";
+import { SimplifyModifier } from "three/addons/modifiers/SimplifyModifier.js";
+
+let scene, camera, renderer, controls, objRoot, originalGeo = null;
+let envMap = null;
+
+const ui = {
+  ratio: document.getElementById('ratio'),
+  lblRatio: document.getElementById('lblRatio'),
+  exp: document.getElementById('exp'),
+  lblExp: document.getElementById('lblExp'),
+  env: document.getElementById('env'),
+  lblEnv: document.getElementById('lblEnv'),
+  wire: document.getElementById('wire'),
+  bg: document.getElementById('bg'),
+  btnShot: document.getElementById('btnShot'),
+  btnReset: document.getElementById('btnReset')
+};
+
+init();
+await loadEnvironment('../assets/env/studio.hdr');       // adjust path if needed
+await loadModel('Female00.obj', 'Female00.mtl');         // in same folder by default
+animate();
+
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0f16);
+
+  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 1000);
+  camera.position.set(0.6, 0.8, 1.2);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer:true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = parseFloat(ui.exp.value);
+  renderer.shadowMap.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  // Floor for soft contact
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(5, 64),
+    new THREE.MeshStandardMaterial({ color: 0x0d1118, metalness:0, roughness:.9 })
+  );
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Key light + fill rim
+  const k = new THREE.DirectionalLight(0xffffff, 3.0);
+  k.position.set(3, 5, 2);
+  k.castShadow = true;
+  k.shadow.mapSize.set(1024,1024);
+  scene.add(k);
+
+  const rim = new THREE.DirectionalLight(0x66aaff, 1.2);
+  rim.position.set(-3, 2, -2);
+  scene.add(rim);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.set(0, .9, 0);
+
+  window.addEventListener('resize', onResize);
+
+  // UI
+  ui.ratio.addEventListener('input', () => {
+    ui.lblRatio.textContent = ui.ratio.value + '%';
+    applyDecimation();
+  });
+  ui.exp.addEventListener('input', () => {
+    renderer.toneMappingExposure = parseFloat(ui.exp.value);
+    ui.lblExp.textContent = ui.exp.value;
+  });
+  ui.env.addEventListener('input', () => {
+    const v = parseFloat(ui.env.value);
+    ui.lblEnv.textContent = v.toFixed(2);
+    scene.traverse(o => {
+      if (o.isMesh && o.material && 'envMapIntensity' in o.material) {
+        o.material.envMapIntensity = v;
+        o.material.needsUpdate = true;
+      }
+    });
+  });
+  ui.wire.addEventListener('change', () => {
+    scene.traverse(o => { if(o.isMesh && o.material){ o.material.wireframe = ui.wire.checked; } });
+  });
+  ui.bg.addEventListener('change', () => {
+    scene.background = ui.bg.checked ? new THREE.Color(0x0a0f16) : null;
+  });
+  ui.btnShot.addEventListener('click', screenshot);
+  ui.btnReset.addEventListener('click', () => { controls.reset(); });
+
+  // Drag & drop for OBJ/MTL
+  window.addEventListener('dragover', e => { e.preventDefault(); });
+  window.addEventListener('drop', async e => {
+    e.preventDefault();
+    const files = [...e.dataTransfer.files];
+    const objFile = files.find(f => /\.obj$/i.test(f.name));
+    if(!objFile) return;
+    const mtlFile = files.find(f => /\.mtl$/i.test(f.name));
+    await loadModel(URL.createObjectURL(objFile), mtlFile ? URL.createObjectURL(mtlFile) : null);
+  });
+}
+
+async function loadEnvironment(hdrPath){
+  try{
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    envMap = await new RGBELoader().setPath('').loadAsync(hdrPath);
+    const tex = pmrem.fromEquirectangular(envMap).texture;
+    scene.environment = tex;
+  }catch(err){ console.warn('HDR env failed, continuing without.', err); }
+}
+
+async function loadModel(objPath, mtlPath=null){
+  // clear previous
+  if(objRoot){ scene.remove(objRoot); objRoot.traverse(o=>o.geometry?.dispose()); objRoot = null; originalGeo=null; }
+
+  let materials = null;
+  if(mtlPath){
+    try{
+      materials = await new MTLLoader().loadAsync(mtlPath);
+      materials.preload();
+    }catch(e){ console.warn('MTL load failed: ', e); }
+  }
+  const loader = new OBJLoader();
+  if(materials) loader.setMaterials(materials);
+  const root = await loader.loadAsync(objPath);
+
+  // normalize: center & fit to 1.8m height
+  const box = new THREE.Box3().setFromObject(root);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  root.position.sub(center);
+  const targetHeight = 1.8;
+  const scale = targetHeight / size.y;
+  root.scale.setScalar(scale);
+
+  // mesh setup
+  root.traverse(o=>{
+    if(o.isMesh){
+      o.castShadow = true; o.receiveShadow = false;
+      if(Array.isArray(o.material)){
+        o.material.forEach(m=>setupMat(m));
+      }else if(o.material){
+        setupMat(o.material);
+      }else{
+        o.material = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness:.1, roughness:.45 });
+        setupMat(o.material);
+      }
+      if(!originalGeo && o.geometry?.isBufferGeometry){
+        originalGeo = o.geometry.clone();
+      }
+    }
+  });
+
+  objRoot = root;
+  scene.add(root);
+
+  // frame camera
+  const s2 = new THREE.Vector3(); new THREE.Box3().setFromObject(root).getSize(s2);
+  const dist = Math.max(s2.x, s2.y, s2.z) * 1.8;
+  const dir = new THREE.Vector3(0.8, 0.6, 1).normalize();
+  camera.position.copy(dir.multiplyScalar(dist));
+  controls.target.set(0, s2.y*0.5*root.scale.y, 0);
+  controls.update();
+
+  applyDecimation();
+}
+
+function setupMat(m){
+  m.envMapIntensity = parseFloat(ui.env.value);
+  m.roughness = m.roughness ?? 0.45;
+  m.metalness = m.metalness ?? 0.15;
+}
+
+function applyDecimation(){
+  if(!objRoot) return;
+  const ratio = parseInt(ui.ratio.value,10)/100;
+  const modifier = new SimplifyModifier();
+
+  objRoot.traverse(o=>{
+    if(o.isMesh && originalGeo){
+      const geo = originalGeo.clone();
+      const count = Math.floor(geo.attributes.position.count * ratio);
+      const simplified = modifier.modify(geo, count);
+      simplified.computeVertexNormals();
+      o.geometry.dispose();
+      o.geometry = simplified;
+      o.material.needsUpdate = true;
+    }
+  });
+}
+
+function onResize(){
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+function screenshot(){
+  const url = renderer.domElement.toDataURL('image/png');
+  const a = Object.assign(document.createElement('a'), { href:url, download:'funebra-view.png' });
+  a.click();
+}
+</script>
+</body>
+</html>
