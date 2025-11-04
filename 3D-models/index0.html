@@ -46,7 +46,7 @@ let cubeMesh, headMesh, cubeGeo, targetPositions = [];
 
 Promise.all([
   loader.loadAsync('cube.obj'),
-  loader.loadAsync('female00.obj')
+  loader.loadAsync('Female00.obj')
 ]).then(([cubeObj, headObj])=>{
   cubeMesh = cubeObj.children.find(m=>m.isMesh);
   headMesh = headObj.children.find(m=>m.isMesh);
