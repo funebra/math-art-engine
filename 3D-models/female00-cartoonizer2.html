@@ -126,6 +126,31 @@ function makeToonMaterial({color='#f4b28a', rim=0.8}={}){
   };
   return mat;
 }
+
+
+  // ---- UI refs FIRST ----
+const subd    = document.getElementById('subd');
+const outline = document.getElementById('outline');
+const shading = document.getElementById('shading');
+const levels  = document.getElementById('levels');
+const base    = document.getElementById('base');
+const rim     = document.getElementById('rim');
+const expo    = document.getElementById('expo');
+const envI    = document.getElementById('envI');
+
+// ---- materials ----
+function makeToonMaterial(/* ... */){ /* unchanged */ }
+
+function makePBRMaterial(){
+  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.0, roughness: 1.0 });
+  m.envMap = env;
+  m.envMapIntensity = parseFloat(envI.value) || 1.0;   // now envI exists
+  return m;
+}
+
+let toonMat = makeToonMaterial();
+let pbrMat  = makePBRMaterial();  // create AFTER envI is defined
+
 function makePBRMaterial(){
   const m=new THREE.MeshStandardMaterial({ color:0xffffff, metalness:0.0, roughness:1.0 });
   m.envMap=env; m.envMapIntensity=parseFloat(envI.value);
