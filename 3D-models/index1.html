@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Funebra™ Anime Entity 00 — Generative Math-Art Character</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "funebra/exporters": "./funebra.exporters.module.js"
+  }
+}
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#05060a;overflow:hidden;}
+  #hud{position:fixed;top:10px;left:10px;color:#eee;font:13px system-ui;background:#111a;padding:8px 12px;border-radius:8px;}
+</style>
+</head>
+<body>
+<div id="hud">Funebra Anime Entity 00<br><button id="export">Export PNG</button></div>
+<canvas id="stage"></canvas>
+
+<script type="module">
+import * as THREE from 'three';
+import { exportPNG, stamp } from 'funebra/exporters';
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0,1.4,3);
+const renderer = new THREE.WebGLRenderer({canvas:stage,antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0x05060a);
+
+// lighting
+const light = new THREE.PointLight(0xff99aa, 1.5, 10);
+light.position.set(2,2,3);
+scene.add(light);
+
+// expressive eyes
+const eyeGeo = new THREE.SphereGeometry(0.25, 32, 32);
+const eyeMat = new THREE.MeshPhysicalMaterial({color:0xff66cc, emissive:0xff0099, emissiveIntensity:0.5, roughness:0.2, transmission:0.8});
+const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+const eyeR = eyeL.clone();
+eyeL.position.set(-0.35, 0.9, 0.9);
+eyeR.position.set(0.35, 0.9, 0.9);
+scene.add(eyeL, eyeR);
+
+// hair wave strips
+const hairGeo = new THREE.PlaneGeometry(2, 1, 80, 20);
+const hairMat = new THREE.MeshBasicMaterial({color:0x88ddff, wireframe:true});
+const hair = new THREE.Mesh(hairGeo, hairMat);
+hair.rotation.x = Math.PI/2;
+hair.position.y = 1.2;
+scene.add(hair);
+
+// fractal outfit core
+const outfitGeo = new THREE.IcosahedronGeometry(0.8, 2);
+const outfitMat = new THREE.MeshStandardMaterial({color:0x3366ff, metalness:0.3, roughness:0.4, emissive:0x111122});
+const outfit = new THREE.Mesh(outfitGeo, outfitMat);
+scene.add(outfit);
+
+// optical illusion background
+const bgGeo = new THREE.PlaneGeometry(20,10, 100,100);
+const bgMat = new THREE.MeshBasicMaterial({color:0x222244, wireframe:true, opacity:0.25, transparent:true});
+const bg = new THREE.Mesh(bgGeo, bgMat);
+bg.position.z = -3;
+scene.add(bg);
+
+// animate
+let t=0;
+function animate(){
+  requestAnimationFrame(animate);
+  t += 0.02;
+  const emo = Math.sin(t*1.3)*Math.cos(t*0.7);
+  outfit.rotation.y += 0.01;
+  outfit.scale.setScalar(1+0.1*emo);
+  hair.rotation.z = Math.sin(t)*0.2;
+  hair.material.color.setHSL((emo+1)/2,1,0.5);
+  renderer.render(scene,camera);
+}
+animate();
+
+// export
+document.getElementById('export').onclick = ()=>exportPNG(renderer.domElement,{filename:stamp('funebra-anime')});
+</script>
+</body>
+</html>
