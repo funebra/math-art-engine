@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Funebra — OBJ Viewer (Female00)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    html,body{margin:0;height:100%;background:#0a0a0a;color:#ddd;font:14px system-ui}
+    #ui{position:fixed;top:12px;left:12px;background:#111a;border:1px solid #222;
+        padding:10px 12px;border-radius:12px;backdrop-filter:blur(2px);min-width:260px;z-index:10}
+    label{display:block;margin-top:6px}
+    input[type=range],select{width:230px}
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div><b>Funebra — Female00.obj</b></div>
+
+    <label>Low-poly ratio:
+      <input id="ratio" type="range" min="5" max="100" value="55">
+      <span id="label">55%</span>
+    </label>
+    <label><input id="toggleLow" type="checkbox"> Show low-poly mesh</label>
+    <label><input id="wire" type="checkbox"> Wireframe</label>
+
+    <hr style="border:none;border-top:1px solid #222;margin:10px 0">
+
+    <label> Morph mode:
+      <select id="mMode">
+        <option value="sphere">Sphere</option>
+        <option value="star" selected>Funebra Star</option>
+        <option value="twist">Twist</option>
+        <option value="noise">Noise</option>
+      </select>
+    </label>
+    <label> Morph amount:
+      <input id="mAmt" type="range" min="0" max="100" value="60">
+      <span id="mAmtLbl">60%</span>
+    </label>
+    <label><input id="mAuto" type="checkbox" checked> Auto animate</label>
+
+    <label> Wave strength:
+      <input id="waveDeg" type="range" min="0" max="45" value="25">
+      <span id="waveLbl">25°</span>
+    </label>
+    <label> Smile amount:
+      <input id="smileAmt" type="range" min="0" max="100" value="60">
+      <span id="smileLbl">60%</span>
+    </label>
+
+    <hr style="border:none;border-top:1px solid #222;margin:10px 0">
+
+    <label> Exposure:
+      <input id="exp" type="range" min="0.2" max="2.0" step="0.01" value="1.0">
+      <span id="expLbl">1.00</span>
+    </label>
+    <label> Env intensity:
+      <input id="envI" type="range" min="0" max="2" step="0.01" value="1.0">
+      <span id="envLbl">1.00</span>
+    </label>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
+    import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+    import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+    // ── Renderer / scene / camera ──────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a0a);
+
+    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 2000);
+    camera.position.set(0, 0, 60);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Key/rim are kept subtle; HDR env provides main lighting
+    const key = new THREE.DirectionalLight(0xffffff, 0.5); key.position.set( 2, 3, 4);
+    const rim = new THREE.DirectionalLight(0x88aaff, 0.25); rim.position.set(-3, 2,-4);
+    scene.add(key, rim);
+
+    // contact floor
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(30,64),
+      new THREE.MeshStandardMaterial({ color:0x111111, roughness:1, metalness:0 }));
+    ground.rotation.x = -Math.PI/2; ground.position.y = -18; ground.receiveShadow = false;
+    scene.add(ground);
+
+    // ── Environment (HDRI) ────────────────────────────────────────────────────
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+
+    try {
+      const hdrTex = await new RGBELoader().loadAsync('../assets/env/studio.hdr'); // ensure this path is valid
+      const env = pmrem.fromEquirectangular(hdrTex).texture;
+      scene.environment = env;
+      hdrTex.dispose();
+    } catch(e) {
+      console.warn('HDR failed to load. Check /assets/env/studio.hdr', e);
+    }
+
+    // ── Materials ──────────────────────────────────────────────────────────────
+    const matGold = new THREE.MeshStandardMaterial({
+      color: 0xE2AE68, metalness: 0.35, roughness: 0.5, envMapIntensity: 1.0, flatShading: true
+    });
+    const matGoldLow = matGold.clone();
+
+    // ── UI refs ────────────────────────────────────────────────────────────────
+    const ratioEl  = document.getElementById('ratio');
+    const labelEl  = document.getElementById('label');
+    const toggleEl = document.getElementById('toggleLow');
+    const wireEl   = document.getElementById('wire');
+
+    const mModeEl  = document.getElementById('mMode');
+    const mAmtEl   = document.getElementById('mAmt');
+    const mAmtLbl  = document.getElementById('mAmtLbl');
+    const mAutoEl  = document.getElementById('mAuto');
+
+    const waveEl   = document.getElementById('waveDeg');
+    const waveLbl  = document.getElementById('waveLbl');
+    const smileEl  = document.getElementById('smileAmt');
+    const smileLbl = document.getElementById('smileLbl');
+
+    const expEl    = document.getElementById('exp');
+    const expLbl   = document.getElementById('expLbl');
+    const envIEl   = document.getElementById('envI');
+    const envLbl   = document.getElementById('envLbl');
+
+    mAmtEl.addEventListener('input', ()=> mAmtLbl.textContent = mAmtEl.value + '%');
+    waveEl.addEventListener('input', ()=> waveLbl.textContent = waveEl.value + '°');
+    smileEl.addEventListener('input',()=> smileLbl.textContent = smileEl.value + '%');
+    expEl.addEventListener('input',  ()=> { renderer.toneMappingExposure = parseFloat(expEl.value); expLbl.textContent = (+expEl.value).toFixed(2); });
+    envIEl.addEventListener('input', ()=> {
+      const v = parseFloat(envIEl.value);
+      envLbl.textContent = v.toFixed(2);
+      scene.traverse(o => { if (o.isMesh && o.material) { const m=o.material; (m.envMapIntensity!==undefined)&&(m.envMapIntensity=v); m.needsUpdate = true; }});
+    });
+
+    // ── Load OBJ and prepare meshes ────────────────────────────────────────────
+    const loader = new OBJLoader();
+    const obj = await loader.loadAsync('./Female00.obj'); // still used to compute bounds if needed
+
+    // Merge all parts (handy fallback / reference)
+    const parts = [];
+    obj.traverse(c => { if (c.isMesh && c.geometry) parts.push(c.geometry); });
+    const merged = parts.length === 1 ? parts[0] : BufferGeometryUtils.mergeGeometries(parts, true);
+    merged.computeBoundingBox();
+
+    // Use Funebra module arrays (your converted vertices/faces)
+    import Funebra, { registerShapeFromModules, makeShape } from 'https://funebra.github.io/math-art-engine/script.shapes.module.js';
+    await registerShapeFromModules('femaleHead',
+      './3D-models/female_head_point_cloud_vertices.js',
+      './3D-models/female_head_point_cloud_faces.js'
+    );
+    const head = makeShape('femaleHead',
+      { color: 0xE2AE68, metalness: 0.35, roughness: 0.5, envMapIntensity: 1.0, flatShading: true },
+      { center: true, scaleTo: 50 }
+    );
+    scene.add(head);
+
+    // ── Low-poly mesh (built on demand) ────────────────────────────────────────
+    const simplifier = new SimplifyModifier();
+    let headLow = null;
+
+    function buildLow() {
+      if (headLow) { scene.remove(headLow); headLow.geometry.dispose(); headLow = null; }
+      const ratio = parseInt(ratioEl.value,10)/100;
+      const src = head.geometry.clone();
+      const target = Math.max(60, Math.floor(src.getAttribute('position').count * ratio));
+      const simp = simplifier.modify(src, target);
+      simp.computeVertexNormals();
+      headLow = new THREE.Mesh(simp, matGoldLow);
+      headLow.visible = toggleEl.checked;
+      headLow.rotation.copy(head.rotation);
+      scene.add(headLow);
+    }
+
+    // UI events
+    ratioEl.addEventListener('input', () => { labelEl.textContent = ratioEl.value + '%'; buildLow(); });
+    toggleEl.addEventListener('change', () => { if (headLow) headLow.visible = toggleEl.checked; });
+    wireEl.addEventListener('change', () => { matGold.wireframe = wireEl.checked; matGoldLow.wireframe = wireEl.checked; });
+
+    buildLow();
+
+    // ── ONE unified onBeforeRender: morphs + wave/smile + low-poly sync ───────
+    const geo = head.geometry;
+    geo.computeBoundingBox(); geo.computeBoundingSphere();
+
+    const bbU = geo.boundingBox.clone();
+    const bsU = geo.boundingSphere;
+    const ctrU = bsU.center.clone();
+    const RU   = bsU.radius;
+    const sizeU= bbU.getSize(new THREE.Vector3());
+    const midZ = (bbU.min.z + bbU.max.z) * 0.5;
+
+    const posU  = geo.getAttribute('position');
+    const baseU = new Float32Array(posU.array.length);
+    baseU.set(posU.array);
+
+    const v = new THREE.Vector3(), n = new THREE.Vector3();
+
+    // Heuristic vertex groups (forearm + mouth corners)
+    const rightForearmIdx=[], mouthL=[], mouthR=[];
+    const rightSideX = bbU.max.x - sizeU.x*0.25;
+    const wristYMin  = bbU.min.y + sizeU.y*0.15;
+    const wristYMax  = bbU.min.y + sizeU.y*0.45;
+    const mouthY     = bbU.max.y - sizeU.y*0.12;
+    const mouthTolY  = sizeU.y*0.035;
+    const mouthSideW = sizeU.x*0.15;
+
+    for (let i=0;i<posU.count;i++){
+      const x=baseU[i*3], y=baseU[i*3+1], z=baseU[i*3+2];
+      if (x>rightSideX && y>wristYMin && y<wristYMax) rightForearmIdx.push(i);
+      if (Math.abs(y-mouthY)<mouthTolY && z>midZ){
+        if (x < bbU.min.x + mouthSideW) mouthL.push(i);
+        if (x > bbU.max.x - mouthSideW) mouthR.push(i);
+      }
+    }
+    const elbowPivot = new THREE.Vector3(bbU.max.x - sizeU.x*0.22, bbU.min.y + sizeU.y*0.52, midZ);
+    const AXIS_Z = new THREE.Vector3(0,0,1);
+
+    // Morph helpers
+    function toSphere(p){ return v.copy(p).sub(ctrU).normalize().multiplyScalar(RU).add(ctrU); }
+    function starRadius(th, ph){ const nL=6,mL=3,k=0.22; return RU*(1+k*Math.cos(nL*ph)*Math.cos(mL*th)); }
+    function toStar(p){
+      v.copy(p).sub(ctrU); const r=v.length()||1e-6;
+      const th=Math.acos(THREE.MathUtils.clamp(v.y/r,-1,1)), ph=Math.atan2(v.z,v.x);
+      return v.normalize().multiplyScalar(starRadius(th,ph)).add(ctrU);
+    }
+    function toTwist(p, t){
+      const amt = THREE.MathUtils.degToRad(180)*t;
+      const h = (p.y - bbU.min.y)/(sizeU.y||1e-6) - 0.5;
+      const ang = amt*h, dx=p.x-ctrU.x, dz=p.z-ctrU.z, c=Math.cos(ang), s=Math.sin(ang);
+      return v.set(ctrU.x + dx*c - dz*s, p.y, ctrU.z + dx*s + dz*c);
+    }
+    function nRand3(x,y,z){ const s=Math.sin(x*12.9898+y*78.233+z*37.719)*43758.5453; return (s-Math.floor(s))*2-1; }
+
+    const clockU = new THREE.Clock();
+    let frameU = 0;
+
+    head.onBeforeRender = () => {
+      const t = clockU.getElapsedTime();
+
+      // morph amount (slider + optional auto pulse)
+      const baseAmt = parseFloat(mAmtEl.value)/100;
+      const a = mAutoEl.checked ? (0.5+0.5*Math.sin(t*1.2))*baseAmt : baseAmt;
+
+      // reset
+      posU.array.set(baseU);
+
+      // apply morph
+      const mode = mModeEl.value;
+      for (let i=0;i<posU.count;i++){
+        const i3=i*3;
+        v.set(baseU[i3],baseU[i3+1],baseU[i3+2]);
+        let target;
+        if (mode==='sphere') target = toSphere(v);
+        else if (mode==='star') target = toStar(v);
+        else if (mode==='twist') target = toTwist(v,a);
+        else { // noise
+          n.copy(v).sub(ctrU).normalize();
+          const nz = nRand3(v.x*0.15, v.y*0.18, v.z*0.21);
+          target = v.clone().addScaledVector(n, nz * RU*0.08*a);
+        }
+        const mix = (mode==='twist') ? 0.9 : a;
+        posU.array[i3]   = THREE.MathUtils.lerp(baseU[i3],   target.x, mix);
+        posU.array[i3+1] = THREE.MathUtils.lerp(baseU[i3+1], target.y, mix);
+        posU.array[i3+2] = THREE.MathUtils.lerp(baseU[i3+2], target.z, mix);
+      }
+
+      // wave + smile
+      const WAVE_DEG = parseFloat(waveEl.value);
+      const WAVE_SPEED = 3.2;
+      const ang = THREE.MathUtils.degToRad(Math.sin(t*WAVE_SPEED)*WAVE_DEG);
+      for (const idx of rightForearmIdx){
+        const i3=idx*3;
+        v.set(posU.array[i3],posU.array[i3+1],posU.array[i3+2])
+         .sub(elbowPivot).applyAxisAngle(AXIS_Z, ang).add(elbowPivot);
+        posU.array[i3]=v.x; posU.array[i3+1]=v.y; posU.array[i3+2]=v.z;
+      }
+      const SMILE_SCALE = parseFloat(smileEl.value)/100;
+      const s = (0.5+0.5*Math.sin(t*2.0)) * SMILE_SCALE;
+      const SMILE_UP  = sizeU.y * 0.012;
+      const SMILE_OUT = sizeU.x * 0.006;
+      for (const idx of mouthL){ const i3=idx*3; posU.array[i3+1]+=SMILE_UP*s; posU.array[i3]-=SMILE_OUT*s; }
+      for (const idx of mouthR){ const i3=idx*3; posU.array[i3+1]+=SMILE_UP*s; posU.array[i3]+=SMILE_OUT*s; }
+
+      posU.needsUpdate = true;
+      if ((frameU++ & 7)===0) geo.computeVertexNormals();
+
+      // keep low-poly in sync when visible (cheap refresh)
+      if (toggleEl.checked && headLow && (frameU % 15 === 0)) {
+        const fresh = geo.clone();
+        headLow.geometry.dispose();
+        headLow.geometry = fresh;
+      }
+    };
+
+    // ── Resize + render loop ───────────────────────────────────────────────────
+    addEventListener('resize', ()=>{
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    (function animate(){
+      requestAnimationFrame(animate);
+      head.rotation.y += 0.0032;
+      if (headLow) headLow.rotation.y += 0.0032;
+      controls.update();
+      renderer.render(scene, camera);
+    })();
+  </script>
+</body>
+</html>
