@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Funebra — High-Poly Classic Mouse (1928 style)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  html,body{height:100%;margin:0;background:#0a0f16;color:#e7ecff;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;overflow:hidden}
+  #ui{
+    position:fixed; top:10px; left:10px; z-index:10; min-width:300px;
+    padding:12px; border-radius:12px; backdrop-filter: blur(6px);
+    background: linear-gradient(180deg, rgba(18,22,32,.85), rgba(11,15,24,.85));
+    border:1px solid rgba(255,122,24,.35); box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  #ui h1{margin:0 0 8px; font-size:16px}
+  #ui label{display:block; margin:8px 0 2px}
+  #ui input[type="range"]{width:260px}
+  #ui button{margin-top:8px; padding:8px 12px; border:0; border-radius:10px; cursor:pointer;
+    background:linear-gradient(180deg,#ff8e3a,#ff6e00); color:#1b1007; font-weight:700}
+  #hint{position:fixed; right:12px; bottom:10px; opacity:.75; font-size:12px}
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>⚡ Funebra — High-Poly Classic Mouse</h1>
+  <label>Scale: <span id="lblScale">1.00</span>
+    <input id="scale" type="range" min="0.6" max="1.8" step="0.01" value="1.00">
+  </label>
+  <label>Exposure: <span id="lblExp">1.00</span>
+    <input id="exp" type="range" min="0.2" max="2.0" step="0.01" value="1.00">
+  </label>
+  <label>Env intensity: <span id="lblEnv">1.20</span>
+    <input id="env" type="range" min="0.0" max="2.0" step="0.01" value="1.20">
+  </label>
+
+  <hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:10px 0">
+
+  <label>Head tilt: <span id="lblTilt">0°</span>
+    <input id="tilt" type="range" min="-25" max="25" step="1" value="0">
+  </label>
+  <label>Smile: <span id="lblSmile">60%</span>
+    <input id="smile" type="range" min="0" max="100" step="1" value="60">
+  </label>
+  <label>Arm raise (L/R): <span id="lblArms">30° / 10°</span>
+    <input id="armL" type="range" min="-10" max="90" step="1" value="30">
+    <input id="armR" type="range" min="-10" max="90" step="1" value="10">
+  </label>
+  <label>Stance (legs spread): <span id="lblLegs">12°</span>
+    <input id="legs" type="range" min="0" max="25" step="1" value="12">
+  </label>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap">
+    <button id="btnObj">Export OBJ</button>
+    <button id="btnGltf">Export GLTF</button>
+    <button id="btnShot">Screenshot</button>
+  </div>
+  <div class="muted" style="margin-top:6px; font-size:12px; opacity:.85">
+    Classic 1928 silhouette tribute. Drag to orbit, wheel to zoom, right-drag to pan.
+  </div>
+</div>
+<div id="hint">© Funebra / pLabs</div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { OBJExporter } from "three/addons/exporters/OBJExporter.js";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
+
+let scene, camera, renderer, controls, pmrem;
+let root, hdrLoaded = false;
+
+// UI
+const ui = {
+  scale: el('scale'), lblScale: el('lblScale'),
+  exp: el('exp'), lblExp: el('lblExp'),
+  env: el('env'), lblEnv: el('lblEnv'),
+  tilt: el('tilt'), lblTilt: el('lblTilt'),
+  smile: el('smile'), lblSmile: el('lblSmile'),
+  armL: el('armL'), armR: el('armR'), lblArms: el('lblArms'),
+  legs: el('legs'), lblLegs: el('lblLegs'),
+  btnObj: el('btnObj'), btnGltf: el('btnGltf'), btnShot: el('btnShot')
+};
+
+init();
+await loadEnvironment('../assets/env/studio.hdr'); // ensure this file exists
+buildCharacter();
+animate();
+
+// ──────────────────────────────────────────────────────────────────────────────
+function el(id){ return document.getElementById(id); }
+
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0f16);
+
+  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 1000);
+  camera.position.set(0.9, 0.85, 1.6);
+
+  renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = parseFloat(ui.exp.value);
+  document.body.appendChild(renderer.domElement);
+
+  pmrem = new THREE.PMREMGenerator(renderer);
+
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(2.8, 64),
+    new THREE.MeshStandardMaterial({ color: 0x0d1118, metalness: 0.0, roughness: 0.95 })
+  );
+  floor.rotation.x = -Math.PI/2; floor.position.y = -0.0;
+  scene.add(floor);
+
+  const key = new THREE.DirectionalLight(0xffffff, 1.8);
+  key.position.set(3, 5, 2);
+  const rim = new THREE.DirectionalLight(0x88aaff, 0.8);
+  rim.position.set(-3, 2, -2);
+  scene.add(key, rim);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.set(0, 0.6, 0);
+
+  addEventListener('resize', onResize);
+
+  // UI events
+  ui.scale.addEventListener('input', ()=>{ ui.lblScale.textContent=(+ui.scale.value).toFixed(2); if(root){ root.scale.setScalar(parseFloat(ui.scale.value)); } });
+  ui.exp.addEventListener('input', ()=>{ renderer.toneMappingExposure = parseFloat(ui.exp.value); ui.lblExp.textContent=(+ui.exp.value).toFixed(2); });
+  ui.env.addEventListener('input', ()=>{ ui.lblEnv.textContent=(+ui.env.value).toFixed(2); if(root) setEnvIntensity(root, parseFloat(ui.env.value)); });
+
+  ui.tilt.addEventListener('input', ()=>{ ui.lblTilt.textContent=ui.tilt.value+'°'; });
+  ui.smile.addEventListener('input', ()=>{ ui.lblSmile.textContent=ui.smile.value+'%'; });
+  ui.armL.addEventListener('input', ()=>{ ui.lblArms.textContent = `${ui.armL.value}° / ${ui.armR.value}°`; });
+  ui.armR.addEventListener('input', ()=>{ ui.lblArms.textContent = `${ui.armL.value}° / ${ui.armR.value}°`; });
+  ui.legs.addEventListener('input', ()=>{ ui.lblLegs.textContent = ui.legs.value+'°'; });
+
+  ui.btnObj.addEventListener('click', exportOBJ);
+  ui.btnGltf.addEventListener('click', exportGLTF);
+  ui.btnShot.addEventListener('click', screenshot);
+}
+
+async function loadEnvironment(hdrPath){
+  try{
+    const hdr = await new RGBELoader().loadAsync(hdrPath);
+    const tex = pmrem.fromEquirectangular(hdr).texture;
+    scene.environment = tex;
+    hdr.dispose();
+    hdrLoaded = true;
+  }catch(e){
+    console.warn('HDR env failed, continuing without.', e);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Build a high-poly “classic mouse” with public-domain 1928 proportions
+function buildCharacter(){
+  if(root){ scene.remove(root); root.traverse(o=>o.geometry?.dispose()); }
+  root = new THREE.Group(); root.scale.setScalar(parseFloat(ui.scale.value));
+
+  // Materials
+  const matBlack = new THREE.MeshStandardMaterial({ color: 0x101010, metalness: 0.15, roughness: 0.4, envMapIntensity: parseFloat(ui.env.value) });
+  const matFace  = new THREE.MeshStandardMaterial({ color: 0xffe6ce, metalness: 0.05, roughness: 0.5, envMapIntensity: parseFloat(ui.env.value) });
+  const matShort = new THREE.MeshStandardMaterial({ color: 0xcc1b1b, metalness: 0.1,  roughness: 0.55, envMapIntensity: parseFloat(ui.env.value) });
+  const matBtn   = new THREE.MeshStandardMaterial({ color: 0xf6f1cf, metalness: 0.05, roughness: 0.25, envMapIntensity: parseFloat(ui.env.value) });
+  const matGlove = new THREE.MeshStandardMaterial({ color: 0xf4f4f4, metalness: 0.05, roughness: 0.25, envMapIntensity: parseFloat(ui.env.value) });
+  const matShoe  = new THREE.MeshStandardMaterial({ color: 0xf4c21a, metalness: 0.1,  roughness: 0.35, envMapIntensity: parseFloat(ui.env.value) });
+  const matNose  = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.25, roughness: 0.2,  envMapIntensity: parseFloat(ui.env.value) });
+  const matEyeW  = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.0,  roughness: 0.2,  envMapIntensity: parseFloat(ui.env.value) });
+  const matEyeB  = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.6,  roughness: 0.15, envMapIntensity: parseFloat(ui.env.value) });
+
+  // Torso (pear)
+  const torso = new THREE.Mesh(new THREE.SphereGeometry(0.33, 128, 96), matBlack);
+  torso.scale.set(1.0, 1.15, 0.95);
+  torso.position.set(0, 0.55, 0);
+  root.add(torso);
+
+  // Pelvis / shorts base
+  const hips = new THREE.Mesh(new THREE.SphereGeometry(0.29, 128, 96), matShort);
+  hips.scale.set(1.05, 0.75, 1.0);
+  hips.position.set(0, 0.35, 0);
+  root.add(hips);
+
+  // Short cuffs (thin torus halves)
+  const cuffGeo = new THREE.TorusGeometry(0.18, 0.04, 32, 128);
+  const cuffL = new THREE.Mesh(cuffGeo, matShort); cuffL.position.set(0,0.42, 0.17); cuffL.rotation.x = Math.PI/2;
+  const cuffR = cuffL.clone(); cuffR.position.z = -cuffL.position.z;
+  root.add(cuffL, cuffR);
+
+  // Buttons
+  const btnL = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.01,48), matBtn);
+  btnL.rotation.x = Math.PI/2; btnL.position.set(0.07, 0.42, 0.08);
+  const btnR = btnL.clone(); btnR.position.z = -btnL.position.z;
+  root.add(btnL, btnR);
+
+  // Head group
+  const head = new THREE.Group(); head.position.set(0, 0.95, 0); root.add(head);
+
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.28, 128, 96), matBlack);
+  head.add(skull);
+
+  // Face/snout (oval)
+  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.22, 96, 72), matFace);
+  snout.scale.set(1.15, 0.9, 1.05);
+  snout.position.set(0.16, -0.02, 0);
+  head.add(snout);
+
+  // Nose
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.06, 64, 48), matNose);
+  nose.position.set(0.27, -0.01, 0);
+  head.add(nose);
+
+  // Ears (big circles)
+  const earGeo = new THREE.SphereGeometry(0.18, 96, 72);
+  const earL = new THREE.Mesh(earGeo, matBlack);
+  earL.position.set(-0.12, 0.22, 0.18);
+  const earR = earL.clone(); earR.position.z = -earL.position.z;
+  head.add(earL, earR);
+
+  // Eyes (classic tall ovals + pupils)
+  const eyeWhiteGeo = new THREE.SphereGeometry(0.09, 64, 48);
+  function makeEye(sign=1){
+    const w = new THREE.Mesh(eyeWhiteGeo, matEyeW);
+    w.scale.set(0.45, 0.8, 0.45);
+    w.position.set(0.19, 0.06, 0.06*sign);
+    // pupil
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 48, 36), matEyeB);
+    pupil.scale.set(0.18, 0.35, 0.2);
+    pupil.position.set(0.22, 0.04, 0.06*sign);
+    head.add(w, pupil);
+  }
+  makeEye(1); makeEye(-1);
+
+  // Mouth (curved quad strip shaped via shape geometry)
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.008, 16, 64, Math.PI*0.7), matNose);
+  mouth.rotation.set(0, 0, Math.PI*0.98);
+  mouth.position.set(0.18, -0.05, 0);
+  head.add(mouth);
+
+  // Arms (capsules) + gloves
+  function capsule(r=0.05, h=0.25, seg=64){
+    return new THREE.CapsuleGeometry(r, h, seg, seg);
+  }
+  const armL = new THREE.Mesh(capsule(0.045, 0.28), matBlack);
+  armL.position.set(0.0, 0.62, 0.26); armL.rotation.set(0, 0, THREE.MathUtils.degToRad(-10));
+  const forearmL = new THREE.Mesh(capsule(0.04, 0.26), matBlack);
+  forearmL.position.set(0.18, 0.62, 0.26); forearmL.rotation.set(0, 0, THREE.MathUtils.degToRad(-10));
+  const gloveL = new THREE.Mesh(new THREE.SphereGeometry(0.09, 64, 48), matGlove);
+  gloveL.position.set(0.31, 0.62, 0.26);
+
+  const armR = armL.clone(); armR.position.z = -armL.position.z;
+  const forearmR = forearmL.clone(); forearmR.position.z = -forearmL.position.z;
+  const gloveR = gloveL.clone(); gloveR.position.z = -gloveL.position.z;
+
+  root.add(armL, forearmL, gloveL, armR, forearmR, gloveR);
+
+  // Legs (capsules) + shoes
+  const legL = new THREE.Mesh(capsule(0.055, 0.32), matBlack);
+  legL.position.set(0.08, 0.25, 0.11);
+  const legR = legL.clone(); legR.position.z = -legL.position.z;
+
+  const shoeGeo = new THREE.SphereGeometry(0.13, 96, 72);
+  const shoeL = new THREE.Mesh(shoeGeo, matShoe); shoeL.scale.set(1.2, 0.6, 0.8);
+  shoeL.position.set(0.12, 0.06, 0.13);
+  const shoeR = shoeL.clone(); shoeR.position.z = -shoeL.position.z;
+
+  root.add(legL, legR, shoeL, shoeR);
+
+  // Tail (thin, simple)
+  const tailCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.22, 0.40, 0.0),
+    new THREE.Vector3(-0.32, 0.42, 0.07),
+    new THREE.Vector3(-0.44, 0.40, -0.02),
+    new THREE.Vector3(-0.54, 0.42, 0.05)
+  ], false, 'centripetal', 0.25);
+  const tail = new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 200, 0.015, 24, false), matBlack);
+  root.add(tail);
+
+  // Grouping to drive posing
+  head.rotation.order = 'YXZ';
+  head.userData.isHead = true;
+  armL.userData.side='L'; forearmL.userData.side='L'; gloveL.userData.side='L';
+  armR.userData.side='R'; forearmR.userData.side='R'; gloveR.userData.side='R';
+  legL.userData.side='L'; legR.userData.side='R';
+
+  // Center + add to scene
+  const box = new THREE.Box3().setFromObject(root);
+  const c = new THREE.Vector3(); box.getCenter(c);
+  root.position.sub(c);
+  scene.add(root);
+
+  // Camera frame
+  controls.target.set(0, 0.6, 0);
+  controls.update();
+
+  // Posing tick
+  const clock = new THREE.Clock();
+  renderer.setAnimationLoop(()=>{
+    const t = clock.getElapsedTime();
+    // head tilt + idle bob
+    head.rotation.z = THREE.MathUtils.degToRad(parseFloat(ui.tilt.value));
+    head.rotation.y = Math.sin(t*0.8)*0.1;
+
+    // smile bend → adjust torus arc “mouth” and snout scale a bit
+    const s = parseFloat(ui.smile.value)/100;
+    mouth.rotation.z = Math.PI*0.98 - 0.35*s;
+
+    // arms
+    const aL = THREE.MathUtils.degToRad(parseFloat(ui.armL.value));
+    const aR = THREE.MathUtils.degToRad(parseFloat(ui.armR.value));
+    armL.rotation.z = -aL; forearmL.rotation.z = -aL*0.1;
+    armR.rotation.z =  aR; forearmR.rotation.z =  aR*0.1;
+
+    // legs spread
+    const legsDeg = THREE.MathUtils.degToRad(parseFloat(ui.legs.value));
+    legL.rotation.z =  legsDeg; shoeL.rotation.y =  0.2;
+    legR.rotation.z = -legsDeg; shoeR.rotation.y = -0.2;
+
+    renderer.render(scene, camera);
+  });
+}
+
+function setEnvIntensity(root, v){
+  root.traverse(o=>{
+    if(o.isMesh && o.material && 'envMapIntensity' in o.material){
+      o.material.envMapIntensity = v; o.material.needsUpdate = true;
+    }
+  });
+}
+
+function onResize(){
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(root) root.rotation.y += 0.0016;
+  controls.update();
+  // render handled in animationLoop too; keeping here as fallback
+}
+
+// ── Exports ───────────────────────────────────────────────────────────────────
+function exportOBJ(){
+  const exp = new OBJExporter();
+  const text = exp.parse(root);
+  downloadText(text, 'funebra-classic-mouse.obj', 'text/plain');
+}
+function exportGLTF(){
+  const exp = new GLTFExporter();
+  exp.parse(root, (gltf)=>{
+    const blob = new Blob([JSON.stringify(gltf)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href:url, download:'funebra-classic-mouse.gltf' });
+    a.click(); URL.revokeObjectURL(url);
+  }, { binary:false });
+}
+function screenshot(){
+  const a = document.createElement('a');
+  a.href = renderer.domElement.toDataURL('image/png');
+  a.download = 'funebra-classic-mouse.png';
+  a.click();
+}
+function downloadText(text, filename, mime){
+  const url = URL.createObjectURL(new Blob([text], {type:mime||'text/plain'}));
+  const a = Object.assign(document.createElement('a'), { href:url, download:filename });
+  a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
