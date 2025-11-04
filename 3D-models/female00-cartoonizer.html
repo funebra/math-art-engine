@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Funebra — High-Poly Cartoonizer (Female00.obj → Chibi)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  html,body{height:100%;margin:0;background:#0a0f16;color:#e7ecff;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;overflow:hidden}
+  canvas{display:block}
+  #ui{
+    position:fixed; top:10px; left:10px; z-index:10; min-width:300px;
+    padding:12px; border-radius:12px; backdrop-filter: blur(6px);
+    background: linear-gradient(180deg, rgba(18,22,32,.86), rgba(11,15,24,.86));
+    border:1px solid rgba(255,122,24,.35); box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  #ui h1{margin:0 0 8px; font-size:16px}
+  #ui label{display:block; margin:8px 0 2px}
+  #ui input[type="range"]{width:260px}
+  #ui button{margin-top:8px; padding:8px 12px; border:0; border-radius:10px; cursor:pointer;
+    background:linear-gradient(180deg,#ff8e3a,#ff6e00); color:#1b1007; font-weight:700}
+  #hint{position:fixed; right:12px; bottom:10px; opacity:.75; font-size:12px}
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>⚡ Funebra — Female00 → Cartoon</h1>
+
+  <label>Subdivision (hi-poly): <span id="lblSub">2</span>
+    <input id="subd" type="range" min="0" max="3" step="1" value="2">
+  </label>
+
+  <label>Head scale (chibi): <span id="lblHead">1.60×</span>
+    <input id="head" type="range" min="1.0" max="2.2" step="0.01" value="1.60">
+  </label>
+
+  <label>Body squash (height): <span id="lblSquash">0.85×</span>
+    <input id="squash" type="range" min="0.6" max="1.1" step="0.01" value="0.85">
+  </label>
+
+  <label>Waist pinch: <span id="lblPinch">0.85×</span>
+    <input id="pinch" type="range" min="0.6" max="1.2" step="0.01" value="0.85">
+  </label>
+
+  <label>Hand/Foot puff: <span id="lblPuff">1.25×</span>
+    <input id="puff" type="range" min="1.0" max="1.8" step="0.01" value="1.25">
+  </label>
+
+  <label>Outline thickness: <span id="lblOutline">1.8%</span>
+    <input id="outline" type="range" min="0.0" max="0.06" step="0.001" value="0.018">
+  </label>
+
+  <label>Shading:
+    <select id="shader">
+      <option value="pbr" selected>PBR (env reflections)</option>
+      <option value="toon">Toon (ramp + outline)</option>
+    </select>
+  </label>
+
+  <label>Exposure: <span id="lblExp">1.00</span>
+    <input id="exp" type="range" min="0.2" max="2.0" step="0.01" value="1.00">
+  </label>
+  <label>Env intensity: <span id="lblEnv">1.20</span>
+    <input id="env" type="range" min="0" max="2" step="0.01" value="1.20">
+  </label>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap">
+    <button id="btnObj">Export OBJ</button>
+    <button id="btnGltf">Export GLTF</button>
+    <button id="btnShot">Screenshot</button>
+  </div>
+
+  <div class="muted" style="margin-top:6px; font-size:12px; opacity:.85">
+    Drag to orbit • Wheel to zoom • Right-drag to pan.
+  </div>
+</div>
+<div id="hint">© Funebra / pLabs</div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { SubdivisionModifier } from "three/addons/modifiers/SubdivisionModifier.js";
+import { OBJExporter } from "three/addons/exporters/OBJExporter.js";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
+
+let scene, camera, renderer, controls, pmrem;
+let srcGeo = null;         // merged original
+let workGeo = null;        // working hi-poly
+let basePos = null;        // Float32Array backup of workGeo positions
+let mesh = null;           // main mesh (PBR or Toon)
+let outlineMesh = null;    // silhouette mesh
+let toonRamp = null;       // DataTexture for MeshToonMaterial
+let envIntensity = 1.2;
+
+const ui = {
+  subd: get('subd'), lblSub: get('lblSub'),
+  head: get('head'), lblHead: get('lblHead'),
+  squash: get('squash'), lblSquash: get('lblSquash'),
+  pinch: get('pinch'), lblPinch: get('lblPinch'),
+  puff: get('puff'), lblPuff: get('lblPuff'),
+  outline: get('outline'), lblOutline: get('lblOutline'),
+  shader: get('shader'),
+  exp: get('exp'), lblExp: get('lblExp'),
+  env: get('env'), lblEnv: get('lblEnv'),
+  btnObj: get('btnObj'), btnGltf: get('btnGltf'), btnShot: get('btnShot')
+};
+
+init();
+await loadEnvironment('../assets/env/studio.hdr');    // make sure this exists
+await loadFemaleObj('./Female00.obj');                // same folder as this HTML
+buildMaterial('pbr');
+applyAllDeforms();                                    // chibi stylization
+updateOutline();
+animate();
+
+// ──────────────────────────────────────────────────────────────────────────────
+function get(id){ return document.getElementById(id); }
+
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0f16);
+
+  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 2000);
+  camera.position.set(0.65, 0.95, 1.8);
+
+  renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = parseFloat(ui.exp.value);
+  document.body.appendChild(renderer.domElement);
+
+  pmrem = new THREE.PMREMGenerator(renderer);
+
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(3, 64),
+    new THREE.MeshStandardMaterial({ color: 0x0d1118, metalness: 0, roughness: 0.95 })
+  );
+  floor.rotation.x = -Math.PI/2;
+  scene.add(floor);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.set(0, 0.9, 0);
+
+  addEventListener('resize', onResize);
+
+  // UI events
+  ui.subd.addEventListener('input', ()=>{ ui.lblSub.textContent = ui.subd.value; rebuildSubd(); });
+  ui.head.addEventListener('input', ()=>{ ui.lblHead.textContent = `${(+ui.head.value).toFixed(2)}×`; applyAllDeforms(); });
+  ui.squash.addEventListener('input', ()=>{ ui.lblSquash.textContent = `${(+ui.squash.value).toFixed(2)}×`; applyAllDeforms(); });
+  ui.pinch.addEventListener('input', ()=>{ ui.lblPinch.textContent = `${(+ui.pinch.value).toFixed(2)}×`; applyAllDeforms(); });
+  ui.puff.addEventListener('input', ()=>{ ui.lblPuff.textContent = `${(+ui.puff.value).toFixed(2)}×`; applyAllDeforms(); });
+
+  ui.outline.addEventListener('input', ()=>{ ui.lblOutline.textContent = `${(ui.outline.value*100).toFixed(1)}%`; updateOutline(); });
+
+  ui.shader.addEventListener('change', ()=>{
+    buildMaterial(ui.shader.value);
+    if(mesh) mesh.material.needsUpdate = true;
+    updateOutline();
+  });
+
+  ui.exp.addEventListener('input', ()=>{ renderer.toneMappingExposure = parseFloat(ui.exp.value); ui.lblExp.textContent = (+ui.exp.value).toFixed(2); });
+  ui.env.addEventListener('input', ()=>{
+    envIntensity = parseFloat(ui.env.value);
+    ui.lblEnv.textContent = envIntensity.toFixed(2);
+    if(mesh && mesh.material && 'envMapIntensity' in mesh.material){
+      mesh.material.envMapIntensity = envIntensity;
+      mesh.material.needsUpdate = true;
+    }
+  });
+
+  ui.btnObj.addEventListener('click', exportOBJ);
+  ui.btnGltf.addEventListener('click', exportGLTF);
+  ui.btnShot.addEventListener('click', screenshot);
+}
+
+async function loadEnvironment(hdrPath){
+  try{
+    const hdr = await new RGBELoader().loadAsync(hdrPath);
+    const tex = pmrem.fromEquirectangular(hdr).texture;
+    scene.environment = tex;
+    hdr.dispose();
+  }catch(e){
+    console.warn('HDR load failed:', e);
+  }
+}
+
+async function loadFemaleObj(path){
+  const obj = await new OBJLoader().loadAsync(path);
+
+  // Merge geometries to one BufferGeometry
+  const geos = [];
+  obj.traverse(o=>{ if(o.isMesh && o.geometry) geos.push(o.geometry); });
+  srcGeo = geos.length === 1 ? geos[0] : BufferGeometryUtils.mergeGeometries(geos, true);
+
+  // Normalize: center & uniform scale ~1.8m height → fit to viewer
+  srcGeo.computeBoundingBox();
+  const box = srcGeo.boundingBox.clone();
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  srcGeo.translate(-center.x, -center.y, -center.z);
+  const targetH = 1.8;
+  const s = targetH / size.y;
+  srcGeo.scale(s, s, s);
+  srcGeo.computeVertexNormals();
+
+  rebuildSubd(); // also builds mesh
+  frameCameraToMesh();
+}
+
+function rebuildSubd(){
+  if(!srcGeo) return;
+  // Recreate a hi-poly copy using SubdivisionModifier
+  const subdLevels = parseInt(ui.subd.value, 10);
+  const mod = new SubdivisionModifier(subdLevels);
+  workGeo = srcGeo.clone();
+  if(subdLevels > 0){
+    workGeo = mod.modify(workGeo);
+    workGeo.computeVertexNormals();
+  }
+  basePos = new Float32Array(workGeo.attributes.position.array); // store base
+  if(mesh){
+    mesh.geometry.dispose();
+    mesh.geometry = workGeo;
+  }else{
+    mesh = new THREE.Mesh(workGeo, new THREE.MeshStandardMaterial({
+      color: 0xe2ae68, metalness: 0.3, roughness: 0.5, envMapIntensity: envIntensity
+    }));
+    scene.add(mesh);
+  }
+  applyAllDeforms();
+  updateOutline();
+}
+
+function buildMaterial(mode){
+  if(!mesh) return;
+  if(mode === 'toon'){
+    // Build a 4-band ramp DataTexture for toon shading
+    toonRamp = buildToonRamp([[12,12,18],[60,60,80],[170,170,190],[255,255,255]]);
+    mesh.material = new THREE.MeshToonMaterial({
+      color: 0xe6c28c,
+      gradientMap: toonRamp,
+      envMapIntensity: envIntensity
+    });
+  }else{
+    mesh.material = new THREE.MeshStandardMaterial({
+      color: 0xe2ae68, metalness: 0.3, roughness: 0.5, envMapIntensity: envIntensity
+    });
+  }
+}
+
+function buildToonRamp(stops){
+  // stops: array of RGB 0-255
+  const w = 256, h = 1;
+  const data = new Uint8Array(w*3);
+  for(let x=0;x<w;x++){
+    const t = x/(w-1);
+    const band = Math.floor(t*stops.length);
+    const i0 = Math.max(0, Math.min(stops.length-1, band));
+    const c = stops[Math.min(i0, stops.length-1)];
+    data[x*3+0] = c[0]; data[x*3+1] = c[1]; data[x*3+2] = c[2];
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBFormat);
+  tex.needsUpdate = true;
+  tex.minFilter = THREE.NearestFilter;
+  tex.magFilter = THREE.NearestFilter;
+  return tex;
+}
+
+// ── Stylization (region-aware deforms) ─────────────────────────────────────────
+// We use Y as vertical axis. We detect head/waist/hands/feet via AABBs and apply
+// smooth falloff weights. Everything is CPU-side (safe for any static OBJ).
+
+function applyAllDeforms(){
+  if(!workGeo || !basePos) return;
+  const pos = workGeo.attributes.position;
+  const arr = pos.array;
+  arr.set(basePos); // reset
+
+  workGeo.computeBoundingBox();
+  const bb = workGeo.boundingBox.clone();
+  const size = new THREE.Vector3(); bb.getSize(size);
+  const minY = bb.min.y, maxY = bb.max.y, midY = (minY+maxY)/2;
+
+  // Parameters
+  const HEAD  = parseFloat(ui.head.value);   // chibi head scale
+  const SQH   = parseFloat(ui.squash.value); // vertical body scale
+  const PINCH = parseFloat(ui.pinch.value);  // waist pinch
+  const PUFF  = parseFloat(ui.puff.value);   // hand/foot scale
+
+  // Regions (heuristic)
+  const neckY      = minY + size.y*0.62;
+  const waistY     = minY + size.y*0.46;
+  const ankleBandY = minY + size.y*0.12;
+  const wristBandY = minY + size.y*0.58;
+
+  const ctr = new THREE.Vector3(
+    (bb.min.x+bb.max.x)/2,
+    (bb.min.y+bb.max.y)/2,
+    (bb.min.z+bb.max.z)/2
+  );
+
+  // Smooth falloff helpers
+  const smoothstep = (a,b,x)=>{ const t = THREE.MathUtils.clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+
+  for(let i=0;i<pos.count;i++){
+    const i3 = i*3;
+    const x = arr[i3], y = arr[i3+1], z = arr[i3+2];
+
+    let px = x, py = y, pz = z;
+
+    // (1) Overall body vertical squash (except head)
+    const wBody = 1.0 - smoothstep(neckY-0.02*size.y, neckY+0.02*size.y, y); // 1 below neck, 0 above
+    py = ctr.y + (y-ctr.y) * (1.0 - (1.0-SQH)*wBody);
+
+    // (2) Head enlargement above neck
+    const wHead = smoothstep(neckY-0.03*size.y, neckY+0.10*size.y, y);
+    px = ctr.x + (px-ctr.x) * (1.0 + (HEAD-1.0)*wHead);
+    py = neckY + (py-neckY) * (1.0 + (HEAD-1.0)*wHead);
+    pz = ctr.z + (pz-ctr.z) * (1.0 + (HEAD-1.0)*wHead);
+
+    // (3) Waist pinch near waistY (radial scale in XZ)
+    const wWaist = Math.max(
+      Math.exp(-Math.pow((y-waistY)/(0.09*size.y), 2.0)) - 0.1,
+      0.0
+    );
+    const rPinch = 1.0 - (1.0-PINCH) * wWaist;
+    px = ctr.x + (px-ctr.x)*rPinch;
+    pz = ctr.z + (pz-ctr.z)*rPinch;
+
+    // (4) Puff hands/feet bands (enlarge radially)
+    const wFeet  = smoothstep(minY-0.02*size.y, ankleBandY+0.06*size.y, y) * (1.0 - smoothstep(ankleBandY+0.06*size.y, ankleBandY+0.16*size.y, y));
+    const wHands = smoothstep(wristBandY-0.04*size.y, wristBandY+0.06*size.y, y) * (1.0 - smoothstep(wristBandY+0.06*size.y, wristBandY+0.18*size.y, y));
+    const puffW  = Math.max(wFeet, wHands);
+    const rPuff  = 1.0 + (PUFF-1.0) * puffW;
+    px = ctr.x + (px-ctr.x)*rPuff;
+    pz = ctr.z + (pz-ctr.z)*rPuff;
+
+    arr[i3]   = px;
+    arr[i3+1] = py;
+    arr[i3+2] = pz;
+  }
+
+  pos.needsUpdate = true;
+  workGeo.computeVertexNormals();
+  if(outlineMesh) outlineMesh.geometry = workGeo.clone();
+}
+
+function updateOutline(){
+  const thickness = parseFloat(ui.outline.value);
+  if(outlineMesh){
+    scene.remove(outlineMesh);
+    outlineMesh.geometry.dispose();
+    outlineMesh.material.dispose();
+    outlineMesh = null;
+  }
+  if(ui.shader.value !== 'toon' || thickness <= 0.0001 || !mesh) return;
+
+  const g = mesh.geometry.clone();
+  // Simple silhouette: backface, slightly scaled
+  outlineMesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide }));
+  outlineMesh.scale.multiplyScalar(1.0 + thickness);
+  outlineMesh.position.copy(mesh.position);
+  outlineMesh.rotation.copy(mesh.rotation);
+  scene.add(outlineMesh);
+}
+
+function frameCameraToMesh(){
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  const dist = Math.max(size.x, size.y, size.z) * 2.1;
+
+  camera.position.set(ctr.x + dist*0.6, ctr.y + dist*0.5, ctr.z + dist*0.9);
+  controls.target.copy(ctr);
+  controls.update();
+}
+
+function onResize(){
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(mesh){ mesh.rotation.y += 0.0018; if(outlineMesh) outlineMesh.rotation.copy(mesh.rotation); }
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// ── Exports ───────────────────────────────────────────────────────────────────
+function exportOBJ(){
+  const root = new THREE.Group();
+  const solid = new THREE.Mesh(mesh.geometry, new THREE.MeshBasicMaterial());
+  root.add(solid);
+  const exp = new OBJExporter();
+  const text = exp.parse(root);
+  downloadText(text, 'funebra-female00-cartoon.obj', 'text/plain');
+}
+function exportGLTF(){
+  const root = new THREE.Group();
+  const mat = (ui.shader.value === 'toon')
+    ? new THREE.MeshToonMaterial({ color: 0xe6c28c })
+    : new THREE.MeshStandardMaterial({ color: 0xe2ae68, metalness:0.3, roughness:0.5 });
+  root.add(new THREE.Mesh(mesh.geometry, mat));
+  const exp = new GLTFExporter();
+  exp.parse(root, (gltf)=>{
+    const blob = new Blob([JSON.stringify(gltf)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href:url, download:'funebra-female00-cartoon.gltf' });
+    a.click(); URL.revokeObjectURL(url);
+  }, { binary:false });
+}
+function screenshot(){
+  const a = document.createElement('a');
+  a.href = renderer.domElement.toDataURL('image/png');
+  a.download = 'funebra-female00-cartoon.png';
+  a.click();
+}
+function downloadText(text, filename, mime){
+  const url = URL.createObjectURL(new Blob([text], {type:mime||'text/plain'}));
+  const a = Object.assign(document.createElement('a'), { href:url, download:filename });
+  a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
