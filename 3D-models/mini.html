@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Funebra — High-Poly Mini Mouse</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  html,body{height:100%;margin:0;background:#0a0f16;color:#e7ecff;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;overflow:hidden}
+  #ui{
+    position:fixed; top:10px; left:10px; z-index:10; min-width:280px;
+    padding:12px; border-radius:12px; backdrop-filter: blur(6px);
+    background: linear-gradient(180deg, rgba(18,22,32,.85), rgba(11,15,24,.85));
+    border:1px solid rgba(255,122,24,.35); box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  #ui h1{margin:0 0 8px; font-size:16px}
+  #ui label{display:block; margin:8px 0 2px}
+  #ui input[type="range"]{width:240px}
+  #ui button{margin-top:8px; padding:8px 12px; border:0; border-radius:10px; cursor:pointer;
+    background:linear-gradient(180deg,#ff8e3a,#ff6e00); color:#1b1007; font-weight:700}
+  #hint{position:fixed; right:12px; bottom:10px; opacity:.75; font-size:12px}
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>⚡ Funebra — High-Poly Mini Mouse</h1>
+  <label>Scale: <span id="lblScale">1.0</span>
+    <input id="scale" type="range" min="0.5" max="2.0" step="0.01" value="1.0">
+  </label>
+  <label>Fur roughness: <span id="lblRough">0.55</span>
+    <input id="rough" type="range" min="0.1" max="1.0" step="0.01" value="0.55">
+  </label>
+  <label>Env intensity: <span id="lblEnv">1.25</span>
+    <input id="env" type="range" min="0.0" max="2.0" step="0.01" value="1.25">
+  </label>
+  <div style="display:flex; gap:8px; flex-wrap:wrap">
+    <button id="btnObj">Export OBJ</button>
+    <button id="btnGltf">Export GLTF</button>
+    <button id="btnShot">Screenshot</button>
+  </div>
+  <div class="muted" style="margin-top:6px; font-size:12px; opacity:.85">
+    Tip: drag to orbit, wheel to zoom, right-drag to pan.
+  </div>
+</div>
+<div id="hint">© Funebra / pLabs</div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { OBJExporter } from "three/addons/exporters/OBJExporter.js";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
+
+let scene, camera, renderer, controls, pmrem;
+let mouseGroup = null;
+
+const ui = {
+  scale: document.getElementById('scale'),
+  lblScale: document.getElementById('lblScale'),
+  rough: document.getElementById('rough'),
+  lblRough: document.getElementById('lblRough'),
+  env: document.getElementById('env'),
+  lblEnv: document.getElementById('lblEnv'),
+  btnObj: document.getElementById('btnObj'),
+  btnGltf: document.getElementById('btnGltf'),
+  btnShot: document.getElementById('btnShot'),
+};
+
+init();
+await loadEnvironment('../assets/env/studio.hdr'); // ensure this path exists
+buildMiniMouse();
+animate();
+
+// ──────────────────────────────────────────────────────────────────────────────
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0f16);
+
+  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 1000);
+  camera.position.set(0.6, 0.55, 1.2);
+
+  renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  document.body.appendChild(renderer.domElement);
+
+  pmrem = new THREE.PMREMGenerator(renderer);
+
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(2.5, 64),
+    new THREE.MeshStandardMaterial({ color: 0x0d1118, metalness: 0.0, roughness: 0.95 })
+  );
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = false;
+  scene.add(floor);
+
+  const key = new THREE.DirectionalLight(0xffffff, 2.2);
+  key.position.set(3, 5, 2);
+  const rim = new THREE.DirectionalLight(0x88aaff, 0.8);
+  rim.position.set(-3, 2, -2);
+  scene.add(key, rim);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.set(0, 0.18, 0);
+
+  window.addEventListener('resize', onResize);
+
+  // UI events
+  ui.scale.addEventListener('input', ()=> {
+    ui.lblScale.textContent = (+ui.scale.value).toFixed(2);
+    if(mouseGroup) mouseGroup.scale.setScalar(parseFloat(ui.scale.value));
+  });
+  ui.rough.addEventListener('input', ()=> {
+    ui.lblRough.textContent = (+ui.rough.value).toFixed(2);
+    if(mouseGroup) applyMaterialTweaks(mouseGroup, { roughness: parseFloat(ui.rough.value) });
+  });
+  ui.env.addEventListener('input', ()=> {
+    ui.lblEnv.textContent = (+ui.env.value).toFixed(2);
+    if(mouseGroup) applyMaterialTweaks(mouseGroup, { envMapIntensity: parseFloat(ui.env.value) });
+  });
+
+  ui.btnObj.addEventListener('click', exportOBJ);
+  ui.btnGltf.addEventListener('click', exportGLTF);
+  ui.btnShot.addEventListener('click', screenshot);
+}
+
+async function loadEnvironment(hdrPath){
+  try{
+    const hdr = await new RGBELoader().loadAsync(hdrPath);
+    const tex = pmrem.fromEquirectangular(hdr).texture;
+    scene.environment = tex;
+    hdr.dispose();
+  }catch(e){
+    console.warn('HDR env failed, continuing without.', e);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// High-poly mini mouse (procedural)
+// Body: Lathe profile; Head: scaled sphere; Ears: thin ellipsoids; Tail: Tube;
+// Paws: capsules; Nose: sphere; Eyes: glossy spheres; Whiskers: thin cylinders.
+function buildMiniMouse(){
+  if(mouseGroup){ scene.remove(mouseGroup); mouseGroup.traverse(d=>d.geometry?.dispose()); }
+  mouseGroup = new THREE.Group();
+  mouseGroup.scale.setScalar(parseFloat(ui.scale.value));
+
+  // Base “fur” material
+  const fur = new THREE.MeshStandardMaterial({
+    color: 0x9b8f86, metalness: 0.1, roughness: parseFloat(ui.rough.value),
+    envMapIntensity: parseFloat(ui.env.value)
+  });
+  const innerEar = new THREE.MeshStandardMaterial({
+    color: 0xf5b2b2, metalness: 0.05, roughness: 0.65, envMapIntensity: parseFloat(ui.env.value)
+  });
+  const glossyBlack = new THREE.MeshStandardMaterial({
+    color: 0x111111, metalness: 0.7, roughness: 0.25, envMapIntensity: parseFloat(ui.env.value)
+  });
+  const noseMat = new THREE.MeshStandardMaterial({
+    color: 0x3b2a2a, metalness: 0.2, roughness: 0.4, envMapIntensity: parseFloat(ui.env.value)
+  });
+
+  // Body profile (in XZ plane, lathe around Y)
+  const bodyProfile = [];
+  const L = 0.22; // body length
+  const Rf = 0.06; // front radius
+  const Rb = 0.08; // back radius (hips)
+  const steps = 120;
+  for(let i=0;i<=steps;i++){
+    const t = i/steps;
+    const z = -L/2 + L*t;
+    // smooth profile: back fuller, taper at nose side
+    const r = THREE.MathUtils.lerp(Rb, Rf, Math.pow(t, 0.9)) * (0.95 + 0.05*Math.cos(t*Math.PI*2));
+    bodyProfile.push(new THREE.Vector2(r, z));
+  }
+  // Convert to LatheGeometry expects points as (x,y) in its space → map (r,z) → (x,y)
+  const lathePts = bodyProfile.map(v => new THREE.Vector2(v.x, v.y));
+  const bodyGeo = new THREE.LatheGeometry(lathePts, 180); // high radial segments
+  bodyGeo.rotateX(Math.PI/2); // make long axis X for easier assembly
+  bodyGeo.translate(0.0, 0.12, 0.0);
+  const body = new THREE.Mesh(bodyGeo, fur);
+  mouseGroup.add(body);
+
+  // Head
+  const headGeo = new THREE.SphereGeometry(0.055, 96, 72);
+  headGeo.scale(1.0, 0.9, 1.05);
+  headGeo.translate(0.11, 0.15, 0.0);
+  const head = new THREE.Mesh(headGeo, fur);
+  mouseGroup.add(head);
+
+  // Ears (outer + inner)
+  const earGeo = new THREE.CircleGeometry(0.05, 96);
+  earGeo.translate(0,0,0);
+  const earOuterL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 72, 56), fur);
+  earOuterL.scale.set(1.0, 0.2, 1.0);
+  earOuterL.position.set(0.065, 0.19, 0.055);
+  earOuterL.rotation.set(THREE.MathUtils.degToRad(-20), 0, THREE.MathUtils.degToRad(18));
+  const earOuterR = earOuterL.clone();
+  earOuterR.position.z = -earOuterL.position.z;
+
+  const earInnerL = new THREE.Mesh(new THREE.SphereGeometry(0.042, 72, 56), innerEar);
+  earInnerL.scale.copy(earOuterL.scale).multiplyScalar(0.95);
+  earInnerL.position.copy(earOuterL.position).add(new THREE.Vector3(0.001, 0.002, 0.0));
+  const earInnerR = earInnerL.clone(); earInnerR.position.z = -earInnerL.position.z;
+
+  mouseGroup.add(earOuterL, earOuterR, earInnerL, earInnerR);
+
+  // Eyes
+  const eyeGeo = new THREE.SphereGeometry(0.012, 48, 36);
+  const eyeL = new THREE.Mesh(eyeGeo, glossyBlack);
+  eyeL.position.set(0.145, 0.145, 0.028);
+  eyeL.rotation.y = THREE.MathUtils.degToRad(10);
+  const eyeR = eyeL.clone(); eyeR.position.z = -eyeL.position.z;
+  mouseGroup.add(eyeL, eyeR);
+
+  // Nose
+  const noseGeo = new THREE.SphereGeometry(0.011, 48, 36);
+  const nose = new THREE.Mesh(noseGeo, noseMat);
+  nose.position.set(0.17, 0.13, 0.0);
+  mouseGroup.add(nose);
+
+  // Whiskers (thin cylinders)
+  const whiskerMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.15, metalness: 0.6, envMapIntensity: parseFloat(ui.env.value) });
+  const whiskers = new THREE.Group();
+  const whiskerAngles = [-14, -7, 7, 14];
+  for(const sign of [1, -1]){
+    for(const a of whiskerAngles){
+      const len = 0.08;
+      const cyl = new THREE.CylinderGeometry(0.0011, 0.0022, len, 24);
+      const w = new THREE.Mesh(cyl, whiskerMat);
+      w.position.set(0.155, 0.135, 0.02*sign);
+      w.rotation.z = THREE.MathUtils.degToRad(a);
+      w.rotation.y = THREE.MathUtils.degToRad( sign * 12);
+      whiskers.add(w);
+    }
+  }
+  mouseGroup.add(whiskers);
+
+  // Tail (CatmullRom curve → TubeGeometry)
+  const tailCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.1, 0.11,  0.0),
+    new THREE.Vector3(-0.18, 0.12, 0.04),
+    new THREE.Vector3(-0.25, 0.13, -0.02),
+    new THREE.Vector3(-0.32, 0.14, 0.06),
+    new THREE.Vector3(-0.40, 0.15, 0.0)
+  ], false, 'centripetal', 0.25);
+  const tailGeo = new THREE.TubeGeometry(tailCurve, 240, 0.006, 24, false);
+  const tail = new THREE.Mesh(tailGeo, new THREE.MeshStandardMaterial({
+    color: 0x876a63, metalness: 0.1, roughness: 0.6, envMapIntensity: parseFloat(ui.env.value)
+  }));
+  mouseGroup.add(tail);
+
+  // Paws (tiny capsules)
+  function capsule(r=0.012, h=0.035, seg=48){
+    const g = new THREE.CapsuleGeometry(r, h, seg, seg);
+    return g;
+  }
+  const pawMat = new THREE.MeshStandardMaterial({ color: 0x8f7c74, metalness: 0.1, roughness: 0.6, envMapIntensity: parseFloat(ui.env.value) });
+  const pawFL = new THREE.Mesh(capsule(0.011, 0.03), pawMat);
+  pawFL.position.set(0.06, 0.105, 0.03);
+  pawFL.rotation.z = THREE.MathUtils.degToRad(15);
+  const pawFR = pawFL.clone(); pawFR.position.z = -pawFL.position.z;
+  const pawBL = pawFL.clone(); pawBL.position.set(-0.03, 0.11, 0.03);
+  const pawBR = pawBL.clone(); pawBR.position.z = -pawBL.position.z;
+  mouseGroup.add(pawFL, pawFR, pawBL, pawBR);
+
+  // Merge body+head for smoother normal continuity (optional)
+  const toMerge = [body.geometry.clone(), head.geometry.clone()];
+  const merged = BufferGeometryUtils.mergeGeometries(toMerge, true);
+  const bodyHead = new THREE.Mesh(merged, fur);
+  mouseGroup.remove(body, head);
+  mouseGroup.add(bodyHead);
+
+  // Center group and frame camera
+  const box = new THREE.Box3().setFromObject(mouseGroup);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  mouseGroup.position.sub(center);
+  scene.add(mouseGroup);
+
+  const dist = Math.max(size.x, size.y, size.z) * 3.5;
+  camera.position.set(dist*0.5, dist*0.45, dist*0.8);
+  controls.target.set(0, 0.12, 0);
+  controls.update();
+}
+
+function applyMaterialTweaks(root, { roughness, envMapIntensity }){
+  root.traverse(o=>{
+    if(o.isMesh && o.material){
+      if(roughness !== undefined && 'roughness' in o.material) o.material.roughness = roughness;
+      if(envMapIntensity !== undefined && 'envMapIntensity' in o.material) o.material.envMapIntensity = envMapIntensity;
+      o.material.needsUpdate = true;
+    }
+  });
+}
+
+function onResize(){
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(mouseGroup) mouseGroup.rotation.y += 0.0022;
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// ── Exports ───────────────────────────────────────────────────────────────────
+function exportOBJ(){
+  const exp = new OBJExporter();
+  const text = exp.parse(mouseGroup);
+  downloadText(text, 'funebra-mini-mouse.obj', 'text/plain');
+}
+
+function exportGLTF(){
+  const exp = new GLTFExporter();
+  exp.parse(mouseGroup, (gltf)=>{
+    const blob = new Blob([JSON.stringify(gltf)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href:url, download:'funebra-mini-mouse.gltf' });
+    a.click(); URL.revokeObjectURL(url);
+  }, { binary:false });
+}
+
+function screenshot(){
+  const a = document.createElement('a');
+  a.href = renderer.domElement.toDataURL('image/png');
+  a.download = 'funebra-mini-mouse.png';
+  a.click();
+}
+
+function downloadText(text, filename, mime){
+  const url = URL.createObjectURL(new Blob([text], {type:mime||'text/plain'}));
+  const a = Object.assign(document.createElement('a'), { href:url, download:filename });
+  a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
