@@ -142,8 +142,8 @@
     // Use Funebra module arrays (your converted vertices/faces)
     import Funebra, { registerShapeFromModules, makeShape } from 'https://funebra.github.io/math-art-engine/script.shapes.module.js';
     await registerShapeFromModules('femaleHead',
-      './female_head_point_cloud_vertices.js',
-      './female_head_point_cloud_faces.js'
+      './3D-models/female_head_point_cloud_vertices.js',
+      './3D-models/female_head_point_cloud_faces.js'
     );
     const head = makeShape('femaleHead',
       { color: 0xE2AE68, metalness: 0.35, roughness: 0.82, flatShading: true },
