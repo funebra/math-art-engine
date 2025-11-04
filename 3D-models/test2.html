@@ -82,7 +82,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 /* SubdivisionModifier via raw.githack to avoid 404/CORS */
-import { SubdivisionModifier } from 'https://raw.githack.com/mrdoob/three.js/r150/examples/jsm/modifiers/SubdivisionModifier.js';
+import { SubdivisionModifier } from './loopSubdivision.js';
 
 const canvas = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
