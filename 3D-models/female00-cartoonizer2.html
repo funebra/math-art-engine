@@ -89,6 +89,12 @@ camera.position.set(0, 0.6, 2.2);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.enablePan = true;
+controls.minDistance = 0.2;
+controls.maxDistance = 10;
+controls.maxPolarAngle = Math.PI * 0.95; // stop going under the floor
+controls.target.set(0, 0.5, 0);
+
 
 
 const hemi = new THREE.HemisphereLight(0xcfe7ff, 0x1a1a22, 0.6);
@@ -218,7 +224,7 @@ async function loadFromText(text){
   applySubdivision(obj);
   applyMaterials(obj);
   // --- auto-frame camera around model ---
-const center = new THREE.Vector3();
+//const center = new THREE.Vector3();
 const box2 = new THREE.Box3().setFromObject(obj);
 box2.getCenter(center);
 controls.target.copy(center);
