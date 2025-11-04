@@ -21,6 +21,19 @@ const _normStep = (o, steps) => {
 function _rot(v, th){ const c=Math.cos(th), s=Math.sin(th); return v.map(([x,y])=>[x*c - y*s, x*s + y*c]); }
 function _tx(v, cx, cy){ return v.map(([x,y])=>[x+cx,y+cy]); }
 
+
+
+// === Numeric-only helpers (drop in script.module.js) ===
+export function id(v){ return Number(v) || 0; }              // pass-through number
+export function pointX(o, x){ return Number(x) || 0; }       // numeric point X
+export function pointY(o, y){ return Number(y) || 0; }       // numeric point Y
+// (Optional) a no-op that ALWAYS returns 0, useful for sCode slots:
+export function zero(){ return 0; }
+
+
+
+
+
 // --- Point & Polyline helpers (rendered through the param2d pipe) ---
 export function Point(cx = 0, cy = 0, color = "#ff6600", size = 3) {
   // one-step parametric; renderer will draw a tiny disk
@@ -859,7 +872,7 @@ const Funebra = {
   makeParametric3D, surfaces, build3D, toThreeGeometry,
 
   // Numeric 2D
-  Point, Polyline,
+  id, pointX, pointY, zero,Point, Polyline,
   lineX, lineY, lineSegmentX, lineSegmentY,
   circleX, circleY, ellipseX, ellipseY,
   polygonX, polygonY, starX, starY,
@@ -919,6 +932,7 @@ export default Funebra;
 if (typeof window !== "undefined") {
   window.Funebra = window.Funebra || Funebra;
 }
+
 
 
 
