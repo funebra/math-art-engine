@@ -75,6 +75,7 @@ import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { funebraSubdivide } from './funebra-subdivider.js';
 
+
 const canvas = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
@@ -242,15 +243,19 @@ document.getElementById('btnGltf').addEventListener('click', ()=>{
     a.click();
   }, { binary:false, onlyVisible:true, trs:false });
 });
-document.getElementById('btnObj').addEventListener('click', ()=>{
-  if(!currentRoot) return;
+document.getElementById('btnObj').addEventListener('click', async () => {
+  if (!currentRoot) return;
   const { OBJExporter } = await import('three/addons/exporters/OBJExporter.js');
   const exporter = new OBJExporter();
   const text = exporter.parse(currentRoot);
-  const blob = new Blob([text], {type:'text/plain'});
-  const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:'female00-cartoon.obj' });
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: 'female00-cartoon.obj'
+  });
   a.click();
 });
+
 
 // Resize + render loop
 addEventListener('resize', ()=>{ camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
