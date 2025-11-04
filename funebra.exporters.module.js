@@ -8,7 +8,7 @@
  *   await X.exportPNG(canvas, { filename: 'funebra.png' });
  *   const webmBlob = await X.recordWebM(canvas, { seconds: 3, fps: 30 });
  *   await X.saveBlob(webmBlob, 'funebra.webm');
- *   const frames = await X.captureFrames({ renderer, scene, camera, frames: 60, fps: 30, update: (i,t)=>{/* animate */} });
+ *   const frames = await X.captureFrames({ renderer, scene, camera, frames: 60, fps: 30, update: (i,t)=>{/* animate */} /*);
  *   const gifBlob = await X.encodeGIF(frames, { fps: 30 });
  *   await X.saveBlob(gifBlob, 'funebra.gif');
  *   await X.exportGLTF(scene, { filename: 'funebra.gltf', binary: false });
