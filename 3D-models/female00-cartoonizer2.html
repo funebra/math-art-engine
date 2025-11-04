@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Funebra — Female00 → Cartoon (Self-host subdivider)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.150.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.150.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#0b0d12;color:#e9f0ff;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;overflow:hidden}
+  #stage{width:100%;height:100%}
+  #ui{position:fixed;top:12px;left:12px;z-index:10;background:#111a;border:1px solid #26324d;border-radius:12px;padding:12px;backdrop-filter:blur(6px);width:320px}
+  #ui h3{margin:0 0 8px;font-size:14px;color:#ffd9a3}
+  #ui label{display:grid;grid-template-columns:160px 1fr;gap:8px;margin:6px 0;font-size:12px}
+  #ui input[type="range"]{width:100%}
+  #ui input[type="color"]{width:100%;height:28px;border:0;background:#0000}
+  .row{display:flex;gap:8px;margin-top:8px}
+  .btn{cursor:pointer;border:1px solid #3b4a77;background:#1b2446;color:#fff;padding:6px 10px;border-radius:8px}
+  .btn:hover{filter:brightness(1.08)}
+  #hint{position:fixed;right:12px;bottom:10px;color:#9fb6ff;font-size:12px;opacity:.9;background:#111a;border:1px solid #26324d;border-radius:10px;padding:6px 8px}
+  #drop{position:fixed;inset:0;pointer-events:none;outline:2px dashed transparent;outline-offset:-10px;border-radius:14px}
+  #drop.active{outline-color:#66aaffaa;background:#3a4a7a22}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div id="ui">
+  <h3>Funebra — Female00 → Cartoon</h3>
+  <label>Load OBJ (file) <input id="file" type="file" accept=".obj" /></label>
+  <label>Load from URL <input id="url" type="text" placeholder="https://…/female00.obj" /></label>
+  <div class="row">
+    <button id="btnUrl" class="btn">Load URL</button>
+    <button id="btnShot" class="btn">Screenshot</button>
+  </div>
+
+  <label>Subdivision (hi-poly) <input id="subd" type="range" min="0" max="3" step="1" value="1" /></label>
+  <label>Outline thickness <input id="outline" type="range" min="0" max="8" step="0.1" value="2.0" /></label>
+
+  <label>Shading
+    <select id="shading">
+      <option value="toon" selected>Toon (quantized)</option>
+      <option value="pbr">PBR (env reflections)</option>
+    </select>
+  </label>
+
+  <label>Quantize levels <input id="levels" type="range" min="2" max="8" step="1" value="4" /></label>
+  <label>Base color <input id="base" type="color" value="#f4b28a" /></label>
+  <label>Rim light <input id="rim" type="range" min="0" max="2" step="0.01" value="0.8" /></label>
+
+  <label>Exposure <input id="expo" type="range" min="0.2" max="2.0" step="0.01" value="1.0" /></label>
+  <label>Env intensity <input id="envI" type="range" min="0" max="2" step="0.01" value="1.2" /></label>
+
+  <div class="row">
+    <button id="btnObj" class="btn">Export OBJ</button>
+    <button id="btnGltf" class="btn">Export GLTF</button>
+  </div>
+</div>
+
+<div id="hint">Drag to orbit · Wheel to zoom · Right-drag to pan</div>
+<div id="drop"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { funebraSubdivide } from './funebra-subdivider.js';
+
+const canvas = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0d12);
+
+const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.01, 1000);
+camera.position.set(0, 0.6, 2.2);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const hemi = new THREE.HemisphereLight(0xcfe7ff, 0x1a1a22, 0.6);
+scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 1.2);
+key.position.set(1.5, 2.5, 1.5);
+scene.add(key);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+const env = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+let currentRoot = null;
+
+// ----- Toon helpers -----
+function makeGradient(levels=4){
+  const size=256, data=new Uint8Array(size);
+  for(let i=0;i<size;i++){ const t=i/(size-1); const s=Math.floor(t*levels)/Math.max(1,levels-1); data[i]=Math.round(s*255); }
+  const tex=new THREE.DataTexture(data,size,1,THREE.LuminanceFormat);
+  tex.needsUpdate=true; tex.minFilter=THREE.NearestFilter; tex.magFilter=THREE.NearestFilter; tex.generateMipmaps=false;
+  return tex;
+}
+let gradientTex = makeGradient(4);
+const outlineMat = new THREE.MeshBasicMaterial({ color:0x000000, side:THREE.BackSide });
+
+function makeToonMaterial({color='#f4b28a', rim=0.8}={}){
+  const mat = new THREE.MeshToonMaterial({ color:new THREE.Color(color), gradientMap:gradientTex });
+  mat.onBeforeCompile = (shader)=>{
+    shader.uniforms.uRim = { value: rim };
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uRim;')
+      .replace('#include <lights_fragment_begin>',
+               '#include <lights_fragment_begin>\nfloat r = pow(1.0 - dot(normalize(vNormal), normalize(vViewPosition)), 2.0);\ndiffuseColor.rgb += r * uRim;');
+    mat.userData.shader = shader;
+  };
+  return mat;
+}
+function makePBRMaterial(){
+  const m=new THREE.MeshStandardMaterial({ color:0xffffff, metalness:0.0, roughness:1.0 });
+  m.envMap=env; m.envMapIntensity=parseFloat(envI.value);
+  return m;
+}
+let toonMat = makeToonMaterial();
+let pbrMat  = makePBRMaterial();
+
+function applyMaterials(root){
+  const mode = shading.value;
+  root.traverse(o=>{
+    if(!o.isMesh) return;
+    o.material = (mode==='toon') ? toonMat : pbrMat;
+    let back = o.children.find(c=>c.material===outlineMat);
+    if(!back){ back = new THREE.Mesh(o.geometry.clone(), outlineMat); o.add(back); }
+    const f = 1.0 + (parseFloat(outline.value)||2)/1000;
+    back.scale.setScalar(f);
+    back.visible = (parseFloat(outline.value)>0.01);
+  });
+}
+
+function applySubdivision(root){
+  const iterations = parseInt(subd.value,10) || 0;
+  root.traverse(o=>{
+    if(!o.isMesh) return;
+    const g = funebraSubdivide(o.geometry, { iterations });
+    g.computeVertexNormals();
+    o.geometry.dispose();
+    o.geometry = g;
+  });
+}
+
+// ----- Loaders -----
+const loader = new OBJLoader();
+
+async function loadFromText(text){
+  const obj = loader.parse(text);
+  if(currentRoot){
+    scene.remove(currentRoot);
+    currentRoot.traverse(o=>o.geometry&&o.geometry.dispose());
+  }
+  currentRoot = obj;
+
+  // normalize & center
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  const maxDim = Math.max(size.x,size.y,size.z)||1;
+  const scale = 1.0/maxDim;
+  obj.position.sub(center);
+  obj.scale.setScalar(scale*1.6);
+
+  scene.add(obj);
+  applySubdivision(obj);
+  applyMaterials(obj);
+}
+
+async function loadFromURL(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Failed to fetch OBJ');
+  const text = await res.text();
+  await loadFromText(text);
+}
+
+// ----- UI -----
+const subd = document.getElementById('subd');
+const outline = document.getElementById('outline');
+const shading = document.getElementById('shading');
+const levels = document.getElementById('levels');
+const base = document.getElementById('base');
+const rim = document.getElementById('rim');
+const expo = document.getElementById('expo');
+const envI = document.getElementById('envI');
+
+subd.addEventListener('input', ()=> currentRoot && (applySubdivision(currentRoot), applyMaterials(currentRoot)));
+outline.addEventListener('input', ()=> currentRoot && applyMaterials(currentRoot));
+levels.addEventListener('input', ()=>{ gradientTex = makeGradient(parseInt(levels.value,10)); toonMat.gradientMap = gradientTex; toonMat.needsUpdate = true; currentRoot && applyMaterials(currentRoot); });
+base.addEventListener('input', ()=>{ toonMat.color.set(base.value); toonMat.needsUpdate = true; currentRoot && applyMaterials(currentRoot); });
+rim.addEventListener('input', ()=>{ toonMat.userData?.shader && (toonMat.userData.shader.uniforms.uRim.value = parseFloat(rim.value)); });
+shading.addEventListener('change', ()=> currentRoot && applyMaterials(currentRoot));
+expo.addEventListener('input', ()=> renderer.toneMappingExposure = parseFloat(expo.value));
+envI.addEventListener('input', ()=>{ pbrMat.envMapIntensity = parseFloat(envI.value); pbrMat.needsUpdate = true; currentRoot && applyMaterials(currentRoot); });
+
+document.getElementById('file').addEventListener('change', async (e)=>{
+  const f = e.target.files?.[0]; if(!f) return;
+  loadFromText(await f.text());
+});
+document.getElementById('btnUrl').addEventListener('click', ()=>{
+  const u = document.getElementById('url').value.trim();
+  if(u) loadFromURL(u).catch(err=>alert(err.message));
+});
+
+// Drag & drop
+const drop = document.getElementById('drop');
+addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('active'); });
+addEventListener('dragleave', ()=> drop.classList.remove('active'));
+addEventListener('drop', async e=>{
+  e.preventDefault(); drop.classList.remove('active');
+  const f = [...e.dataTransfer.files].find(f=>/\.obj$/i.test(f.name));
+  if(f){ loadFromText(await f.text()); }
+});
+
+// Exports
+document.getElementById('btnShot').addEventListener('click', ()=>{
+  const url = renderer.domElement.toDataURL('image/png');
+  const a = Object.assign(document.createElement('a'), { href:url, download:'female00-cartoon.png' });
+  a.click();
+});
+document.getElementById('btnGltf').addEventListener('click', ()=>{
+  if(!currentRoot) return;
+  const exporter = new GLTFExporter();
+  exporter.parse(currentRoot, (gltf)=>{
+    const blob = new Blob([JSON.stringify(gltf)], {type:'model/gltf+json'});
+    const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:'female00-cartoon.gltf' });
+    a.click();
+  }, { binary:false, onlyVisible:true, trs:false });
+});
+document.getElementById('btnObj').addEventListener('click', ()=>{
+  if(!currentRoot) return;
+  const { OBJExporter } = await import('three/addons/exporters/OBJExporter.js');
+  const exporter = new OBJExporter();
+  const text = exporter.parse(currentRoot);
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:'female00-cartoon.obj' });
+  a.click();
+});
+
+// Resize + render loop
+addEventListener('resize', ()=>{ camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+(function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); })();
+</script>
+</body>
+</html>
