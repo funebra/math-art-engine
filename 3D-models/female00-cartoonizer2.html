@@ -71,10 +71,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { funebraSubdivide } from './funebra-subdivider.js';
-
 
 const canvas = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
@@ -103,7 +101,17 @@ const env = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 
 let currentRoot = null;
 
-// ----- Toon helpers -----
+// ---------- UI refs (before functions that use them)
+const subd    = document.getElementById('subd');
+const outline = document.getElementById('outline');
+const shading = document.getElementById('shading');
+const levels  = document.getElementById('levels');
+const base    = document.getElementById('base');
+const rim     = document.getElementById('rim');
+const expo    = document.getElementById('expo');
+const envI    = document.getElementById('envI');
+
+// ---------- Toon / PBR materials
 function makeGradient(levels=4){
   const size=256, data=new Uint8Array(size);
   for(let i=0;i<size;i++){ const t=i/(size-1); const s=Math.floor(t*levels)/Math.max(1,levels-1); data[i]=Math.round(s*255); }
@@ -121,41 +129,20 @@ function makeToonMaterial({color='#f4b28a', rim=0.8}={}){
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform float uRim;')
       .replace('#include <lights_fragment_begin>',
-               '#include <lights_fragment_begin>\nfloat r = pow(1.0 - dot(normalize(vNormal), normalize(vViewPosition)), 2.0);\ndiffuseColor.rgb += r * uRim;');
+        '#include <lights_fragment_begin>\nfloat r = pow(1.0 - dot(normalize(vNormal), normalize(vViewPosition)), 2.0);\n' +
+        'diffuseColor.rgb += r * uRim;');
     mat.userData.shader = shader;
   };
   return mat;
 }
 
-
-  // ---- UI refs FIRST ----
-const subd    = document.getElementById('subd');
-const outline = document.getElementById('outline');
-const shading = document.getElementById('shading');
-const levels  = document.getElementById('levels');
-const base    = document.getElementById('base');
-const rim     = document.getElementById('rim');
-const expo    = document.getElementById('expo');
-const envI    = document.getElementById('envI');
-
-// ---- materials ----
-//function makeToonMaterial(/* ... */){ /* unchanged */ }
-
 function makePBRMaterial(){
-  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.0, roughness: 1.0 });
+  const m = new THREE.MeshStandardMaterial({ color:0xffffff, metalness:0.0, roughness:1.0 });
   m.envMap = env;
-  m.envMapIntensity = parseFloat(envI.value) || 1.0;   // now envI exists
+  m.envMapIntensity = parseFloat(envI.value) || 1.0;
   return m;
 }
 
-let toonMat = makeToonMaterial();
-let pbrMat  = makePBRMaterial();  // create AFTER envI is defined
-
-function makePBRMaterial(){
-  const m=new THREE.MeshStandardMaterial({ color:0xffffff, metalness:0.0, roughness:1.0 });
-  m.envMap=env; m.envMapIntensity=parseFloat(envI.value);
-  return m;
-}
 let toonMat = makeToonMaterial();
 let pbrMat  = makePBRMaterial();
 
@@ -183,7 +170,7 @@ function applySubdivision(root){
   });
 }
 
-// ----- Loaders -----
+// ---------- Loaders
 const loader = new OBJLoader();
 
 async function loadFromText(text){
@@ -194,7 +181,6 @@ async function loadFromText(text){
   }
   currentRoot = obj;
 
-  // normalize & center
   const box = new THREE.Box3().setFromObject(obj);
   const size = new THREE.Vector3(); box.getSize(size);
   const center = new THREE.Vector3(); box.getCenter(center);
@@ -215,16 +201,7 @@ async function loadFromURL(url){
   await loadFromText(text);
 }
 
-// ----- UI -----
-const subd = document.getElementById('subd');
-const outline = document.getElementById('outline');
-const shading = document.getElementById('shading');
-const levels = document.getElementById('levels');
-const base = document.getElementById('base');
-const rim = document.getElementById('rim');
-const expo = document.getElementById('expo');
-const envI = document.getElementById('envI');
-
+// ---------- UI wiring
 subd.addEventListener('input', ()=> currentRoot && (applySubdivision(currentRoot), applyMaterials(currentRoot)));
 outline.addEventListener('input', ()=> currentRoot && applyMaterials(currentRoot));
 levels.addEventListener('input', ()=>{ gradientTex = makeGradient(parseInt(levels.value,10)); toonMat.gradientMap = gradientTex; toonMat.needsUpdate = true; currentRoot && applyMaterials(currentRoot); });
@@ -232,7 +209,7 @@ base.addEventListener('input', ()=>{ toonMat.color.set(base.value); toonMat.need
 rim.addEventListener('input', ()=>{ toonMat.userData?.shader && (toonMat.userData.shader.uniforms.uRim.value = parseFloat(rim.value)); });
 shading.addEventListener('change', ()=> currentRoot && applyMaterials(currentRoot));
 expo.addEventListener('input', ()=> renderer.toneMappingExposure = parseFloat(expo.value));
-envI.addEventListener('input', ()=>{ pbrMat.envMapIntensity = parseFloat(envI.value); pbrMat.needsUpdate = true; currentRoot && applyMaterials(currentRoot); });
+envI.addEventListener('input', ()=>{ pbrMat.envMapIntensity = parseFloat(envI.value) || 1.0; pbrMat.needsUpdate = true; if (shading.value==='pbr' && currentRoot) applyMaterials(currentRoot); });
 
 document.getElementById('file').addEventListener('change', async (e)=>{
   const f = e.target.files?.[0]; if(!f) return;
@@ -268,19 +245,15 @@ document.getElementById('btnGltf').addEventListener('click', ()=>{
     a.click();
   }, { binary:false, onlyVisible:true, trs:false });
 });
-document.getElementById('btnObj').addEventListener('click', async () => {
-  if (!currentRoot) return;
+document.getElementById('btnObj').addEventListener('click', async ()=>{
+  if(!currentRoot) return;
   const { OBJExporter } = await import('three/addons/exporters/OBJExporter.js');
   const exporter = new OBJExporter();
   const text = exporter.parse(currentRoot);
-  const blob = new Blob([text], { type: 'text/plain' });
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: 'female00-cartoon.obj'
-  });
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:'female00-cartoon.obj' });
   a.click();
 });
-
 
 // Resize + render loop
 addEventListener('resize', ()=>{ camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
