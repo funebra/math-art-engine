@@ -101,7 +101,7 @@ const env = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 
 let currentRoot = null;
 
-// ---------- UI refs (before functions that use them)
+// ---------- UI refs
 const subd    = document.getElementById('subd');
 const outline = document.getElementById('outline');
 const shading = document.getElementById('shading');
@@ -146,23 +146,39 @@ function makePBRMaterial(){
 let toonMat = makeToonMaterial();
 let pbrMat  = makePBRMaterial();
 
+// ---------- SAFE applyMaterials (no recursive outlines)
 function applyMaterials(root){
   const mode = shading.value;
+
   root.traverse(o=>{
     if(!o.isMesh) return;
-    o.material = (mode==='toon') ? toonMat : pbrMat;
-    let back = o.children.find(c=>c.material===outlineMat);
-    if(!back){ back = new THREE.Mesh(o.geometry.clone(), outlineMat); o.add(back); }
-    const f = 1.0 + (parseFloat(outline.value)||2)/1000;
-    back.scale.setScalar(f);
-    back.visible = (parseFloat(outline.value)>0.01);
+    if (o.userData.isOutline) return;           // never process outline meshes
+
+    // main material
+    o.material = (mode === 'toon') ? toonMat : pbrMat;
+
+    // remove any previous outline children
+    o.children = o.children.filter(c => !c.userData?.isOutline);
+
+    // add outline if needed
+    const thickness = parseFloat(outline.value) || 0;
+    if (thickness > 0.01) {
+      const back = new THREE.Mesh(o.geometry.clone(), outlineMat);
+      back.userData.isOutline = true;
+      back.scale.setScalar(1.0 + thickness / 1000.0);
+      back.renderOrder = o.renderOrder - 1;
+      o.add(back);
+    }
   });
+
+  root.updateMatrixWorld(true);
 }
 
 function applySubdivision(root){
   const iterations = parseInt(subd.value,10) || 0;
   root.traverse(o=>{
     if(!o.isMesh) return;
+    if (o.userData.isOutline) return;           // never subdivide the outline clone
     const g = funebraSubdivide(o.geometry, { iterations });
     g.computeVertexNormals();
     o.geometry.dispose();
