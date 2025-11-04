@@ -14,79 +14,171 @@
 </script>
 <style>
   html,body{margin:0;height:100%;background:#0a0c10;overflow:hidden}
-  #ui{position:fixed;top:10px;left:10px;z-index:10;background:#111a;
-      color:#eee;font:13px system-ui;padding:8px 12px;border-radius:8px;}
+  #ui{position:fixed;top:10px;left:10px;z-index:10;background:#111a;color:#eee;
+      font:13px system-ui;padding:8px 12px;border-radius:8px;min-width:260px}
+  #msg{margin-top:6px;color:#9ad;}
+  button, input[type=range]{margin-top:6px;width:100%}
 </style>
 </head>
 <body>
-<div id="ui">Funebra Morph — cube → female00<br><button id="morphBtn">Morph!</button></div>
+<div id="ui">
+  <div><b>Funebra Morph — cube → female00</b></div>
+  <button id="btnMorph">Morph ▶</button>
+  <input id="slider" type="range" min="0" max="1" step="0.001" value="0">
+  <button id="btnReverse">Reverse ◀</button>
+  <label><input id="chkWire" type="checkbox"> Head wireframe (show)</label>
+  <div id="msg">loading…</div>
+</div>
+
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 
+const msg = document.getElementById('msg');
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.01, 50);
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.01, 100);
 camera.position.set(0,1.2,2.2);
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0,0.5,0);
 
-// lights
 scene.add(new THREE.HemisphereLight(0xffffff,0x202020,1.0));
-const dLight = new THREE.DirectionalLight(0xffffff,0.8);
-dLight.position.set(1,1,1);
-scene.add(dLight);
+const d = new THREE.DirectionalLight(0xffffff,0.9); d.position.set(2,3,2); scene.add(d);
 
-// load objects
+// helpers (toggle if needed)
+// scene.add(new THREE.AxesHelper(0.5), new THREE.GridHelper(10,10,0x333333,0x222222));
+
 const loader = new OBJLoader();
-let cubeMesh, headMesh, cubeGeo, targetPositions = [];
+let cubeMesh, headMesh, cubeGeo, targetPositions = [], t = 0, morphing = false;
 
+function log(s){ msg.textContent = s; console.log(s); }
+
+// ——— utilities ———
+function firstMesh(obj){
+  let m = null, maxTris = -1;
+  obj.traverse(o=>{
+    if(o.isMesh && o.geometry){
+      const tri = (o.geometry.index ? o.geometry.index.count/3 : o.geometry.attributes.position.count/3);
+      if(tri > maxTris){ maxTris = tri; m = o; }
+    }
+  });
+  return m;
+}
+function centerAndScale(mesh, targetSize=1.0){
+  mesh.updateWorldMatrix(true,true);
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  mesh.position.sub(center); // center to origin
+  const maxSide = Math.max(size.x,size.y,size.z) || 1;
+  const s = targetSize / maxSide;
+  mesh.scale.setScalar(s);
+  mesh.updateMatrixWorld(true);
+}
+function ensureNonIndexed(g){
+  if (!g.index) return g;         // already non-indexed (avoid warning)
+  return g.toNonIndexed();
+}
+function fitCameraToObject(obj, padding=1.25){
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3()).length();
+  const center = box.getCenter(new THREE.Vector3());
+  const dist = (size*padding)/Math.tan(THREE.MathUtils.degToRad(camera.fov*0.5));
+  camera.position.copy(center.clone().add(new THREE.Vector3(dist*0.3, dist*0.3, dist)));
+  controls.target.copy(center);
+  camera.near = dist/100; camera.far = dist*10; camera.updateProjectionMatrix();
+}
+
+// ——— load both OBJs (case-sensitive!) ———
 Promise.all([
-  loader.loadAsync('cube.obj'),
-  loader.loadAsync('Female00.obj')
+  loader.loadAsync('cube.obj').catch(e=>{throw new Error('Failed to load cube.obj: '+e)}),
+  loader.loadAsync('female00.obj').catch(e=>{
+    throw new Error('Failed to load female00.obj (note lowercase). '+e);
+  })
 ]).then(([cubeObj, headObj])=>{
-  cubeMesh = cubeObj.children.find(m=>m.isMesh);
-  headMesh = headObj.children.find(m=>m.isMesh);
-  cubeMesh.material = new THREE.MeshStandardMaterial({color:0x6699ff,metalness:0.1,roughness:0.4});
-  headMesh.material = new THREE.MeshStandardMaterial({color:0xffcc99,wireframe:true});
-  headMesh.visible = false;
-  scene.add(cubeMesh, headMesh);
-  cubeGeo = cubeMesh.geometry = cubeMesh.geometry.toNonIndexed();
-  cubeGeo.attributes.position.setUsage(THREE.DynamicDrawUsage);
+  cubeMesh = firstMesh(cubeObj);
+  headMesh = firstMesh(headObj);
+  if(!cubeMesh) throw new Error('No mesh found in cube.obj');
+  if(!headMesh) throw new Error('No mesh found in female00.obj');
 
-  // prepare morph mapping using MeshSurfaceSampler
+  // materials
+  cubeMesh.material = new THREE.MeshStandardMaterial({color:0x6699ff, metalness:0.1, roughness:0.4});
+  headMesh.material = new THREE.MeshStandardMaterial({color:0xffcc99, wireframe:true, transparent:true, opacity:0.7});
+
+  // normalize, center, scale both
+  centerAndScale(cubeMesh, 1.0);
+  centerAndScale(headMesh, 1.0);
+
+  // ensure non-indexed (without warning)
+  cubeMesh.geometry = ensureNonIndexed(cubeMesh.geometry);
+  cubeMesh.geometry.attributes.position.setUsage(THREE.DynamicDrawUsage);
+
+  scene.add(cubeMesh);
+  scene.add(headMesh);
+  document.getElementById('chkWire').onchange = e=> headMesh.visible = e.target.checked;
+  headMesh.visible = false;
+
+  // Build sampler on a clean triangle mesh
+  // (MeshSurfaceSampler needs normals; compute if missing)
+  headMesh.geometry.computeVertexNormals();
   const sampler = new MeshSurfaceSampler(headMesh).build();
-  const pos = cubeGeo.attributes.position;
-  const count = pos.count;
-  for(let i=0;i<count;i++){
+
+  // Precompute targets for each cube vertex
+  const pos = cubeMesh.geometry.attributes.position;
+  const tmp = new THREE.Vector3();
+  for(let i=0;i<pos.count;i++){
     const target = new THREE.Vector3();
     sampler.sample(target, new THREE.Vector3(), new THREE.Vector3());
     targetPositions.push(target);
   }
+
+  fitCameraToObject(cubeMesh);
+  log('Loaded. Click “Morph ▶” or drag the slider.');
+
   animate();
+}).catch(err=>{
+  log(err.message);
 });
 
-let t=0, morphing=false;
-document.getElementById('morphBtn').onclick=()=>{morphing=!morphing;};
+// ——— UI ———
+const btnMorph = document.getElementById('btnMorph');
+const slider = document.getElementById('slider');
+document.getElementById('btnReverse').onclick = ()=>{ morphing=false; t=0; slider.value=0; updateMorph(0); };
+btnMorph.onclick = ()=>{ morphing = !morphing; btnMorph.textContent = morphing ? 'Pause ▌▌' : 'Morph ▶'; };
+slider.oninput = (e)=>{ morphing=false; t=parseFloat(e.target.value); updateMorph(t); btnMorph.textContent='Morph ▶'; };
+
+function updateMorph(alpha){
+  if(!cubeMesh) return;
+  const pos = cubeMesh.geometry.attributes.position;
+  const v = new THREE.Vector3();
+  for(let i=0;i<pos.count;i++){
+    v.fromBufferAttribute(pos,i);
+    // LERP towards sampled head point
+    v.lerp(targetPositions[i], alpha);
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  pos.needsUpdate = true;
+}
 
 function animate(){
   requestAnimationFrame(animate);
-  if(cubeGeo && morphing){
-    t = Math.min(1, t+0.005);
-    const pos = cubeGeo.attributes.position;
-    const tmp = new THREE.Vector3();
-    for(let i=0;i<pos.count;i++){
-      tmp.fromBufferAttribute(pos,i);
-      tmp.lerp(targetPositions[i], t);
-      pos.setXYZ(i,tmp.x,tmp.y,tmp.z);
-    }
-    pos.needsUpdate=true;
+  if(morphing){
+    t = Math.min(1, t + 0.005);
+    slider.value = t;
+    updateMorph(t);
   }
-  renderer.render(scene,camera);
+  renderer.render(scene, camera);
 }
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
 </script>
 </body>
 </html>
+
