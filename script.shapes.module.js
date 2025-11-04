@@ -21,6 +21,25 @@ const _normStep = (o, steps) => {
 function _rot(v, th){ const c=Math.cos(th), s=Math.sin(th); return v.map(([x,y])=>[x*c - y*s, x*s + y*c]); }
 function _tx(v, cx, cy){ return v.map(([x,y])=>[x+cx,y+cy]); }
 
+// --- Point & Polyline helpers (rendered through the param2d pipe) ---
+export function Point(cx = 0, cy = 0, color = "#ff6600", size = 3) {
+  // one-step parametric; renderer will draw a tiny disk
+  return { kind: "param2d", steps: 1,
+    x: () => cx, y: () => cy,
+    close: false, stroke: null, color, lineWidth: size };
+}
+
+export function Polyline(points = [], { close = false, color = "#fff", width = 1 } = {}) {
+  const N = Math.max(2, points.length);
+  return {
+    kind: "param2d",
+    steps: N,
+    x: i => points[i % N][0],
+    y: i => points[i % N][1],
+    close, stroke: color, lineWidth: width
+  };
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Core Funebra 2D numerics (lines, circles, ellipses, polygons, stars)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -840,6 +859,7 @@ const Funebra = {
   makeParametric3D, surfaces, build3D, toThreeGeometry,
 
   // Numeric 2D
+  Point, Polyline,
   lineX, lineY, lineSegmentX, lineSegmentY,
   circleX, circleY, ellipseX, ellipseY,
   polygonX, polygonY, starX, starY,
@@ -894,5 +914,12 @@ const Funebra = {
 };
 
 export default Funebra;
+
+// Expose a browser global for legacy demos / MVX sCode
+if (typeof window !== "undefined") {
+  window.Funebra = window.Funebra || Funebra;
+}
+
+
 
 
