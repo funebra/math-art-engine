@@ -75,11 +75,11 @@ export const PALETTE_16BIT = [
   '#ffffff', // 15 spec
 ];
 
-/** Build a 2D matrix H×W prefilled with val. */
+/** Build a 2D matrix H×W prefilled with val. 
 export function makeMatrix(w, h, val = -1){
   return Array.from({length:h}, ()=>Array.from({length:w}, ()=>val));
 }
-
+ */
 /** Parse a token-art grid (array of rows with space-separated tokens)
  *  using a token→index map K. `.` (dot) is treated as transparent (-1).
  */
