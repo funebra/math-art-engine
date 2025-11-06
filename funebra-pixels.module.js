@@ -119,6 +119,48 @@ export function applyPixels(el, matrix, palette, { title } = {}){
 }
 
 
+// ──────────────────────────────────────────────────────────────
+// Funebra 32-Bit Color Mode (RGBA true color)
+// ──────────────────────────────────────────────────────────────
+
+export const PALETTE_32BIT = {
+  ink:      [20, 24, 28, 255],
+  brown1:   [40, 26, 14, 255],
+  brown2:   [88, 52, 32, 255],
+  brown3:   [148, 92, 50, 255],
+  redDark:  [128, 18, 14, 255],
+  redBase:  [220, 46, 40, 255],
+  redLight: [255, 110, 70, 255],
+  blueDark: [28, 56, 92, 255],
+  blueBase: [60, 100, 172, 255],
+  blueLight:[130, 170, 255, 255],
+  skin1:    [190, 130, 80, 255],
+  skin2:    [235, 185, 140, 255],
+  skin3:    [255, 225, 190, 255],
+  gold:     [255, 210, 60, 255],
+  white:    [255, 255, 255, 255],
+  glow:     [255, 255, 255, 128],
+};
+
+/** Blend two RGBA colors by alpha, returns new [r,g,b,a]. */
+export function blendRGBA(a, b){
+  const fa = a[3]/255, fb = b[3]/255;
+  const outA = fa + fb*(1-fa);
+  const mix = (ca, cb)=>((ca*fa + cb*fb*(1-fa))/outA)|0;
+  return [mix(a[0],b[0]), mix(a[1],b[1]), mix(a[2],b[2]), Math.round(outA*255)];
+}
+
+/** Smooth shade between two colors by t ∈ [0,1]. */
+export function lerpRGBA(c1, c2, t){
+  const L = (a,b)=>a+(b-a)*t;
+  return [
+    L(c1[0],c2[0])|0,
+    L(c1[1],c2[1])|0,
+    L(c1[2],c2[2])|0,
+    L(c1[3],c2[3])|0,
+  ];
+}
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────
