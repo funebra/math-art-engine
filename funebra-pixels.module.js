@@ -47,6 +47,79 @@ export function applyPixels(el, matrix, palette, { title } = {}) {
   return css;
 }
 
+
+
+
+// ──────────────────────────────────────────────────────────────
+// funebra-pixels.module.js — add-on helpers + 16-bit palette
+// (Keep your existing exports. Append the following.)
+// ──────────────────────────────────────────────────────────────
+
+/** 16-bit SNES-ish palette (16 colors; index 0 is "ink"). */
+export const PALETTE_16BIT = [
+  '#0c0f12', // 0 ink (very dark)
+  '#2b1a0f', // 1 dark brown
+  '#5a3820', // 2 mid brown
+  '#8a5a33', // 3 light brown
+  '#b16a2e', // 4 leather
+  '#c05922', // 5 red shadow
+  '#d43a26', // 6 red base
+  '#ff6a4a', // 7 red highlight
+  '#0f2a73', // 8 blue shadow
+  '#1f53b2', // 9 blue base
+  '#4e7ff3', // 10 blue highlight
+  '#e1b07a', // 11 skin shadow
+  '#f4c896', // 12 skin base
+  '#ffe2bd', // 13 skin highlight
+  '#f8d33b', // 14 gold
+  '#ffffff', // 15 spec
+];
+
+/** Build a 2D matrix H×W prefilled with val. */
+export function makeMatrix(w, h, val = -1){
+  return Array.from({length:h}, ()=>Array.from({length:w}, ()=>val));
+}
+
+/** Parse a token-art grid (array of rows with space-separated tokens)
+ *  using a token→index map K. `.` (dot) is treated as transparent (-1).
+ */
+export function tokensToMatrix(tokenRows, K){
+  const H = tokenRows.length;
+  const W = tokenRows[0].trim().split(/\s+/).length;
+  const m = makeMatrix(W, H, -1);
+  for (let y=0; y<H; y++){
+    const cells = tokenRows[y].trim().split(/\s+/);
+    for (let x=0; x<W; x++){
+      const c = cells[x];
+      m[y][x] = (c === '.' ? -1 : (K[c] ?? -1));
+    }
+  }
+  return m;
+}
+
+/** Apply a 1px CSS "sprite" from an index-matrix + palette to a DOM element.
+ *  (No-op in Node; keep for browser demos.)
+ */
+export function applyPixels(el, matrix, palette, { title } = {}){
+  if (!el || typeof document === 'undefined') return;
+  const H = matrix.length, W = matrix[0].length;
+  const px = [];
+  for (let y=0; y<H; y++){
+    for (let x=0; x<W; x++){
+      const idx = matrix[y][x];
+      if (idx >= 0) px.push(`${x}px ${y}px 0 ${palette[idx]}`);
+    }
+  }
+  el.style.width = '1px';
+  el.style.height = '1px';
+  el.style.boxShadow = px.join(', ');
+  if (title) el.title = title;
+  el.setAttribute('aria-label', title || 'funebra-pixels');
+}
+
+
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Rasterization primitives
 // ─────────────────────────────────────────────────────────────────────────────
