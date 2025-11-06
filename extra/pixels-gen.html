@@ -1,0 +1,42 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>htmlPixels.css — Generator Demo</title>
+<style>
+  html,body{margin:0;height:100%;display:grid;place-items:center;background:#0b0d12}
+  .frame{transform:scale(6); image-rendering: pixelated; will-change: transform;}
+</style>
+<link rel="stylesheet" href="htmlPixels.css">
+<div class="frame">
+  <span class="pixels" id="sprite"></span>
+</div>
+
+<script type="module">
+  import { applyPixels, matrixFromAscii } from "./pixels-gen.js";
+
+  // Palette (indexes 0..N)
+  const palette = [
+    "#ffffff",   // 0
+    "#222831",   // 1
+    "#ff7a18",   // 2
+    "#2bd4cf"    // 3
+  ];
+
+  // Quick 10×10 sample via ASCII legend
+  const legend = { ".": -1, "A": 0, "B": 1, "C": 2, "D": 3 };
+  const ascii = [
+    "..........",
+    "..BBB.....",
+    ".B...B....",
+    ".B.C.B....",
+    ".B...B....",
+    "..BBB.....",
+    "....D.....",
+    "...DDD....",
+    "..........",
+    ".........."
+  ];
+  const matrix = matrixFromAscii(ascii, legend);
+
+  const el = document.getElementById("sprite");
+  applyPixels(el, matrix, palette, { title: "Sample sprite" });
+</script>
