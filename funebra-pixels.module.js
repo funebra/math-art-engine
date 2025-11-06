@@ -39,6 +39,7 @@ export function boxShadowFromMatrix(matrix, palette) {
   return out.join(',\n');
 }
 
+/*
 export function applyPixels(el, matrix, palette, { title } = {}) {
   if (!el) throw new Error('applyPixels: element is required');
   const css = boxShadowFromMatrix(matrix, palette);
@@ -47,7 +48,7 @@ export function applyPixels(el, matrix, palette, { title } = {}) {
   return css;
 }
 
-
+*/
 
 
 // ──────────────────────────────────────────────────────────────
