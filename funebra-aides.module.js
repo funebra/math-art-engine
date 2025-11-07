@@ -58,17 +58,42 @@ const normText = s => (s||'').replace(/\s+/g,' ').trim();
 const cut = (s, n)=> s.length>n ? s.slice(0,n-1)+'…' : s;
 const once = fn => { let ran=false; return (...a)=>{ if(!ran){ran=true; return fn(...a);} }; };
 
+
+
 class Tooltip {
-  constructor(z){ 
+  constructor(z){
     this.el = document.createElement('div');
     this.el.className = 'aides-tip';
     this.el.style.zIndex = String(z);
-    this._aux = document.createElement('span');
-    this._aux.className = 'aux';
-    this.el.appendChild(this._aux);
+
+    // keep separate nodes so we never remove aux by accident
+    this._text = document.createElement('span');
+    this._text.className = 'txt';
+    this._aux  = document.createElement('span');
+    this._aux.className  = 'aux';
+
+    this.el.append(this._text, this._aux);
     document.body.appendChild(this.el);
     this.hide();
   }
+  show(x, y, text, aux = ''){
+    this.el.style.display = 'block';
+    this._text.textContent = text || '';
+    this._aux.textContent  = aux  || '';
+
+    // position in viewport coords (fixed element) – no scrollY
+    const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+    const top  = Math.max(12, Math.min(window.innerHeight - 12, y - 12));
+    const left = Math.max(12, Math.min(vw - 12, x));
+    this.el.style.left = left + 'px';
+    this.el.style.top  = top  + 'px';
+  }
+  hide(){ this.el.style.display = 'none'; }
+}
+
+
+
+
   show(x,y, text, aux=''){
     this.el.style.display='block';
     this.el.firstChild.nodeType===3 ? (this.el.firstChild.nodeValue=text) : (this.el.childNodes[0]?.remove());
