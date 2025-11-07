@@ -20,7 +20,7 @@ const DEFAULTS = {
   ],
   tooltipZ: 2147483000,
   observeMutations: true,
-  funebraHints: true            // leverage Funebra naming if present
+  funebraHints: true
 };
 
 const AIDES_STYLE = `
@@ -31,6 +31,7 @@ const AIDES_STYLE = `
   box-shadow:0 10px 30px rgba(0,0,0,.35);pointer-events:none;transform:translate(-50%,-120%);
   white-space:normal;word-wrap:break-word;z-index:2147483000
 }
+.aides-tip .txt{display:block}
 .aides-tip .aux{display:block;margin-top:6px;color:#9aa3b2;font-size:12px;opacity:.9}
 .aides-focus-ring{outline:2px dashed #63f5cc;outline-offset:2px;border-radius:8px}
 .aides-dev-panel{
@@ -47,7 +48,7 @@ const AIDES_STYLE = `
 }
 `;
 
-// Small utilities
+// utils
 const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
 const isVisible = el => {
   const r = el.getBoundingClientRect();
@@ -55,18 +56,15 @@ const isVisible = el => {
   return r.width>0 && r.height>0 && style.visibility!=='hidden' && style.display!=='none';
 };
 const normText = s => (s||'').replace(/\s+/g,' ').trim();
-const cut = (s, n)=> s.length>n ? s.slice(0,n-1)+'…' : s;
-const once = fn => { let ran=false; return (...a)=>{ if(!ran){ran=true; return fn(...a);} }; };
+const cut = (s,n)=> s.length>n ? s.slice(0,n-1)+'…' : s;
 
-
-
+// fixed tooltip
 class Tooltip {
   constructor(z){
     this.el = document.createElement('div');
     this.el.className = 'aides-tip';
     this.el.style.zIndex = String(z);
 
-    // keep separate nodes so we never remove aux by accident
     this._text = document.createElement('span');
     this._text.className = 'txt';
     this._aux  = document.createElement('span');
@@ -76,12 +74,12 @@ class Tooltip {
     document.body.appendChild(this.el);
     this.hide();
   }
-  show(x, y, text, aux = ''){
+  show(x, y, text, aux=''){
     this.el.style.display = 'block';
     this._text.textContent = text || '';
     this._aux.textContent  = aux  || '';
 
-    // position in viewport coords (fixed element) – no scrollY
+    // fixed coordinates (no scrollY)
     const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
     const top  = Math.max(12, Math.min(window.innerHeight - 12, y - 12));
     const left = Math.max(12, Math.min(vw - 12, x));
@@ -89,24 +87,6 @@ class Tooltip {
     this.el.style.top  = top  + 'px';
   }
   hide(){ this.el.style.display = 'none'; }
-}
-
-
-
-
-  show(x,y, text, aux=''){
-    this.el.style.display='block';
-    this.el.firstChild.nodeType===3 ? (this.el.firstChild.nodeValue=text) : (this.el.childNodes[0]?.remove());
-    const textNode = document.createTextNode(text);
-    this.el.insertBefore(textNode, this._aux);
-    this._aux.textContent = aux;
-    const vw = Math.max(document.documentElement.clientWidth||0, window.innerWidth||0);
-    const top = clamp(y-12, 12, window.innerHeight-12);
-    const left = clamp(x, 12, vw-12);
-    this.el.style.left = left+'px';
-    this.el.style.top  = top+'px';
-  }
-  hide(){ this.el.style.display='none'; }
 }
 
 function say(text, lang){
@@ -117,7 +97,6 @@ function say(text, lang){
   window.speechSynthesis.speak(u);
 }
 
-// Heuristic descriptor builder
 function describeElement(el, opts){
   if (!el) return { text:'', aux:'', conf:0.0 };
   const tag = el.tagName?.toLowerCase() || '';
@@ -136,7 +115,6 @@ function describeElement(el, opts){
   const value = (el.value && typeof el.value === 'string') ? el.value : '';
   const textContent = normText(el.textContent);
 
-  // Funebra-specific hints
   const funebraName = opts.funebraHints ? (
     el.getAttribute?.('data-funebra-name') ||
     el.getAttribute?.('data-funebra-control') ||
@@ -149,7 +127,6 @@ function describeElement(el, opts){
     textContent
   ].map(normText).filter(Boolean);
 
-  // Confidence heuristic
   let conf = 0;
   if (dataAides) conf += 0.45;
   if (ariaLabel || labelledbyText) conf += 0.25;
@@ -158,7 +135,6 @@ function describeElement(el, opts){
   if (textContent) conf += 0.10;
   conf = clamp(conf, 0, 1);
 
-  // Role phrasing
   let prefix = '';
   if (role) prefix = role;
   else if (tag==='button') prefix = 'button';
@@ -173,12 +149,10 @@ function describeElement(el, opts){
   let text = best;
   if (prefix && best && !best.toLowerCase().startsWith(prefix)) text = `${prefix}: ${best}`;
   if (!text) {
-    // Fallback structural hint
     const cls = (el.className||'').toString().split(/\s+/).find(c => /btn|icon|tab|slider|ctrl/i.test(c)) || '';
     text = cls ? `${prefix||'control'}: ${cls.replace(/[-_]/g,' ')}` : (prefix||'control');
   }
 
-  // Aux info
   const hasHotkey = el.getAttribute?.('accesskey');
   const aux = [
     role && `role=${role}`,
@@ -247,8 +221,7 @@ const AIDES = (() => {
 
   function scan(){
     const selector = buildSelectorList(cfg.scanSelectors);
-    const els = Array.from(document.querySelectorAll(selector)).filter(isVisible);
-    return els;
+    return Array.from(document.querySelectorAll(selector)).filter(isVisible);
   }
 
   function onHover(e){
@@ -262,7 +235,7 @@ const AIDES = (() => {
     if (cfg.output==='tooltip' || cfg.output==='both'){
       ensureTip();
       const r = el.getBoundingClientRect();
-      tip.show(r.left + r.width/2, r.top - 6 + window.scrollY, text, aux);
+      tip.show(r.left + r.width/2, r.top - 6, text, aux); // no scrollY
       el.classList.add('aides-focus-ring');
     }
     if ((cfg.output==='voice' || cfg.output==='both') && cfg.speakOn!=='never'){
@@ -278,7 +251,7 @@ const AIDES = (() => {
   function onOut(e){
     const el = e.target;
     if (tip) tip.hide();
-    if (el?.classList) el.classList.remove('aides-focus-ring');
+    el?.classList?.remove('aides-focus-ring');
   }
 
   function onFocus(e){
@@ -289,7 +262,7 @@ const AIDES = (() => {
     if (cfg.output==='tooltip' || cfg.output==='both'){
       ensureTip();
       const r = el.getBoundingClientRect();
-      tip.show(r.left + r.width/2, r.top - 6 + window.scrollY, text, aux);
+      tip.show(r.left + r.width/2, r.top - 6, text, aux); // no scrollY
     }
     if ((cfg.output==='voice' || cfg.output==='both') && (cfg.speakOn==='focus-only' || cfg.speakOn==='always')){
       say(text, cfg.language);
@@ -323,7 +296,6 @@ const AIDES = (() => {
     }
   }
 
-  // Public API
   return {
     init(options={}){
       cfg = { ...DEFAULTS, ...options };
