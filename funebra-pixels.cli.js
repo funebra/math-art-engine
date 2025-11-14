@@ -50,6 +50,87 @@ Examples:
 `); process.exit(0);
 }
 
+
+
+
+
+// funebra-pixels.cli.js  (add this somewhere after your other helpers)
+
+// Turn an image into a flat Funebra pixel list: [x,y,z, x,y,z, ...]
+async function funebraPixelsFromImage(
+  url,
+  {
+    targetHeight = 150,   // final pixel-art height (C3: fairly detailed)
+    threshold = 210,      // 0..255 — lower = more points (keep darker ink)
+    invert = false,       // true if you want to detect light on dark
+    step = 1,             // spacing between points in Funebra space
+    sampleStride = 1,     // 1 = every pixel, 2 = every 2nd pixel (thins points)
+    x0 = 0,
+    y0 = 0,
+    z0 = 0,
+  } = {}
+) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      // Scale image to targetHeight, preserving aspect
+      const scale = targetHeight / img.height;
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = targetHeight;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const { data } = ctx.getImageData(0, 0, w, h);
+
+      const pts = []; // flat [x,y,z, x,y,z, ...]
+
+      for (let y = 0; y < h; y += sampleStride) {
+        for (let x = 0; x < w; x += sampleStride) {
+          const idx = (y * w + x) * 4;
+          const r = data[idx + 0];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          const a = data[idx + 3];
+
+          if (a < 10) continue; // transparent, skip
+
+          // luminance (perceived brightness)
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+          // For black-on-white line art:
+          const isInk = invert ? lum > threshold : lum < threshold;
+
+          if (isInk) {
+            const X = x0 + x * step;
+            const Y = y0 + y * step;
+            const Z = z0;
+            pts.push(X, Y, Z);
+          }
+        }
+      }
+
+      resolve(pts);
+    };
+
+    img.onerror = (e) => reject(e);
+    img.src = url;
+  });
+}
+
+// Make it reachable from console / other modules
+window.funebraPixelsFromImage = funebraPixelsFromImage;
+
+
+
+
+
+
+
 // --- parse shared flags ---
 const width   = parseInt(flag("w", flag("width", 64)));
 const height  = parseInt(flag("h", flag("height", 64)));
