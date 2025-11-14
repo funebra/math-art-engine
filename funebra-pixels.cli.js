@@ -121,10 +121,10 @@ async function funebraPixelsFromImage(
     img.src = url;
   });
 }
-
+/*
 // Make it reachable from console / other modules
 window.funebraPixelsFromImage = funebraPixelsFromImage;
-
+*/
 
 
 
@@ -210,3 +210,8 @@ for (let y=0; y<height; y++) {
 png.pack().pipe(fs.createWriteStream(outPNG))
   .on("close", () => console.log("✔ PNG saved:", path.resolve(outPNG)))
   .on("error", (e) => { console.error("PNG write error:", e); process.exit(1); });
+
+window.funebraText = funebraText;
+window.funebraPixelsFromImage = funebraPixelsFromImage;
+window.funebraSpriteLoad = funebraSpriteLoad;
+
