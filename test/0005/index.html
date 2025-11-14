@@ -144,7 +144,117 @@
     <span id="expStatus" style="margin-left:6px;opacity:.9" aria-live="polite"></span>
   </div>
 
-  <script src="https://funebra.github.io/math-art-engine/funebra-pixels.cli.js" type="module"></script>
+
+<script type="module">
+  // --- 5×7 pixel font for text rendering ---
+  const FONT_5x7 = {
+    " ": ["00000","00000","00000","00000","00000","00000","00000"],
+    "?": ["01110","10001","00010","00100","00100","00000","00100"],
+    G:  ["01110","10000","10000","10111","10001","10001","01110"],
+    A:  ["00100","01010","10001","10001","11111","10001","10001"],
+    M:  ["10001","11011","10101","10101","10001","10001","10001"],
+    E:  ["11111","10000","10000","11110","10000","10000","11111"],
+    Z:  ["11111","00001","00010","00100","01000","10000","11111"],
+    F:  ["11111","10000","10000","11110","10000","10000","10000"],
+    U:  ["10001","10001","10001","10001","10001","10001","01110"],
+    N:  ["10001","11001","10101","10011","10001","10001","10001"],
+    B:  ["11110","10001","10001","11110","10001","10001","11110"],
+    R:  ["11110","10001","10001","11110","10100","10010","10001"],
+    P:  ["11110","10001","10001","11110","10000","10000","10000"],
+    L:  ["10000","10000","10000","10000","10000","10000","11111"],
+  };
+
+  // Text → flat [x,y,z,...]
+  function funebraText(str, {
+    step = 12,
+    x0 = 0, y0 = 0, z0 = 0,
+    letterSpacing = 1,
+    lineSpacing = 2,
+  } = {}) {
+    const data = [];
+    const W = 5, H = 7;
+    const lines = String(str).toUpperCase().split("\n");
+    let cursorY = 0;
+
+    for (const line of lines) {
+      let cursorX = 0;
+      for (const rawCh of line) {
+        const ch = rawCh === " " ? " " : rawCh;
+        const grid = FONT_5x7[ch] || FONT_5x7["?"];
+        for (let r = 0; r < grid.length; r++) {
+          const row = grid[r];
+          for (let c = 0; c < row.length; c++) {
+            if (row[c] === "1") {
+              const X = x0 + (cursorX + c) * step;
+              const Y = y0 + (cursorY + r) * step;
+              const Z = z0;
+              data.push(X, Y, Z);
+            }
+          }
+        }
+        cursorX += W + letterSpacing;
+      }
+      cursorY += H + lineSpacing;
+    }
+    return data;
+  }
+
+  // Image → flat [x,y,z,...]
+  async function funebraPixelsFromImage(
+    url,
+    {
+      targetHeight = 150,
+      threshold = 210,
+      invert = false,
+      step = 1,
+      sampleStride = 1,
+      x0 = 0, y0 = 0, z0 = 0,
+    } = {}
+  ) {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = url;
+    await img.decode();
+
+    const scale = targetHeight / img.height;
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = targetHeight;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const { data } = ctx.getImageData(0, 0, w, h);
+    const pts = [];
+
+    for (let y = 0; y < h; y += sampleStride) {
+      for (let x = 0; x < w; x += sampleStride) {
+        const idx = (y * w + x) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        const a = data[idx + 3];
+        if (a < 10) continue;
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        const isInk = invert ? lum > threshold : lum < threshold;
+        if (!isInk) continue;
+        const X = x0 + x * step;
+        const Y = y0 + y * step;
+        const Z = z0;
+        pts.push(X, Y, Z);
+      }
+    }
+    return pts;
+  }
+
+  // expose to window so the existing engine + console can see them
+  Object.assign(window, { funebraText, funebraPixelsFromImage });
+</script>
+
+
+  
   <!-- Math‑Art Engine modules (ESM) -->
   <script type="module">
     import Funebra from "https://funebra.github.io/math-art-engine/script.shapes.module.js";
