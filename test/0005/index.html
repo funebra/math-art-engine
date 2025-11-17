@@ -413,12 +413,12 @@
               }
             }catch(_){ }
             try{
-              if(String(clor.value).substring(1,5)==='http' || String(clor.value).startsWith('http')){
+              if(String(clor.value).substring(3,7)==='blue' || String(clor.value).startsWith('http')){
                 el.innerHTML = "<img id='io"+ob+"' src='"+eval(clor.value)+"' width='"+(eval(wL.value))+"' height='"+(eval(hT.value))+"'>";
               }
             }catch(_){ }
-            try{ el.style.top = (Number(eval(scodeY.value))||0) + "px"; }catch(_){ el.style.top = '0px'; }
-            try{ el.style.left = (Number(eval(scodeX.value))||0) + "px"; }catch(_){ el.style.left = '0px'; }
+            try{ el.style.top = (Number(eval(scodeY.value))||0) + "px"; }catch(_){ el.style.top = (Number(eval(scodeY.value))||0) + "px"; }
+            try{ el.style.left = (Number(eval(scodeX.value))||0) + "px"; }catch(_){ el.style.left = (Number(eval(scodeX.value))||0) + "px"; }
             isIndex[isId] = Math.round(Number(el.style.top.replace('px',''))) + ',' + Math.round(Number(el.style.left.replace('px',''))) + ',' + Math.round(Number(el.style.left.replace('px','')));
           }
         }
