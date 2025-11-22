@@ -12,10 +12,220 @@ import * as THREE from 'three';
 // ──────────────────────────────────────────────────────────────────────────────
 export const TAU = Math.PI * 2;
 
+export const PHI = (1 + Math.sqrt(5)) / 2;  // golden ratio
+
+
 const _normStep = (o, steps) => {
   const s = (steps|0) > 0 ? (steps|0) : 1;
   return { t: (o % s) / s, s };
 };
+
+
+
+
+
+
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Fibonacci + Golden / "Fibonacci" Spiral helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Integer Fibonacci (safe up to ~n=60 for JS number)
+export function fib(n){
+  n = n|0;
+  if (n <= 0) return 0;
+  if (n === 1) return 1;
+  let a = 0, b = 1;
+  for (let i = 2; i <= n; i++){
+    const c = a + b;
+    a = b;
+    b = c;
+  }
+  return b;
+}
+
+// Internal golden spiral param: t ∈ [0,1] → { r, theta }
+function _goldenSpiral(t, a = 4, turns = 4){
+  // a = base radius, turns = number of full rotations
+  const thetaMax = turns * TAU;
+  const theta    = t * thetaMax;
+  // logarithmic spiral with growth factor ≈ φ per full turn
+  const r        = a * Math.pow(PHI, theta / TAU);
+  return { r, theta };
+}
+
+/**
+ * fibonacciX / fibonacciY
+ * "Fibonacci" (golden) logarithmic spiral in 2D.
+ *
+ * o            : step index
+ * steps        : total steps for one full spiral
+ * baseRadius   : starting radius (a)
+ * turns        : number of full revolutions
+ * cx, cy       : center
+ * rotation     : extra rotation offset (radians)
+ */
+export function fibonacciX(
+  o,
+  steps       = 720,
+  baseRadius  = 4,
+  turns       = 4,
+  cx          = 0,
+  cy          = 0,
+  rotation    = 0
+){
+  const t = (o % steps) / steps;
+  const { r, theta } = _goldenSpiral(t, baseRadius, turns);
+  const ang = theta + rotation;
+  return cx + r * Math.cos(ang);
+}
+
+export function fibonacciY(
+  o,
+  steps       = 720,
+  baseRadius  = 4,
+  turns       = 4,
+  cx          = 0,
+  cy          = 0,
+  rotation    = 0
+){
+  const t = (o % steps) / steps;
+  const { r, theta } = _goldenSpiral(t, baseRadius, turns);
+  const ang = theta + rotation;
+  return cy + r * Math.sin(ang);
+}
+
+/* usage
+
+scodeX.value = "Funebra.fibonacciX(u, 1200, 3, 4, 320, 360, 0)";
+scodeY.value = "Funebra.fibonacciY(u, 1200, 3, 4, 320, 360, 0)";
+*/
+
+
+
+
+
+
+
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Sacred geometry: golden rectangle (φ aspect)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Golden rectangle where width / height = PHI.
+ * width = long side, height = width / PHI.
+ */
+export function goldenRectangleVertices(width, cx=0, cy=0, theta=0){
+  const w = width;
+  const h = width / PHI;          // long/short = PHI
+  const rx = w / 2, ry = h / 2;
+  let v = [[-rx,-ry],[rx,-ry],[rx,ry],[-rx,ry]];
+  if (theta) v = _rot(v, theta);
+  return _tx(v, cx, cy);
+}
+
+export function goldenRectangleX(o, width, cx=0, cy=0, stepsPerEdge=24, theta=0){
+  return _polyPathX(o, goldenRectangleVertices(width, cx, cy, theta), stepsPerEdge);
+}
+export function goldenRectangleY(o, width, cx=0, cy=0, stepsPerEdge=24, theta=0){
+  return _polyPathY(o, goldenRectangleVertices(width, cx, cy, theta), stepsPerEdge);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Sacred geometry: Seed of Life (7-circle pattern)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Centers for Seed of Life (central + 6 around).
+ * R  : circle radius
+ * cx,cy : center of the whole figure
+ * returns [{x,y}, ... 7 items]
+ */
+export function seedOfLifeCenters(R=60, cx=0, cy=0){
+  const centers = [{ x: cx, y: cy }]; // central
+  for (let k = 0; k < 6; k++){
+    const a = TAU * (k / 6);   // 0,60,...,300 degrees
+    centers.push({
+      x: cx + R * Math.cos(a),
+      y: cy + R * Math.sin(a),
+    });
+  }
+  return centers;
+}
+
+/**
+ * Seed-of-life circle sampler, using index 0..6.
+ * index 0 = central; 1..6 are the hexagon around.
+ */
+export function seedOfLifeCircleX(o, index, R=60, cx=0, cy=0, steps=360){
+  const centers = seedOfLifeCenters(R, cx, cy);
+  const c = centers[index % centers.length];
+  return circleX(o, R, c.x, steps, 0);
+}
+export function seedOfLifeCircleY(o, index, R=60, cx=0, cy=0, steps=360){
+  const centers = seedOfLifeCenters(R, cx, cy);
+  const c = centers[index % centers.length];
+  return circleY(o, R, c.y, steps, 0);
+}
+
+
+/*   usage
+
+
+// 7 circles seed-of-life:
+scodeX.value =
+  "Funebra.seedOfLifeCircleX(u, Math.floor(u / 360), 60, 320, 360, 360)";
+scodeY.value =
+  "Funebra.seedOfLifeCircleY(u, Math.floor(u / 360), 60, 320, 360, 360)";
+ofcircle = 360 * 7;
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Small vector helpers (for polygon pipelines)
 function _rot(v, th){ const c=Math.cos(th), s=Math.sin(th); return v.map(([x,y])=>[x*c - y*s, x*s + y*c]); }
@@ -903,6 +1113,139 @@ export function makeShape(name, materialOptions = { color: 0xE2AE68, flatShading
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+export function rotate2D(x, y, theta = 0, cx = 0, cy = 0){
+  const cs = Math.cos(theta);
+  const sn = Math.sin(theta);
+  const dx = x - cx;
+  const dy = y - cy;
+  return {
+    x: cx + dx * cs - dy * sn,
+    y: cy + dx * sn + dy * cs
+  };
+}
+
+
+
+/* usage
+
+scodeX.value = "Funebra.rotateX(u => Funebra.circleX(u,120,320,360), angle)";
+scodeY.value = "Funebra.rotateY(u => Funebra.circleY(u,120,320,360), angle)";
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export function rotateParamX(fn, theta, cx = 0, cy = 0){
+  return function(o){
+    const x = fn(o);
+    const y = fn.y ? fn.y(o) : 0; // in case fn carries both
+    return rotate2D(x, y, theta, cx, cy).x;
+  }
+}
+
+export function rotateParamY(fn, theta, cx = 0, cy = 0){
+  return function(o){
+    const x = fn.x ? fn.x(o) : 0;
+    const y = fn(o);
+    return rotate2D(x, y, theta, cx, cy).y;
+  }
+}
+
+
+
+
+
+
+export function rotateShape(shape, theta = 0, cx = 0, cy = 0){
+  return {
+    ...shape,
+    x: (o) => {
+      const px = shape.x(o);
+      const py = shape.y(o);
+      return rotate2D(px, py, theta, cx, cy).x;
+    },
+    y: (o) => {
+      const px = shape.x(o);
+      const py = shape.y(o);
+      return rotate2D(px, py, theta, cx, cy).y;
+    }
+  };
+}
+
+
+/* usage
+
+const circle45 = Funebra.rotateShape(circle, Math.PI/4, 320, 360);
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Default export namespace
 // ──────────────────────────────────────────────────────────────────────────────
@@ -938,7 +1281,11 @@ const Funebra = {
   octagonX, octagonY,
   nonagonX, nonagonY,
   decagonX, decagonY,
-
+  // Numeric 2D (extra sacred / Fibonacci)
+  fib,
+  fibonacciX, fibonacciY,
+  goldenRectangleVertices, goldenRectangleX, goldenRectangleY,
+  seedOfLifeCenters, seedOfLifeCircleX, seedOfLifeCircleY,
   // Geometry helpers / projections
   cube,
   pyramidX, pyramidY, pyramidZ,
@@ -960,6 +1307,11 @@ const Funebra = {
 
   // Compat namespace
   FunebraShapesCompat,
+  // rotate
+  rotate2D,
+rotateParamX, rotateParamY,
+rotateShape,
+rotateX, rotateY,
 
   // constants
   TAU,
@@ -980,6 +1332,7 @@ const polylineXh = "Funebra.polylineX(u, 24, 320,220, 380,180, 460,220, 520,300)
 const polylineYh = "Funebra.polylineY(u, 24, 320,220, 380,180, 460,220, 520,300)";
 const polylineClosedXh = "Funebra.polylineClosedX(u, 28, 360,160, 480,200, 460,300, 340,280)";
 const polylineClosedYh = "Funebra.polylineClosedY(u, 28, 360,160, 480,200, 460,300, 340,280)";
+
 
 
 
