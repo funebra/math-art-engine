@@ -1,33 +1,53 @@
 // funebra-geometry-video.module.js
+// 2D Funebra geometry + 3D OBJ/GLB → video
 
-// Core engine + shapes + pixels / heart helpers
-// (Adjust paths based on your repo layout)
-import { Funebra } from './script.shapes.module.js';
-import './script.shapes.module.js';      // extends Funebra with circleX/Y, starX/Y, etc.
-import './funebra-pixels.module.js';     // extends Funebra with heart2D_x/y, pixel helpers, etc.
+// ─────────────────────────────────────────────────────────────
+// Import Funebra engine modules (extend window.Funebra)
+// ─────────────────────────────────────────────────────────────
+import './script.module.js';
+import './script.shapes.module.js';
+import './funebra-pixels.module.js';
 
+// Three.js + loaders (paths resolved via importmap in HTML)
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OBJLoader }  from 'three/addons/loaders/OBJLoader.js';
+
+// ─────────────────────────────────────────────────────────────
 // DOM hooks
-const canvas       = document.getElementById('funebraCanvas');
-const ctx          = canvas.getContext('2d');
-const codeInput    = document.getElementById('codeInput');
-const durationInput= document.getElementById('durationInput');
-const fpsInput     = document.getElementById('fpsInput');
-const resSelect    = document.getElementById('resSelect');
-const previewBtn   = document.getElementById('previewBtn');
-const recordBtn    = document.getElementById('recordBtn');
-const statusText   = document.getElementById('statusText');
-const downloadArea = document.getElementById('downloadArea');
-const engineStatus = document.getElementById('engineStatus');
+// ─────────────────────────────────────────────────────────────
+const canvas        = document.getElementById('funebraCanvas');
+const ctx           = canvas.getContext('2d');
+const codeInput     = document.getElementById('codeInput');
+const durationInput = document.getElementById('durationInput');
+const fpsInput      = document.getElementById('fpsInput');
+const resSelect     = document.getElementById('resSelect');
+const previewBtn    = document.getElementById('previewBtn');
+const recordBtn     = document.getElementById('recordBtn');
+const statusText    = document.getElementById('statusText');
+const downloadArea  = document.getElementById('downloadArea');
+const engineStatus  = document.getElementById('engineStatus');
+const modeSelect    = document.getElementById('modeSelect');
+const modelInput    = document.getElementById('modelInput');
 
-// Capabilities (from modules)
-const HAS_FUNEBRA        = !!Funebra;
-const HAS_FUNEBRA_CIRCLE = HAS_FUNEBRA &&
+let currentMode = '2d'; // '2d' | '3d'
+
+// ─────────────────────────────────────────────────────────────
+// Funebra capabilities
+// ─────────────────────────────────────────────────────────────
+const Funebra = window.Funebra || {};
+
+const HAS_FUNEBRA = !!Funebra;
+const HAS_FUNEBRA_CIRCLE =
+  HAS_FUNEBRA &&
   typeof Funebra.circleX === 'function' &&
   typeof Funebra.circleY === 'function';
-const HAS_FUNEBRA_STAR   = HAS_FUNEBRA &&
+const HAS_FUNEBRA_STAR =
+  HAS_FUNEBRA &&
   typeof Funebra.starX === 'function' &&
   typeof Funebra.starY === 'function';
-const HAS_FUNEBRA_HEART2D = HAS_FUNEBRA &&
+const HAS_FUNEBRA_HEART2D =
+  HAS_FUNEBRA &&
   typeof Funebra.heart2D_x === 'function' &&
   typeof Funebra.heart2D_y === 'function';
 
@@ -40,13 +60,24 @@ engineStatus.textContent = HAS_FUNEBRA
     ].join(' · ')
   : 'fallback trig mode';
 
+// ─────────────────────────────────────────────────────────────
+// Shared state
+// ─────────────────────────────────────────────────────────────
 let animationFrameId = null;
 let recorder         = null;
 let recordedChunks   = [];
 let recordingTimeout = null;
 
-// ---------- Helpers ----------
+// 3D state
+let renderer3D = null;
+let scene3D    = null;
+let camera3D   = null;
+let model3D    = null;
+let light3D    = null;
 
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
 function setResolution() {
   let w, h;
   switch (resSelect.value) {
@@ -58,8 +89,15 @@ function setResolution() {
   }
   canvas.width  = w;
   canvas.height = h;
-}
 
+  if (renderer3D) {
+    renderer3D.setSize(w, h, false);
+    if (camera3D && camera3D.isPerspectiveCamera) {
+      camera3D.aspect = w / h;
+      camera3D.updateProjectionMatrix();
+    }
+  }
+}
 setResolution();
 resSelect.addEventListener('change', setResolution);
 
@@ -76,9 +114,10 @@ function makeSeededRandom(seedStr) {
   };
 }
 
-// ---------- Core renderer wired to Funebra modules ----------
-
-function drawFunebraFrame(tNorm, seedCode) {
+// ─────────────────────────────────────────────────────────────
+// 2D Funebra renderer (existing behaviour)
+// ─────────────────────────────────────────────────────────────
+function drawFunebraFrame2D(tNorm, seedCode) {
   const w      = canvas.width;
   const h      = canvas.height;
   const cx     = w / 2;
@@ -115,17 +154,16 @@ function drawFunebraFrame(tNorm, seedCode) {
   ctx.stroke();
   ctx.restore();
 
-  // Time-gate digits
+  // Time-gate digits from code
   const digits = (seedCode.replace(/\D/g, '') || '2741')
     .padEnd(4, '0')
     .slice(0, 4)
     .split('')
     .map(d => parseInt(d, 10));
-
   const [d2, d7, d4, d1] = digits;
   const basePhase = tNorm * Math.PI * 2;
 
-  // RING — heart2D if available, else circleX/Y, else trig
+  // Outer ring – heart2D → circleX/Y → trig
   const ringPoints = 32 + (d2 + d7);
   const ringRadius = minDim * (0.25 + (d4 / 40));
 
@@ -138,11 +176,9 @@ function drawFunebraFrame(tNorm, seedCode) {
     const radius = ringRadius * (1 + wobble * 0.08);
 
     let x, y;
-
     if (HAS_FUNEBRA_HEART2D) {
       const steps = ringPoints;
       const param = gateT * steps;
-      // Assumed signature in pixels module: heart2D_x(o, radius, center, steps)
       x = Funebra.heart2D_x(param, radius, 0, steps);
       y = Funebra.heart2D_y(param, radius, 0, steps);
     } else if (HAS_FUNEBRA_CIRCLE) {
@@ -167,15 +203,14 @@ function drawFunebraFrame(tNorm, seedCode) {
     ctx.fill();
   }
 
-  // CENTRAL STAR — wired to starX/starY
+  // Central Funebra star
   ctx.save();
-  const polygonSides = 4 + (d2 % 4) + (d7 % 3); // 4–10
+  const polygonSides = 4 + (d2 % 4) + (d7 % 3);
   const polyRadius   = minDim * 0.18;
   const polyRotation = basePhase * (0.2 + d1 * 0.02);
   ctx.rotate(polyRotation);
 
   const samples = polygonSides * 2;
-
   ctx.beginPath();
   for (let i = 0; i <= samples; i++) {
     const aPhase  = (i / samples) * Math.PI * 2;
@@ -188,7 +223,6 @@ function drawFunebraFrame(tNorm, seedCode) {
       const innerR = outerR * 0.55;
       const center = 0;
       const steps  = samples;
-      // starX(o, arms, outerR, innerR, center, steps)
       x = Funebra.starX(o, polygonSides, outerR, innerR, center, steps);
       y = Funebra.starY(o, polygonSides, outerR, innerR, center, steps);
     } else {
@@ -212,7 +246,7 @@ function drawFunebraFrame(tNorm, seedCode) {
   ctx.stroke();
   ctx.restore();
 
-  // INNER STONES — use circleX/Y where possible
+  // Inner stones
   const stones = 8 + d1;
   for (let s = 0; s < stones; s++) {
     const phaseOffset = (s / stones) * Math.PI * 2;
@@ -258,8 +292,7 @@ function drawFunebraFrame(tNorm, seedCode) {
 
   ctx.globalAlpha = 0.55;
   ctx.font        = '10px system-ui';
-
-  let modeLabel = 'fallback trig';
+  let modeLabel   = 'fallback trig';
   if (HAS_FUNEBRA) {
     const bits = [];
     if (HAS_FUNEBRA_HEART2D) bits.push('heart2D');
@@ -267,14 +300,147 @@ function drawFunebraFrame(tNorm, seedCode) {
     if (HAS_FUNEBRA_STAR)    bits.push('starX/Y');
     modeLabel = 'Funebra · ' + (bits.length ? bits.join(' + ') : 'engine loaded');
   }
-
   ctx.fillText(modeLabel, pad, h - 34);
-  ctx.fillText('Funebra™ Geometry AI · v0.4', pad, h - 20);
+  ctx.fillText('Funebra™ Geometry AI · v0.4 · 2D', pad, h - 20);
   ctx.restore();
 }
 
-// ---------- Playback & recording ----------
+// ─────────────────────────────────────────────────────────────
+// 3D renderer: OBJ/GLB + rotation
+// ─────────────────────────────────────────────────────────────
+function ensure3DScene() {
+  if (renderer3D) return;
 
+  const w = canvas.width;
+  const h = canvas.height;
+
+  renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer3D.setSize(w, h, false);
+  renderer3D.setPixelRatio(window.devicePixelRatio || 1);
+
+  const wrap = document.querySelector('.canvas-wrap');
+  renderer3D.domElement.style.position = 'absolute';
+  renderer3D.domElement.style.left = '0';
+  renderer3D.domElement.style.top  = '0';
+  renderer3D.domElement.style.width  = '100%';
+  renderer3D.domElement.style.height = '100%';
+
+  // put WebGL canvas on top of the 2D canvas
+  wrap.appendChild(renderer3D.domElement);
+
+  scene3D  = new THREE.Scene();
+  scene3D.background = new THREE.Color(0x05060b);
+
+  camera3D = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  camera3D.position.set(0, 0.5, 2.5);
+
+  light3D = new THREE.DirectionalLight(0xffffff, 1.2);
+  light3D.position.set(3, 4, 2);
+  scene3D.add(light3D);
+
+  const fillLight = new THREE.AmbientLight(0x404060, 0.7);
+  scene3D.add(fillLight);
+
+  // ground grid (optional)
+  const grid = new THREE.GridHelper(4, 16, 0x304060, 0x202535);
+  grid.position.y = -1;
+  scene3D.add(grid);
+}
+
+function load3DModelFromFile(file) {
+  if (!file) return;
+
+  ensure3DScene();
+
+  // Remove old model
+  if (model3D && scene3D) {
+    scene3D.remove(model3D);
+    model3D.traverse?.(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    });
+    model3D = null;
+  }
+
+  const url = URL.createObjectURL(file);
+  const lower = file.name.toLowerCase();
+
+  if (lower.endsWith('.glb') || lower.endsWith('.gltf')) {
+    const loader = new GLTFLoader();
+    loader.load(url, gltf => {
+      model3D = gltf.scene;
+      scene3D.add(model3D);
+      fitModelToView(model3D);
+    });
+  } else if (lower.endsWith('.obj')) {
+    const loader = new OBJLoader();
+    loader.load(url, obj => {
+      model3D = obj;
+      scene3D.add(model3D);
+      fitModelToView(model3D);
+    });
+  } else {
+    console.warn('Unsupported model type:', file.name);
+  }
+}
+
+function fitModelToView(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+
+  // move model to origin
+  obj.position.sub(center);
+
+  // scale into a nice range
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const targetSize = 1.8;
+  const scale = targetSize / maxDim;
+  obj.scale.setScalar(scale);
+}
+
+function drawFunebraFrame3D(tNorm, seedCode) {
+  if (!renderer3D || !scene3D || !camera3D) {
+    // fallback: just draw the 2D version
+    drawFunebraFrame2D(tNorm, seedCode);
+    return;
+  }
+
+  const digits = (seedCode.replace(/\D/g, '') || '2741')
+    .padEnd(4, '0')
+    .slice(0, 4)
+    .split('')
+    .map(d => parseInt(d, 10));
+  const [d2, d7, d4, d1] = digits;
+  const basePhase = tNorm * Math.PI * 2;
+
+  if (model3D) {
+    // simple Funebra-style rotation driven by digits
+    model3D.rotation.y = basePhase * (0.3 + d2 * 0.03);
+    model3D.rotation.x = basePhase * (0.15 + d7 * 0.02);
+    model3D.rotation.z = Math.sin(basePhase * (0.5 + d4 * 0.05)) * 0.4;
+  }
+
+  renderer3D.render(scene3D, camera3D);
+}
+
+// Choose active "draw frame" implementation based on mode
+function drawFrame(tNorm, seedCode) {
+  if (currentMode === '3d') {
+    drawFunebraFrame3D(tNorm, seedCode);
+  } else {
+    drawFunebraFrame2D(tNorm, seedCode);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Playback & recording
+// ─────────────────────────────────────────────────────────────
 function stopAnimation() {
   if (animationFrameId !== null) {
     cancelAnimationFrame(animationFrameId);
@@ -296,21 +462,21 @@ function startPreview() {
   function loop(now) {
     if (now - start > previewDuration) {
       statusText.innerHTML =
-        `Preview finished · engine mode: <code>${engineStatus.textContent}</code>`;
+        `Preview finished · engine mode: <code>${engineStatus.textContent}</code> · mode: ${currentMode}`;
       animationFrameId = null;
       return;
     }
 
     if (now - lastFrameTime >= frameDuration * 0.8) {
       const tNorm = ((now - start) % previewDuration) / previewDuration;
-      drawFunebraFrame(tNorm, seed);
+      drawFrame(tNorm, seed);
       lastFrameTime = now;
     }
     animationFrameId = requestAnimationFrame(loop);
   }
 
   statusText.innerHTML =
-    `Previewing Funebra geometry animation… engine mode: <code>${engineStatus.textContent}</code>`;
+    `Previewing Funebra animation… engine: <code>${engineStatus.textContent}</code> · mode: ${currentMode}`;
   animationFrameId = requestAnimationFrame(loop);
 }
 
@@ -326,7 +492,13 @@ function startRecording() {
   const totalMs     = durationSec * 1000;
   const frameDuration = 1000 / fps;
 
-  const stream = canvas.captureStream(fps);
+  // use the correct canvas
+  const sourceCanvas =
+    currentMode === '3d' && renderer3D
+      ? renderer3D.domElement
+      : canvas;
+
+  const stream = sourceCanvas.captureStream(fps);
   recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
 
   recordedChunks = [];
@@ -336,7 +508,7 @@ function startRecording() {
   recorder.onstop = () => {
     const blob = new Blob(recordedChunks, { type: 'video/webm' });
     const url  = URL.createObjectURL(blob);
-    const filename = `funebra_geometry_${seed || '2741'}_${durationSec}s_${fps}fps.webm`;
+    const filename = `funebra_geometry_${seed || 'code'}_${durationSec}s_${fps}fps_${currentMode}.webm`;
 
     downloadArea.innerHTML =
       `<a href="${url}" download="${filename}">⬇ Download video (${filename})</a>`;
@@ -363,7 +535,7 @@ function startRecording() {
 
     if (now - lastFrameTime >= frameDuration * 0.9) {
       const tNorm = elapsed / totalMs;
-      drawFunebraFrame(tNorm, seed);
+      drawFrame(tNorm, seed);
       lastFrameTime = now;
     }
 
@@ -372,7 +544,7 @@ function startRecording() {
 
   recorder.start();
   statusText.textContent =
-    `Recording ${durationSec}s @ ${fps}fps · engine mode: ${engineStatus.textContent}`;
+    `Recording ${durationSec}s @ ${fps}fps · engine: ${engineStatus.textContent} · mode: ${currentMode}`;
   recordBtn.classList.add('recording');
   animationFrameId = requestAnimationFrame(loop);
 
@@ -381,7 +553,9 @@ function startRecording() {
   }, totalMs + 1000);
 }
 
-// Wire events
+// ─────────────────────────────────────────────────────────────
+// UI wiring
+// ─────────────────────────────────────────────────────────────
 previewBtn.addEventListener('click', startPreview);
 recordBtn.addEventListener('click', () => {
   if (recorder && recorder.state === 'recording') {
@@ -392,5 +566,23 @@ recordBtn.addEventListener('click', () => {
   startRecording();
 });
 
-// First frame
-drawFunebraFrame(0.0, '2741');
+modeSelect.addEventListener('change', () => {
+  currentMode = modeSelect.value;
+  // Show/hide model input hint if you like (optional)
+  statusText.textContent =
+    currentMode === '3d'
+      ? '3D mode: upload a Funebra OBJ/GLB model to animate.'
+      : '2D mode: Funebra geometry engine active.';
+});
+
+modelInput.addEventListener('change', () => {
+  const file = modelInput.files && modelInput.files[0];
+  if (!file) return;
+  currentMode = '3d';
+  modeSelect.value = '3d';
+  load3DModelFromFile(file);
+  statusText.textContent = `Loaded model: ${file.name}`;
+});
+
+// Initial frame (2D)
+drawFunebraFrame2D(0.0, '2741');
