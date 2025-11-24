@@ -2,8 +2,8 @@
 
 // Core engine + shapes + pixels / heart helpers
 // (Adjust paths based on your repo layout)
-import { Funebra } from './script.module.js';
-import './script.shapes.module.js';      // extends Funebra with circleX/Y, starX/Y, etc.
+import { Funebra } from './script.shapes.module.js';
+import './script.module.js';      // extends Funebra with circleX/Y, starX/Y, etc.
 import './funebra-pixels.module.js';     // extends Funebra with heart2D_x/y, pixel helpers, etc.
 
 // DOM hooks
