@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FUNEBRA: Scrambled Order Challenge — 21 Card Logic Sorcery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #020308;
+      --bg-soft: #090e1b;
+      --panel: #0e1224;
+      --accent: #ff3c7f;
+      --accent-soft: #ffb3d2;
+      --border: #2a3045;
+      --text: #f5f5ff;
+      --muted: #a3a7cf;
+      --good: #6dffb3;
+      --bad: #ff6b81;
+      --card-back: #101633;
+      --card-front: #171f49;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, #1c2245, #020308 55%) fixed,
+        radial-gradient(circle at bottom, #1b0b24, transparent 60%) fixed;
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1120px;
+      background: linear-gradient(135deg, rgba(255, 60, 127, 0.15), rgba(60, 245, 255, 0.05));
+      border-radius: 1.4rem;
+      padding: 1px;
+      box-shadow:
+        0 0 40px rgba(0, 0, 0, 0.6),
+        0 0 70px rgba(255, 60, 127, 0.2);
+    }
+
+    .frame {
+      background: radial-gradient(circle at top left, #151a37, #050713 60%);
+      border-radius: 1.3rem;
+      padding: 1.5rem 1.75rem;
+      display: grid;
+      grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.4fr);
+      gap: 1.5rem;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .title-block h1 {
+      font-size: 1.4rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--accent-soft);
+    }
+
+    .title-block h1 span {
+      color: var(--accent);
+    }
+
+    .title-block p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--muted);
+      background: radial-gradient(circle at top left, rgba(255, 60, 127, 0.2), transparent 60%);
+    }
+
+    .chip.funebra {
+      border-color: rgba(255, 60, 127, 0.7);
+      color: var(--accent-soft);
+    }
+
+    /* BOARD */
+
+    .board-wrap {
+      background: radial-gradient(circle at top, rgba(255, 60, 127, 0.08), rgba(0, 0, 0, 0.3));
+      border-radius: 1.1rem;
+      padding: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .board-headline {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .board-headline h2 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+    }
+
+    .board-headline span {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+
+    .card {
+      position: relative;
+      width: 100%;
+      padding-top: 150%; /* 2:3 ratio */
+      perspective: 900px;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      position: absolute;
+      inset: 0;
+      border-radius: 0.9rem;
+      transform-style: preserve-3d;
+      transition: transform 0.45s ease;
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 0.9rem;
+      border: 1px solid var(--border);
+      backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.4rem;
+      box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .card-back {
+      background: radial-gradient(circle at top, #1a2147, #07091c 65%);
+      color: var(--accent-soft);
+      font-size: 1rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .card-back .bn {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    .card-front {
+      background: radial-gradient(circle at top, #232b5c, #0a0e21 70%);
+      color: var(--text);
+      font-size: 1.3rem;
+      transform: rotateY(180deg);
+    }
+
+    .card-front small {
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    .card.revealed .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-guess-tag {
+      position: absolute;
+      bottom: 0.25rem;
+      left: 0.3rem;
+      padding: 0.16rem 0.4rem;
+      font-size: 0.65rem;
+      border-radius: 999px;
+      background: rgba(2, 3, 8, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      display: inline-flex;
+      gap: 0.25rem;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .card-guess-symbol {
+      font-weight: 600;
+      min-width: 0.7rem;
+      text-align: center;
+    }
+
+    .card-guess-label {
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      font-size: 0.6rem;
+      color: var(--muted);
+    }
+
+    .guess-unknown .card-guess-symbol {
+      color: var(--muted);
+    }
+
+    .guess-ace .card-guess-symbol {
+      color: #ffdd6b;
+    }
+
+    .guess-heart .card-guess-symbol {
+      color: #ff8bb0;
+    }
+
+    .guess-royal .card-guess-symbol {
+      color: #9ae6ff;
+    }
+
+    .guess-joker .card-guess-symbol {
+      color: #d18bff;
+    }
+
+    .guess-filler .card-guess-symbol {
+      color: #9cf7c7;
+    }
+
+    .hint-strip {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hint-strip span {
+      opacity: 0.8;
+    }
+
+    .hint-strip strong {
+      color: var(--accent-soft);
+      font-weight: 500;
+    }
+
+    /* SIDEBAR */
+
+    .side {
+      background: radial-gradient(circle at top, rgba(0, 0, 0, 0.2), rgba(4, 6, 18, 0.9));
+      border-radius: 1.1rem;
+      padding: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .panel {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.7));
+      border-radius: 0.9rem;
+      padding: 0.75rem 0.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .panel h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      margin-bottom: 0.45rem;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: 1.2fr 1.2fr;
+      gap: 0.5rem 0.75rem;
+      font-size: 0.78rem;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .legend-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+    }
+
+    .legend-dot span {
+      transform: translateY(-0.02rem);
+    }
+
+    .legend-note {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .legend-note strong {
+      color: var(--accent-soft);
+      font-weight: 500;
+    }
+
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .score {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--good);
+    }
+
+    .score-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.55rem;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      cursor: pointer;
+      background: radial-gradient(circle at top, #ff3c7f, #ff215c);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255, 60, 127, 0.65);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease,
+                  background 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 0 18px rgba(255, 60, 127, 0.85),
+        0 0 40px rgba(60, 245, 255, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow:
+        0 0 8px rgba(255, 60, 127, 0.8),
+        0 0 16px rgba(60, 245, 255, 0.3);
+    }
+
+    button.secondary {
+      background: radial-gradient(circle at top, #272f5b, #151934);
+      box-shadow: 0 0 10px rgba(60, 245, 255, 0.28);
+      color: var(--accent-soft);
+      border: 1px solid rgba(120, 180, 255, 0.4);
+    }
+
+    button.secondary:hover {
+      background: radial-gradient(circle at top, #313a6c, #171b3d);
+    }
+
+    button.ghost {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: var(--muted);
+      box-shadow: none;
+    }
+
+    button.ghost:hover {
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: none;
+      color: var(--accent-soft);
+    }
+
+    button[disabled] {
+      opacity: 0.55;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .log {
+      font-size: 0.73rem;
+      color: var(--muted);
+      max-height: 150px;
+      overflow: auto;
+      padding-right: 0.2rem;
+    }
+
+    .log p {
+      margin-bottom: 0.25rem;
+    }
+
+    .log p strong {
+      color: var(--accent-soft);
+      font-weight: 500;
+    }
+
+    .log p.good {
+      color: var(--good);
+    }
+
+    .log p.bad {
+      color: var(--bad);
+    }
+
+    .combo-list {
+      font-size: 0.73rem;
+      margin-top: 0.25rem;
+    }
+
+    .combo-list li {
+      margin-left: 1em;
+      margin-bottom: 0.1rem;
+    }
+
+    @media (max-width: 880px) {
+      .frame {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .badge-row {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="frame">
+    <header>
+      <div class="title-block">
+        <h1><span>Funebra</span> · Scrambled Order Challenge</h1>
+        <p>
+          21-card Apralacarta field. Each card is a bn-point.  
+          Your task: decode the hidden roles — Aces, Hearts, Royals, Joker, and background noise.
+        </p>
+      </div>
+      <div class="badge-row">
+        <div class="chip funebra">Logic · Sorcery · 2741</div>
+        <div class="chip">Single Player Deduction</div>
+      </div>
+    </header>
+
+    <!-- BOARD -->
+    <section class="board-wrap">
+      <div class="board-headline">
+        <h2>Scrambled bn-field</h2>
+        <span>Tap cards to cycle their guessed role</span>
+      </div>
+
+      <div id="card-grid" class="grid">
+        <!-- Cards are inserted by JS -->
+      </div>
+
+      <div class="hint-strip">
+        <span>Order is scrambled every new puzzle.</span>
+        <span><strong>Goal:</strong> correctly label all pattern cards before revealing the true deck.</span>
+      </div>
+    </section>
+
+    <!-- SIDE PANEL -->
+    <aside class="side">
+      <div class="panel">
+        <h3>Guess legend</h3>
+        <div class="legend">
+          <div class="legend-row">
+            <div class="legend-dot"><span>?</span></div>
+            <span>Unknown / unmarked</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot"><span>A</span></div>
+            <span>Aces pattern</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot"><span>♥</span></div>
+            <span>Hearts cluster</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot"><span>R</span></div>
+            <span>Royal cluster</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot"><span>J</span></div>
+            <span>Joker anomaly</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot"><span>•</span></div>
+            <span>Background / filler</span>
+          </div>
+        </div>
+        <p class="legend-note">
+          Tap any card to rotate through: <strong>Unknown → Ace → Heart → Royal → Joker → Other → Unknown</strong>.
+        </p>
+      </div>
+
+      <div class="panel">
+        <div class="score-row">
+          <div>
+            <div class="score-label">Score</div>
+            <div id="score" class="score">0 FP</div>
+          </div>
+          <div style="text-align:right; font-size:0.75rem; color:var(--muted)">
+            <div>Perfect Ace quartet: +2741</div>
+            <div>Hearts cluster: +96 · Royals: +1982 · Joker: +5363</div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="check-btn" class="secondary" type="button">Check Patterns</button>
+          <button id="reveal-btn" class="ghost" type="button">Reveal Solution</button>
+          <button id="reset-btn" type="button">New Puzzle</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Game log</h3>
+        <div id="log" class="log">
+          <p>Welcome to the Funebra Scrambled Order Challenge.</p>
+          <p>Mark your hypotheses, press <strong>Check Patterns</strong>, then reveal the truth.</p>
+        </div>
+
+        <ul class="combo-list">
+          <li><strong>Aces pattern</strong>: 4 Ace-roles all marked as A → +2741 FP</li>
+          <li><strong>Hearts cluster</strong>: 3 Heart-roles all ♥ → +96 FP</li>
+          <li><strong>Royal cluster</strong>: 3 Royal-roles all R → +1982 FP</li>
+          <li><strong>Joker anomaly</strong>: Joker marked J → +5363 FP</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  // --- DATA MODEL ---
+
+  // Each card has: label (rank+symbol), role (ace/heart/royal/joker/filler)
+  // Roles are disjoint on purpose: exactly one "true role" per card.
+  const BASE_DECK = [
+    // Aces pattern (4)
+    { id: "bn0", label: "A♠", role: "ace",  description: "Ace of Spades" },
+    { id: "bn1", label: "A♥", role: "ace",  description: "Ace of Hearts" },
+    { id: "bn2", label: "A♦", role: "ace",  description: "Ace of Diamonds" },
+    { id: "bn3", label: "A♣", role: "ace",  description: "Ace of Clubs" },
+
+    // Hearts cluster (3)
+    { id: "bn4", label: "5♥", role: "heart", description: "5 of Hearts" },
+    { id: "bn5", label: "7♥", role: "heart", description: "7 of Hearts" },
+    { id: "bn6", label: "9♥", role: "heart", description: "9 of Hearts" },
+
+    // Royal cluster (3)
+    { id: "bn7", label: "K♠", role: "royal", description: "King of Spades" },
+    { id: "bn8", label: "Q♦", role: "royal", description: "Queen of Diamonds" },
+    { id: "bn9", label: "J♣", role: "royal", description: "Jack of Clubs" },
+
+    // Joker anomaly (1)
+    { id: "bn10", label: "🃏", role: "joker", description: "Joker anomaly" },
+
+    // Filler / background (10)
+    { id: "bn11", label: "2♣", role: "filler", description: "2 of Clubs" },
+    { id: "bn12", label: "3♦", role: "filler", description: "3 of Diamonds" },
+    { id: "bn13", label: "4♠", role: "filler", description: "4 of Spades" },
+    { id: "bn14", label: "6♣", role: "filler", description: "6 of Clubs" },
+    { id: "bn15", label: "8♦", role: "filler", description: "8 of Diamonds" },
+    { id: "bn16", label: "10♠", role: "filler", description: "10 of Spades" },
+    { id: "bn17", label: "2♥", role: "filler", description: "2 of Hearts" },
+    { id: "bn18", label: "3♣", role: "filler", description: "3 of Clubs" },
+    { id: "bn19", label: "8♠", role: "filler", description: "8 of Spades" },
+    { id: "bn20", label: "9♦", role: "filler", description: "9 of Diamonds" }
+  ];
+
+  const GUESS_STATES = ["unknown", "ace", "heart", "royal", "joker", "filler"];
+
+  const GUESS_SYMBOL = {
+    unknown: "?",
+    ace: "A",
+    heart: "♥",
+    royal: "R",
+    joker: "J",
+    filler: "•"
+  };
+
+  const GUESS_LABEL = {
+    unknown: "Unknown",
+    ace: "Ace",
+    heart: "Heart",
+    royal: "Royal",
+    joker: "Joker",
+    filler: "Other"
+  };
+
+  // Points for individual cards when guess matches role
+  const ROLE_BASE_POINTS = {
+    ace: 72,
+    heart: 32,
+    royal: 48,
+    joker: 120,
+    filler: 10
+  };
+
+  const ROLE_PENALTY = -18; // for wrong classification
+
+  const COMBO_BONUS = {
+    ace: 2741,
+    heart: 96,
+    royal: 1982,
+    joker: 5363
+  };
+
+  let deck = [];
+  let guesses = [];
+  let revealed = false;
+
+  const gridEl = document.getElementById("card-grid");
+  const scoreEl = document.getElementById("score");
+  const logEl = document.getElementById("log");
+  const checkBtn = document.getElementById("check-btn");
+  const revealBtn = document.getElementById("reveal-btn");
+  const resetBtn = document.getElementById("reset-btn");
+
+  function shuffle(array) {
+    const arr = array.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function initGame() {
+    revealed = false;
+    deck = shuffle(BASE_DECK);
+    guesses = new Array(deck.length).fill("unknown");
+    scoreEl.textContent = "0 FP";
+
+    // Clear board + build fresh
+    gridEl.innerHTML = "";
+    deck.forEach((card, index) => {
+      const cardEl = document.createElement("div");
+      cardEl.className = "card guess-unknown";
+      cardEl.dataset.index = index.toString();
+
+      const inner = document.createElement("div");
+      inner.className = "card-inner";
+
+      const back = document.createElement("div");
+      back.className = "card-face card-back";
+      back.innerHTML = `
+        <div>Apralacarta</div>
+        <div class="bn">${card.id}</div>
+      `;
+
+      const front = document.createElement("div");
+      front.className = "card-face card-front";
+      front.innerHTML = `
+        <div>${card.label}</div>
+        <small>${card.description}</small>
+      `;
+
+      const guessTag = document.createElement("div");
+      guessTag.className = "card-guess-tag";
+      guessTag.innerHTML = `
+        <span class="card-guess-symbol">${GUESS_SYMBOL.unknown}</span>
+        <span class="card-guess-label">${GUESS_LABEL.unknown}</span>
+      `;
+
+      inner.appendChild(back);
+      inner.appendChild(front);
+      cardEl.appendChild(inner);
+      cardEl.appendChild(guessTag);
+
+      cardEl.addEventListener("click", () => onCardClick(index));
+
+      gridEl.appendChild(cardEl);
+    });
+
+    // Reset log
+    logEl.innerHTML = "";
+    appendLog("New scrambled Funebra field generated. Start tagging your guesses.", "good");
+    appendLog("Hint: work backwards from where a Joker would 'want' to hide.", "neutral");
+
+    // Enable controls
+    checkBtn.disabled = false;
+    revealBtn.disabled = false;
+  }
+
+  function onCardClick(index) {
+    if (revealed) return;
+    const current = guesses[index];
+    const currentIdx = GUESS_STATES.indexOf(current);
+    const next = GUESS_STATES[(currentIdx + 1) % GUESS_STATES.length];
+    guesses[index] = next;
+    updateCardGuessUI(index);
+  }
+
+  function updateCardGuessUI(index) {
+    const cardEl = gridEl.querySelector(`.card[data-index="${index}"]`);
+    if (!cardEl) return;
+    const guess = guesses[index];
+
+    cardEl.classList.remove(
+      "guess-unknown",
+      "guess-ace",
+      "guess-heart",
+      "guess-royal",
+      "guess-joker",
+      "guess-filler"
+    );
+    cardEl.classList.add(`guess-${guess}`);
+
+    const sym = cardEl.querySelector(".card-guess-symbol");
+    const lab = cardEl.querySelector(".card-guess-label");
+    if (sym) sym.textContent = GUESS_SYMBOL[guess];
+    if (lab) lab.textContent = GUESS_LABEL[guess];
+  }
+
+  function appendLog(message, mood) {
+    const p = document.createElement("p");
+    if (mood === "good") p.classList.add("good");
+    if (mood === "bad") p.classList.add("bad");
+    p.textContent = message;
+    logEl.appendChild(p);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function scoreCurrentState() {
+    let score = 0;
+    let correctCount = 0;
+    let totalMarked = 0;
+
+    let allAceCorrect = true;
+    let allHeartCorrect = true;
+    let allRoyalCorrect = true;
+    let jokerCorrect = false;
+
+    deck.forEach((card, idx) => {
+      const guess = guesses[idx];
+      const role = card.role;
+
+      if (guess !== "unknown") {
+        totalMarked++;
+        if (guess === role) {
+          correctCount++;
+          score += ROLE_BASE_POINTS[role] || 0;
+        } else {
+          score += ROLE_PENALTY;
+        }
+      }
+
+      if (role === "ace" && guess !== "ace") allAceCorrect = false;
+      if (role === "heart" && guess !== "heart") allHeartCorrect = false;
+      if (role === "royal" && guess !== "royal") allRoyalCorrect = false;
+      if (role === "joker") {
+        if (guess === "joker") jokerCorrect = true;
+        else jokerCorrect = false;
+      }
+    });
+
+    let comboText = [];
+
+    if (allAceCorrect) {
+      score += COMBO_BONUS.ace;
+      comboText.push(`Ace pattern cracked (+${COMBO_BONUS.ace} FP)`);
+    }
+    if (allHeartCorrect) {
+      score += COMBO_BONUS.heart;
+      comboText.push(`Heart cluster aligned (+${COMBO_BONUS.heart} FP)`);
+    }
+    if (allRoyalCorrect) {
+      score += COMBO_BONUS.royal;
+      comboText.push(`Royal matrix decoded (+${COMBO_BONUS.royal} FP)`);
+    }
+    if (jokerCorrect) {
+      score += COMBO_BONUS.joker;
+      comboText.push(`Joker anomaly located (+${COMBO_BONUS.joker} FP)`);
+    }
+
+    scoreEl.textContent = `${score} FP`;
+
+    const accuracy =
+      totalMarked > 0 ? ((correctCount / totalMarked) * 100).toFixed(1) : "0.0";
+
+    appendLog(
+      `Pattern check: ${correctCount}/${totalMarked || 0} correct (${accuracy}% accuracy).`,
+      correctCount >= totalMarked / 2 ? "good" : "bad"
+    );
+
+    if (comboText.length) {
+      comboText.forEach((t) => appendLog(t, "good"));
+    } else {
+      appendLog("No full pattern bonuses yet. The Funebra field is still resisting.", "neutral");
+    }
+  }
+
+  function revealSolution() {
+    if (revealed) return;
+    revealed = true;
+    const cards = gridEl.querySelectorAll(".card");
+    cards.forEach((cardEl) => {
+      cardEl.classList.add("revealed");
+    });
+    appendLog("Solution revealed. Compare your mental mapping with the true Funebra layout.", "good");
+    checkBtn.disabled = true;
+    revealBtn.disabled = true;
+  }
+
+  // --- BUTTON HOOKS ---
+
+  checkBtn.addEventListener("click", scoreCurrentState);
+  revealBtn.addEventListener("click", revealSolution);
+  resetBtn.addEventListener("click", initGame);
+
+  // Initial boot
+  initGame();
+</script>
+</body>
+</html>
