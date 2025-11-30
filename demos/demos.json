@@ -1,7 +1,13 @@
 [
-  { "file": "hexagon.html", "title": "Hexagon (Exagon) Walker" },
-  { "file": "star.html",    "title": "Star Polygon" },
-  { "file": "rose.html",    "title": "Rose Curve" },
-  { "file": "wave.html",    "title": "Wave / Data Plot" },
-  { "file": "cross.html",   "title": "Funebrad Cross" }
+  { "file": "hexagon.html",          "title": "Hexagon (Exagon) Walker" },
+  { "file": "star.html",             "title": "Star Polygon" },
+  { "file": "rose.html",             "title": "Rose Curve" },
+  { "file": "wave.html",             "title": "Wave / Data Plot" },
+  { "file": "cross.html",            "title": "Funebrad Cross" },
+
+  { "file": "funebrasorcery/index.htm",
+    "title": "Scrambled Order Challenge — Logic Sorcery" },
+
+  { "file": "funebracard/index.htm",
+    "title": "APRALACARTA" }
 ]
