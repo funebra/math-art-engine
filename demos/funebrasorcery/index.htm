@@ -40,6 +40,21 @@
       padding: 1.5rem;
     }
 
+
+    .card.correct-guess .card-inner {
+  box-shadow:
+    0 0 18px rgba(109, 255, 179, 0.75),
+    0 0 40px rgba(60, 245, 255, 0.45);
+}
+
+.card.wrong-guess .card-inner {
+  box-shadow:
+    0 0 18px rgba(255, 107, 129, 0.8),
+    0 0 30px rgba(255, 60, 127, 0.55);
+}
+
+
+    
     .shell {
       width: 100%;
       max-width: 1120px;
@@ -779,74 +794,80 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
 
-  function scoreCurrentState() {
-    let score = 0;
-    let correctCount = 0;
-    let totalMarked = 0;
+function scoreCurrentState() {
+  let score = 0;
+  let correctCount = 0;
+  let totalMarked = 0;
 
-    let allAceCorrect = true;
-    let allHeartCorrect = true;
-    let allRoyalCorrect = true;
-    let jokerCorrect = false;
+  let allAceCorrect = true;
+  let allHeartCorrect = true;
+  let allRoyalCorrect = true;
+  let jokerCorrect = false;
 
-    deck.forEach((card, idx) => {
-      const guess = guesses[idx];
-      const role = card.role;
+  deck.forEach((card, idx) => {
+    const guess = guesses[idx];
+    const role = card.role;
+    const cardEl = gridEl.querySelector(`.card[data-index="${idx}"]`);
 
-      if (guess !== "unknown") {
-        totalMarked++;
-        if (guess === role) {
-          correctCount++;
-          score += ROLE_BASE_POINTS[role] || 0;
-        } else {
-          score += ROLE_PENALTY;
-        }
+    // reset previous visual marks
+    cardEl.classList.remove("correct-guess", "wrong-guess");
+
+    if (guess !== "unknown") {
+      totalMarked++;
+
+      if (guess === role) {
+        correctCount++;
+        score += ROLE_BASE_POINTS[role] || 0;
+        cardEl.classList.add("correct-guess");
+      } else {
+        score += ROLE_PENALTY;
+        cardEl.classList.add("wrong-guess");
       }
-
-      if (role === "ace" && guess !== "ace") allAceCorrect = false;
-      if (role === "heart" && guess !== "heart") allHeartCorrect = false;
-      if (role === "royal" && guess !== "royal") allRoyalCorrect = false;
-      if (role === "joker") {
-        if (guess === "joker") jokerCorrect = true;
-        else jokerCorrect = false;
-      }
-    });
-
-    let comboText = [];
-
-    if (allAceCorrect) {
-      score += COMBO_BONUS.ace;
-      comboText.push(`Ace pattern cracked (+${COMBO_BONUS.ace} FP)`);
-    }
-    if (allHeartCorrect) {
-      score += COMBO_BONUS.heart;
-      comboText.push(`Heart cluster aligned (+${COMBO_BONUS.heart} FP)`);
-    }
-    if (allRoyalCorrect) {
-      score += COMBO_BONUS.royal;
-      comboText.push(`Royal matrix decoded (+${COMBO_BONUS.royal} FP)`);
-    }
-    if (jokerCorrect) {
-      score += COMBO_BONUS.joker;
-      comboText.push(`Joker anomaly located (+${COMBO_BONUS.joker} FP)`);
     }
 
-    scoreEl.textContent = `${score} FP`;
-
-    const accuracy =
-      totalMarked > 0 ? ((correctCount / totalMarked) * 100).toFixed(1) : "0.0";
-
-    appendLog(
-      `Pattern check: ${correctCount}/${totalMarked || 0} correct (${accuracy}% accuracy).`,
-      correctCount >= totalMarked / 2 ? "good" : "bad"
-    );
-
-    if (comboText.length) {
-      comboText.forEach((t) => appendLog(t, "good"));
-    } else {
-      appendLog("No full pattern bonuses yet. The Funebra field is still resisting.", "neutral");
+    if (role === "ace" && guess !== "ace") allAceCorrect = false;
+    if (role === "heart" && guess !== "heart") allHeartCorrect = false;
+    if (role === "royal" && guess !== "royal") allRoyalCorrect = false;
+    if (role === "joker") {
+      jokerCorrect = guess === "joker";
     }
+  });
+
+  let comboText = [];
+
+  if (allAceCorrect) {
+    score += COMBO_BONUS.ace;
+    comboText.push(`Ace pattern cracked (+${COMBO_BONUS.ace} FP)`);
   }
+  if (allHeartCorrect) {
+    score += COMBO_BONUS.heart;
+    comboText.push(`Heart cluster aligned (+${COMBO_BONUS.heart} FP)`);
+  }
+  if (allRoyalCorrect) {
+    score += COMBO_BONUS.royal;
+    comboText.push(`Royal matrix decoded (+${COMBO_BONUS.royal} FP)`);
+  }
+  if (jokerCorrect) {
+    score += COMBO_BONUS.joker;
+    comboText.push(`Joker anomaly located (+${COMBO_BONUS.joker} FP)`);
+  }
+
+  scoreEl.textContent = `${score} FP`;
+
+  const accuracy =
+    totalMarked > 0 ? ((correctCount / totalMarked) * 100).toFixed(1) : "0.0";
+
+  appendLog(
+    `Pattern check: ${correctCount}/${totalMarked || 0} correct (${accuracy}% accuracy).`,
+    correctCount >= totalMarked / 2 ? "good" : "bad"
+  );
+
+  if (comboText.length) {
+    comboText.forEach((t) => appendLog(t, "good"));
+  } else {
+    appendLog("No full pattern bonuses yet. The Funebra field is still resisting.", "neutral");
+  }
+}
 
   function revealSolution() {
     if (revealed) return;
