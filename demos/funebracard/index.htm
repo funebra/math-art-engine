@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Funebra Apralacarta — 21 Card Mind Reader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #020308;
+      --panel: #0a0f1f;
+      --accent: #ff3c7f;
+      --accent-soft: #ffb3d2;
+      --border: #272b3f;
+      --text: #f5f5ff;
+      --muted: #a1a4c5;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #181d36, #020308);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 980px;
+      background: linear-gradient(145deg, #050713, #101425);
+      border-radius: 1.5rem;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.85);
+      padding: 1.6rem 1.8rem 1.9rem;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.75rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      margin-bottom: .3rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: 1.1rem;
+    }
+
+    .status {
+      text-align: center;
+      font-size: .9rem;
+      margin-bottom: 1rem;
+      color: var(--accent-soft);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .column {
+      background: var(--panel);
+      border-radius: 1.1rem;
+      border: 1px solid var(--border);
+      padding: .7rem .5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .35rem;
+    }
+
+    .column-label {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .11em;
+      margin-bottom: .3rem;
+      color: var(--muted);
+    }
+
+    .card-img {
+      max-width: 100%;
+      width: 82px;
+      height: auto;
+      image-rendering: auto;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9));
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .75rem;
+      margin-bottom: .6rem;
+    }
+
+    button {
+      padding: .5rem 1rem;
+      border-radius: .9rem;
+      border: none;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      background: radial-gradient(circle at top left, var(--accent), #7a2cff);
+      color: #fff;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.8);
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.9);
+    }
+
+    button:active {
+      transform: translateY(1px) scale(.98);
+      box-shadow: 0 8px 22px rgba(0,0,0,0.8);
+    }
+
+    button.secondary {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      box-shadow: none;
+    }
+
+    .prediction {
+      text-align: center;
+      margin-top: .7rem;
+      font-size: .9rem;
+      min-height: 1.6rem;
+    }
+
+    .prediction strong {
+      color: var(--accent-soft);
+    }
+
+    .prediction-img {
+      margin-top: .7rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .prediction-img img {
+      width: 110px;
+      max-width: 25vw;
+      height: auto;
+      filter: drop-shadow(0 10px 26px rgba(0,0,0,0.95));
+    }
+
+    @media (max-width: 720px) {
+      .shell { padding: 1.3rem 1rem 1.5rem; }
+      .board { grid-template-columns: 1fr; }
+      .column { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+      .column-label { width: 100%; text-align: center; }
+      .card-img { width: 60px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>Apralacarta · 21</h1>
+    <p class="subtitle">Think of a card silently. Tell Funebra only the column.</p>
+
+    <p class="status" id="status">
+      Step 1 · Look at the 21 cards. Choose one in your mind. Then click the column that holds it.
+    </p>
+
+    <div class="board">
+      <div class="column" data-col="0">
+        <div class="column-label">Column 1 · Left</div>
+        <div class="cards" id="col-0"></div>
+      </div>
+      <div class="column" data-col="1">
+        <div class="column-label">Column 2 · Middle</div>
+        <div class="cards" id="col-1"></div>
+      </div>
+      <div class="column" data-col="2">
+        <div class="column-label">Column 3 · Right</div>
+        <div class="cards" id="col-2"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="secondary" id="restart">New 21 cards</button>
+    </div>
+
+    <div class="prediction" id="prediction"></div>
+    <div class="prediction-img" id="prediction-img"></div>
+  </div>
+
+<script>
+  (function () {
+    const BASE_URL = "https://plabs.at.ua/bluetooth/trans/still/";
+    const MAX_INDEX = 54;
+    const ROUNDS = 3;
+
+    let deck = [];
+    let round = 1;
+    const statusEl = document.getElementById("status");
+    const predictionEl = document.getElementById("prediction");
+    const predictionImgEl = document.getElementById("prediction-img");
+    const restartBtn = document.getElementById("restart");
+    const colEls = [
+      document.getElementById("col-0"),
+      document.getElementById("col-1"),
+      document.getElementById("col-2"),
+    ];
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateRandomDeck() {
+      // pick 21 unique indices from 1..MAX_INDEX
+      const used = new Set();
+      const result = [];
+      while (result.length < 21) {
+        const n = randomInt(1, MAX_INDEX);
+        if (!used.has(n)) {
+          used.add(n);
+          result.push(n);
+        }
+      }
+      return result;
+    }
+
+    function dealIntoColumns() {
+      // clear
+      colEls.forEach(col => col.innerHTML = "");
+
+      for (let i = 0; i < deck.length; i++) {
+        const colIndex = i % 3; // 0,1,2
+        const img = document.createElement("img");
+        img.className = "card-img";
+        img.src = BASE_URL + deck[i] + ".png";
+        img.alt = "Card " + deck[i];
+        colEls[colIndex].appendChild(img);
+      }
+    }
+
+    function restackWithChosenColumn(colChosen) {
+      // gather columns 0,1,2 as arrays of indices (top to bottom)
+      const columns = [[], [], []];
+      for (let i = 0; i < deck.length; i++) {
+        columns[i % 3].push(deck[i]);
+      }
+
+      // classic 21-card trick: put chosen column in the middle.
+      // if chosen=0 → [1,0,2]
+      // if chosen=1 → [0,1,2]
+      // if chosen=2 → [0,2,1]
+      let order;
+      if (colChosen === 0) order = [1, 0, 2];
+      else if (colChosen === 1) order = [0, 1, 2];
+      else order = [0, 2, 1];
+
+      const newStack = [];
+      order.forEach(idx => newStack.push(...columns[idx]));
+
+      // IMPORTANT: we STOP here.
+      // newStack is the physical deck order.
+      // Next call to dealIntoColumns() will redeal it.
+      deck = newStack;
+    }
+
+    function revealPrediction() {
+      // after 3 rounds, chosen card is in the middle (index 10)
+      const chosenIndex = deck[10];
+      statusEl.textContent = "Apralacarta whispers your card…";
+      predictionEl.innerHTML =
+        "You silently chose: <strong>card index " + chosenIndex + "</strong>.";
+
+      predictionImgEl.innerHTML = "";
+      const img = document.createElement("img");
+      img.src = BASE_URL + chosenIndex + ".png";
+      img.alt = "Predicted card " + chosenIndex;
+      predictionImgEl.appendChild(img);
+    }
+
+    function handleColumnClick(colIndex) {
+      if (round > ROUNDS) return;
+      restackWithChosenColumn(colIndex);
+      round++;
+
+      if (round > ROUNDS) {
+        dealIntoColumns(); // optional final layout
+        revealPrediction();
+      } else {
+        dealIntoColumns();
+        statusEl.textContent =
+          "Step " + round +
+          " · Again: which column now holds your chosen card?";
+      }
+    }
+
+    function init() {
+      predictionEl.textContent = "";
+      predictionImgEl.innerHTML = "";
+      round = 1;
+      deck = generateRandomDeck();
+      dealIntoColumns();
+      statusEl.textContent =
+        "Step 1 · Look at the 21 cards. Choose one silently, then click the column that holds it.";
+    }
+
+    // click listeners on columns
+    document.querySelectorAll(".column").forEach(col => {
+      col.addEventListener("click", () => {
+        const idx = parseInt(col.getAttribute("data-col"), 10);
+        handleColumnClick(idx);
+      });
+    });
+
+    restartBtn.addEventListener("click", init);
+
+    init();
+  })();
+</script>
+
+</body>
+</html>
