@@ -452,7 +452,7 @@
         nodo.style.position = "absolute";
         nodo.id = shape+_o;
         nodo.onclick = function() {
-          mPosition.value = this.id.substring(this.id.length-2);
+          mPosition.value = this.id.substring(this.id.length, this.id.length-2);
           try{ oDef.innerText = (window[shape+this.id.substring(2)]||{}).innerHTML || ''; }catch(_){ }
         };
         nodo.onmouseover = function() {
@@ -461,7 +461,7 @@
           abou.id=this.id+"abou";
           abou.innerText = "Step: "+this.id+" of "+ofcircle+"\nstepStart: "+stpStart.value+"\nstepEnd: "+stpEnd.value+"\nsSpeed : "+dta.value+"\nscodeX : "+scodeX.value+"\nscodeY : "+scodeY.value+"\nsColor : "+clor.value+"\nsCode : "+itext.value;
           this.appendChild(abou);
-          mPosition.value = this.id.substring(this.id.length-2);
+          mPosition.value = this.id.substring(this.id.length, this.id.length-2);
           try{ oDef.innerText = (window[shape+this.id.substring(2)]||{}).innerHTML || ''; }catch(_){ }
           this.onmouseout = function() {
             const div = this.querySelector('div');
