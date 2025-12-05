@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Background Remove Demo</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    .preview { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+    canvas, img { max-width: 300px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>background-remove.module.js demo</h1>
+  <input type="file" id="fileInput" accept="image/*" />
+  <div class="preview">
+    <div>
+      <h3>Original</h3>
+      <img id="original" />
+    </div>
+    <div>
+      <h3>No background</h3>
+      <canvas id="output"></canvas>
+    </div>
+  </div>
+
+  <script type="module">
+    import { BackgroundRemove } from "https://funebra.github.io/math-art-engine/background-remove.module.js";
+
+    const fileInput = document.getElementById("fileInput");
+    const original  = document.getElementById("original");
+    const output    = document.getElementById("output");
+    const outCtx    = output.getContext("2d");
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const img = await BackgroundRemove.loadImage(file);
+      original.src = img.src;
+
+      const canvas = BackgroundRemove.removeBackgroundFromImage(img, {
+        sampleSize: 12,
+        threshold: 45,
+        softEdges: true
+      });
+
+      output.width  = canvas.width;
+      output.height = canvas.height;
+      outCtx.clearRect(0, 0, output.width, output.height);
+      outCtx.drawImage(canvas, 0, 0);
+    });
+  </script>
+</body>
+</html>
