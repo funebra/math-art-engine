@@ -505,9 +505,13 @@
                 value='0'><input type='button' value='>000' onClick=''>
           <div align='left'><h1>Scene Templates</h1><br>
             <font onclick='bo.value="url(https://plabs.at.ua/earth/vu/body/FAVPNG_wedding-invitation-picture-frame_je3Wdbt8.png)100% 100%/ 100% 100%,                                  url(https://plabs.at.ua/tools/values/sinaxes_0_0_0.png)100% 100%/100% 100%,                                                        url(https://plabs.at.ua/tools/values/sinrad_0_0_0.png)100% 100%/100% 100%,                url(https://plabs.at.ua/bluetooth/trans/still/clear_0_0_1.png), rgb(200,200,230)";chngBG20()'>
-              Math Dream Scene</font><div style='width:100%;' align='right'>
+              Math Dream Scene</font>
+            
+            <div style='width:100%;' align='right'>
             <a id="setX1">X-pat 1</a>
                 <a id="setY1">Y-pat 1</a>
+            <a id="gridsetup">Grid setup</a>
+                <a id="setY2"></a>
 
 <script>
 document.getElementById("setX1").onclick = () => {
@@ -516,7 +520,43 @@ document.getElementById("setX1").onclick = () => {
 document.getElementById("setY1").onclick = () => {
     scodeY.value = "Math.sin(o/9.2)*120+370";
 };
-</script></div></div></center>
+  document.getElementById("gridsetup").onclick = () => {
+   // 1) Engine loop settings
+steps.value    = 1;
+stpStart.value = 0;
+stpEnd.value   = 12 * 12 - 1;  // 14400 bn-points
+shape.value    = "smileGrid";    // any label you like
+
+// 2) Initialise bn0..bn14399
+initsobj(shape.value);
+
+// 3) Position formula: 12×12 grid
+// cellSize = 10px → change if you want bigger/smaller faces
+const cellSize = 10;
+const cols = 12;
+
+// X: column = o % 12
+// center horizontally by subtracting half-width (cols * cellSize / 2)
+scodeX.value =
+  "(o % " + 12 + ") * " + 10 +
+  " + window.innerWidth/2 - (" + 12 + "*" + 10 + ")/2";
+
+// Y: row = floor(o / 12)
+scodeY.value =
+  "Math.floor(o / " + 12 + ") * " + 10 +
+  " + 100";  // vertical offset from top, adjust as you like
+
+// 4) Render positions
+mvx();
+
+};
+</script>
+            <br>
+              
+
+            </div>
+          
+          </div></center>
     </b>&nbsp;</div>
 <div id='page02' style='visibility:hidden;width:360px;'><b style='position:absolute;right:3px;top:0px;'>
         <div style='background:gray;'><b id='mvx1control' onClick='oDef.value=mvx1control.innerText;execon();'
