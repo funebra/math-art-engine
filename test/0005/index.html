@@ -537,14 +537,15 @@ const cols = 12;
 
 // X: column = o % 12
 // center horizontally by subtracting half-width (cols * cellSize / 2)
+    (o % 12) * 20 + window.innerWidth/2 - (12*10)-10
 scodeX.value =
-  "(o % " + 12 + ") * " + 10 +
-  " + window.innerWidth/2 - (" + 12 + "*" + 10 + ")/2";
+  "(o % " + 12 + ") * " + 20 +
+  " + window.innerWidth/2 - (" + 12 + "*" + 20 + ")/2";
 
 // Y: row = floor(o / 12)
 scodeY.value =
   "Math.floor(o / " + 12 + ") * " + 10 +
-  " + 100";  // vertical offset from top, adjust as you like
+  " + 260";  // vertical offset from top, adjust as you like
 
 // 4) Render positions
 mvx();
