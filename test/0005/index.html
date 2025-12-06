@@ -754,7 +754,7 @@ document.getElementById("setmotion").onclick = () => {
           if(el){
             el.style.zIndex = String(o);
             try{
-              if(String(clor.value).substring(1, 3)==='rgb'){
+              if(String(clor.value).substring(1, 4)==='rgb'){
                 with(Math){
                   el.innerHTML = eval(itext.value);
                   el.style.fontSize='14pt';
