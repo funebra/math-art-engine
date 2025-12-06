@@ -511,9 +511,13 @@
             <a id="setX1">X-pat 1</a>
                 <a id="setY1">Y-pat 1</a><br>
             <a id="gridsetup">Grid setup</a>
-                <a id="setY2"></a>
+                <a id="setY2"></a><br>
+              
+
+              
 
 <script>
+      
 document.getElementById("setX1").onclick = () => {
     scodeX.value = "o*5 + window.innerWidth/2 - 160";
 };
@@ -556,7 +560,46 @@ mvx();
               
 
             </div>
-          
+            <hr>
+                                      <font onclick=''>
+              Math shortcuts</font><br> 
+            <div style='width:100%;' align='right'>
+              <a id="setmotion" cursor="pointer">Animate</a>
+              <script>
+document.getElementById("setmotion").onclick = () => {
+    const step  = Number(steps.value) || 1;
+    const end   = Math.floor(Number(stpEnd.value)) || 0;
+    const delay = Number(dta.value) || 0;
+
+    // compile the formulas once, reuse for each frame + each o
+    const evalX = new Function("o", "return " + scodeX.value);
+    const evalY = new Function("o", "return " + scodeY.value);
+
+    function tick(){
+        // ── 1 frame in the Funebra engine = update ALL o's at once
+        for(let o = step; o < end; o += step){
+            const n = document.getElementById(shape.value + o);
+            if(!n) continue;
+
+            const x = evalX(o);
+            const y = evalY(o);
+
+            n.style.left  = x + "px";   // important: add "px"
+            n.style.top   = y + "px";
+            n.style.color = clor.value;
+        }
+
+        // repeat next frame
+        if (delay >= 0) {
+            setTimeout(tick, delay);
+        }
+    }
+
+    // start the animation loop
+    tick();
+};
+</script>
+            </div>
           </div></center>
     </b>&nbsp;</div>
 <div id='page02' style='visibility:hidden;width:360px;'><b style='position:absolute;right:3px;top:0px;'>
