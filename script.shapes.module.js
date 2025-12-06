@@ -1,4 +1,4 @@
-// script.module.js — Funebra unified ESM (Core + Numeric Shapes + Compat + 3D)
+// script.shapes.module.js — Funebra unified ESM (Core + Numeric Shapes + Compat + 3D)
 // - Pure ESM (no globals).
 // - Local THREE import.
 // - All numeric 2D, Bézier, heart, waves, projected pyramid, 3D builders,
@@ -1341,6 +1341,7 @@ const polylineXh = "Funebra.polylineX(u, 24, 320,220, 380,180, 460,220, 520,300)
 const polylineYh = "Funebra.polylineY(u, 24, 320,220, 380,180, 460,220, 520,300)";
 const polylineClosedXh = "Funebra.polylineClosedX(u, 28, 360,160, 480,200, 460,300, 340,280)";
 const polylineClosedYh = "Funebra.polylineClosedY(u, 28, 360,160, 480,200, 460,300, 340,280)";
+
 
 
 
