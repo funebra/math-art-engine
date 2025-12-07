@@ -512,6 +512,11 @@
             <a id="setX1" style="cursor:pointer;">X-pat 1</a>
                 <a id="setY1" style="cursor:pointer;">Y-pat 1</a><br>
             <a id="gridsetup" style="cursor:pointer;">Grid setup</a><br>
+            <a id="gridsetup8" style="cursor:pointer;">G 8x8</a>
+            <a id="gridsetup12" style="cursor:pointer;">G 12x12</a>
+            <a id="gridsetup16" style="cursor:pointer;">G 16x16</a>
+            <a id="gridsetup32" style="cursor:pointer;">G 32x32</a>
+            <a id="gridsetup64" style="cursor:pointer;">G 64x64</a><br>
             <a id="setfunebraeye101" style="cursor:pointer;">Funebra setup 10 </a>
             <a id="setfunebraeye271" style="cursor:pointer;"> 27 </a>
             <a id="setfunebraeye272" style="cursor:pointer;"> (1) </a>
@@ -525,9 +530,71 @@
               
              
 <script>
-   
-  document.getElementById("setfunebraeye272").onclick = () => {
-    clor.value = '"rgb("+cos(((15-(o%16))-floor(o/16))/2)*720+", 120, 120)"';
+
+  document.getElementById("gridsetup8").onclick = () => {
+ steps.value    = 1;
+  stpStart.value = 0;
+  stpEnd.value   = 8 * 8-1;
+  shape.value    = "smileGrid";
+  initsobj(shape.value);
+  const cols = 8;
+  const cellSize = 20;
+  scodeX.value =
+    "(o % " + 8 + ") * " + 20 +
+    " + window.innerWidth/2 - (" + 8 + " * " + 20 + ")/2-10";
+  scodeY.value =
+    "Math.floor(o / " + 8 + ") * " + 20 +
+    " + 300";
+  };
+  document.getElementById("gridsetup12").onclick = () => {
+ steps.value    = 1;
+  stpStart.value = 0;
+  stpEnd.value   = 12 * 12-1;
+  shape.value    = "smileGrid";
+  initsobj(shape.value);
+  const cols = 12;
+  const cellSize = 20;
+  scodeX.value =
+    "(o % " + 12 + ") * " + 20 +
+    " + window.innerWidth/2 - (" + 12 + " * " + 20 + ")/2-10";
+  scodeY.value =
+    "Math.floor(o / " + 12 + ") * " + 20 +
+    " + 260";
+  };
+  document.getElementById("gridsetup16").onclick = () => {
+ steps.value    = 1;
+  stpStart.value = 0;
+  stpEnd.value   = 16 * 16-1;
+  shape.value    = "smileGrid";
+  initsobj(shape.value);
+  const cols = 16;
+  const cellSize = 20;
+  scodeX.value =
+    "(o % " + 16 + ") * " + 20 +
+    " + window.innerWidth/2 - (" + 16 + " * " + 20 + ")/2-10";
+  scodeY.value =
+    "Math.floor(o / " + 16 + ") * " + 20 +
+    " + 220";
+  };
+  
+ document.getElementById("gridsetup32").onclick = () => {
+ steps.value    = 1;
+  stpStart.value = 0;
+  stpEnd.value   = 32 * 32-1;
+  shape.value    = "smileGrid";
+  //itext.value = "&#0149;";
+  initsobj(shape.value);
+  const cols = 32;
+  const cellSize = 10;
+  scodeX.value =
+    "(o % " + 32 + ") * " + 10 +
+    " + window.innerWidth/2 - (" + 32 + " * " + 10 + ")/2-10";
+  scodeY.value =
+    "Math.floor(o / " + 32 + ") * " + 10 +
+    " + 220";
+  };
+    document.getElementById("setfunebraeye271").onclick = () => {
+    clor.value = '"rgb("+abs(cos(((o%82)-floor((o+80)/36))/8)*720+fibonacci(((o%27)-floor((cz+40)/6))/8)*720%255)+", 120, 120)";';
 };
   document.getElementById("setfunebraeye271").onclick = () => {
     clor.value = '"rgb("+abs(cos(((o%82)-floor((o+80)/36))/8)*720+fibonacci(((o%27)-floor((cz+40)/6))/8)*720%255)+", 120, 120)";';
