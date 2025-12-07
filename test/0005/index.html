@@ -575,7 +575,7 @@ mvx();
         const n = document.getElementById(shape.value+_o);
         if(n) n.style.color =eval(clor.value);
       }
-                  setTimeout(animate, Number(dta.value));
+                  setTimeout(animate, Number(dta.value) || 0);
                 }
 </script>
             </div>
