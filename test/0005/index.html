@@ -525,6 +525,34 @@
               
              
 <script>
+   
+  document.getElementById("setfunebraeye272").onclick = () => {
+    clor.value = '"rgb("+cos(((15-(o%16))-floor(o/16))/2)*720+", 120, 120)"';
+};
+  document.getElementById("setfunebraeye271").onclick = () => {
+    clor.value = '"rgb("+abs(cos(((o%82)-floor((o+80)/36))/8)*720+fibonacci(((o%27)-floor((cz+40)/6))/8)*720%255)+", 120, 120)";';
+};
+  document.getElementById("setfunebraeye281").onclick = () => {
+      itext.value = '"&#0149;"';
+    scodeX.value = '(Funebra.wave("sine",     o, 180,  180, 120)  )+ window.innerWidth/2 - (12*20)/2';
+    clor.value =  '"rgb("+   (Funebra.wave(&quot;sine&quot;,     o, 120,  32, 135))+","+   (Funebra.wave(&quot;triangle&quot;, o, 120,  64, 135))+","+   (Funebra.wave(&quot;square&quot;,   o, 120, 128, 135))+ ")"';
+};
+    document.getElementById("setlatinletter0002").onclick = () => {
+    itext.value = 'let cols = 12; let col  = o % cols; let row  = floor(o / cols);  let s="";    if(      (col==3 && row>=1 && row<=10) ||       (row==1 && col>=3 && col<=6) ||       (row==10 && col>=3 && col<=8) ||      (row==5 && col>=3 && col<=7) ||      (col==6 && row>=2 && row<=4) ||  shape     (col==8 && row>=6 && row<=9) ||     !(col==7 && row==4) &&     !(col==7 && row==6) ){     s="B"; }else{     s=""; }  s;';
+};
+    document.getElementById("setlatinletter0001").onclick = () => {
+    itext.value = 'let cols = 12; let col  = o % cols; let row  = Math.floor(o / cols); let s    = "";  if(     (row > 1 && (col == 3 || col == 8)) ||     (row == 6 && col >= 3 && col <= 8) ||     (row == 1 && col >= 5 && col <= 6) ){     s = "&#9787;"; }else{     s = ""; }  s;';
+};
+  document.getElementById("settorus0001").onclick = () => {
+    itext.value = 'let cols = 12; let col  = o % cols; let row  = floor(o / cols); let cx = (cols - 1) / 2; let cy = cx;  let dx = col - cx; let dy = row - cy;  let R  = 4.5; let d  = sqrt(dx*dx + dy*dy);  let s  = "";  if(d > 3.2 + sin(iu/40)*0.8 && d < 4.8 + sin(iu/40)*0.8) { s = "&#9787;";} else {     s = "<font color='red'>o</font>"; }  s;';        
+
+};
+  document.getElementById("setfunebraeye101").onclick = () => {
+    itext.value = 'let cols = 12; let col  = o % cols; let row  = floor(o / cols); let cx = (cols - 1) / 2; let cy = cx;  let dx = col - cx; let dy = row - cy;  let R  = 4.5; let d  = sqrt(dx*dx + dy*dy);  let s  = "";  if( (d*2741 % 12) < 6 ) { s = "&#9787;";} else {     s = "o"; }  s;'  
+;
+};
+  
+  /*
 document.getElementById("setfunebraeye272").onclick = () => {
   clor.value = '"rgb(" + (Math.cos(((15 - (o % 16)) - Math.floor(o / 16)) / 2) * 120 + 135) + ", 120, 120)"';
 };
@@ -600,7 +628,7 @@ document.getElementById("setfunebraeye101").onclick = () => {
     'let d  = Math.sqrt(dx*dx + dy*dy); ' +
     'let s  = ""; ' +
     'if ((d * 2741) % 12 < 6) { s = "&#9787;"; } else { s = "o"; } s;';
-};
+}; */
 
 document.getElementById("setX1").onclick = () => {
   scodeX.value = "o*5 + window.innerWidth/2 - 160";
@@ -610,6 +638,11 @@ document.getElementById("setY1").onclick = () => {
   scodeY.value = "Math.sin(o/9.2)*120+370";
 };
 
+                 document.getElementById("setslogo0000").onclick = () => {
+    itext.value='let R = 5; let d = sqrt(cos(o/9.2)*cos(o/9.2) + sin(o/9.2)*6); let s = "";  if (d <= R) {     s = "&#9787;";  } else {     s = ""; }  s;';
+            
+};
+/*
 document.getElementById("setslogo0000").onclick = () => {
   itext.value =
     'let R = 5; ' +
@@ -619,7 +652,7 @@ document.getElementById("setslogo0000").onclick = () => {
     'let s = ""; ' +
     'if (d <= R) { s = "&#9787;"; } else { s = ""; } s;';
 };
-
+*/
 document.getElementById("gridsetup").onclick = () => {
   steps.value    = 1;
   stpStart.value = 0;
