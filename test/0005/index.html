@@ -648,40 +648,7 @@ document.getElementById("gridsetup").onclick = () => {
               Math shortcuts</font><br> 
             <div style='width:100%;' align='right'>
 <a id="setmotion" style="cursor:pointer;" onclick="animate();">Animate</a>
-<a id="stopmotion" style="cursor:pointer;" onclick="stopAnimate();">Stop</a>
-<script>
-let iu = 0;
-let animTimer = null;
 
-function animate(){
-  const step = Number(steps.value) || 1;
-  const max  = Math.floor(Number(stpEnd.value));
-  iu++;
-  for(let o = step; o < max; o += step){
-    const n = document.getElementById(shape.value + o);
-    if(!n) continue;
-    if(scodeX.value){
-      const x = eval(scodeX.value);
-      n.style.left = x + "px";
-    }
-    if(scodeY.value){
-      const y = eval(scodeY.value);
-      n.style.top = y + "px";
-    }
-    if(clor.value){
-      n.style.color = eval(clor.value);
-    }
-  }
-  animTimer = setTimeout(animate, Number(dta.value) || 33);
-}
-
-function stopAnimate(){
-  if(animTimer){
-    clearTimeout(animTimer);
-    animTimer = null;
-  }
-}
-</script>
 
             </div>
           </div></center>
