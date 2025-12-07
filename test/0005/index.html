@@ -504,21 +504,55 @@
         <center><input type='button' value='000<' onClick=''><input type='text' id='pgindex' style='width:30;'
                 value='0'><input type='button' value='>000' onClick=''>
           <div align='left'><h1>Scene Templates</h1><br>
-            <font onclick='bo.value="url(https://plabs.at.ua/earth/vu/body/FAVPNG_wedding-invitation-picture-frame_je3Wdbt8.png)100% 100%/ 100% 100%,                                  url(https://plabs.at.ua/tools/values/sinaxes_0_0_0.png)100% 100%/100% 100%,                                                        url(https://plabs.at.ua/tools/values/sinrad_0_0_0.png)100% 100%/100% 100%,                url(https://plabs.at.ua/bluetooth/trans/still/clear_0_0_1.png), rgb(200,200,230)";chngBG20()'>
+            <font style="cursor:pointer;" onclick='bo.value="url(https://plabs.at.ua/earth/vu/body/FAVPNG_wedding-invitation-picture-frame_je3Wdbt8.png)100% 100%/ 100% 100%,                                  url(https://plabs.at.ua/tools/values/sinaxes_0_0_0.png)100% 100%/100% 100%,                                                        url(https://plabs.at.ua/tools/values/sinrad_0_0_0.png)100% 100%/100% 100%,                url(https://plabs.at.ua/bluetooth/trans/still/clear_0_0_1.png), rgb(200,200,230)";chngBG20()'>
               Math Dream Scene</font>
             
             <div style='width:100%;' align='right'>
-            <a id="setX1">X-pat 1</a>
-                <a id="setY1">Y-pat 1</a><br>
-            <a id="gridsetup">Grid setup</a>
+            <a id="setX1" style="cursor:pointer;">X-pat 1</a>
+                <a id="setY1" style="cursor:pointer;">Y-pat 1</a><br>
+            <a id="gridsetup" style="cursor:pointer;">Grid setup</a><br>
+            <a id="setfunebraeye101" style="cursor:pointer;">Funebra setup 10 </a>
+            <a id="setfunebraeye271" style="cursor:pointer;"> 27 </a>
+            <a id="setfunebraeye272" style="cursor:pointer;"> (1) </a>
+            <a id="setfunebraeye273" style="cursor:pointer;"> (2) </a>
+            <a id="setfunebraeye281" style="cursor:pointer;"> 28 </a><br>
+              <a id="setslogo0000" style="cursor:pointer;" onclick="">Logo s 1</a><br>
+              <a id="setlatinletter0001" style="cursor:pointer;" onclick="">Chars  A </a>
+              <a id="setlatinletter0002" style="cursor:pointer;" onclick=""> B </a><br>
+            <a id="settorus0001" style="cursor:pointer;">Torus setup 1</a>
                 <a id="setY2"></a><br>
               
 
-              
-
+             
 <script>
-      
-document.getElementById("setX1").onclick = () => {
+ 
+    
+  document.getElementById("setfunebraeye272").onclick = () => {
+    clor.value = '"rgb("+cos(((15-(o%16))-floor(o/16))/2)*720+", 120, 120)"';
+};
+  document.getElementById("setfunebraeye271").onclick = () => {
+    clor.value = '"rgb("+abs(cos(((o%82)-floor((o+80)/36))/8)*720+fibonacci(((o%27)-floor((cz+40)/6))/8)*720%255)+", 120, 120)";';
+};
+  document.getElementById("setfunebraeye281").onclick = () => {
+      itext.value = '"&#0149;"';
+    scodeX.value = '(Funebra.wave("sine",     o, 180,  180, 120)  )+ window.innerWidth/2 - (12*20)/2';
+    clor.value =  `"rgb("+   (Funebra.wave('sine',     o, 120,  32, 135))+","+   (Funebra.wave('triangle', o, 120,  64, 135))+","+   (Funebra.wave('square',   o, 120, 128, 135))+ ")"`;
+};
+    document.getElementById("setlatinletter0002").onclick = () => {
+    itext.value = 'let cols = 12; let col  = o % cols; let row  = floor(o / cols);  let s="";    if(      (col==3 && row>=1 && row<=10) ||       (row==1 && col>=3 && col<=6) ||       (row==10 && col>=3 && col<=8) ||      (row==5 && col>=3 && col<=7) ||      (col==6 && row>=2 && row<=4) ||  shape     (col==8 && row>=6 && row<=9) ||     !(col==7 && row==4) &&     !(col==7 && row==6) ){     s="B"; }else{     s=""; }  s;';
+};
+    document.getElementById("setlatinletter0001").onclick = () => {
+    itext.value = 'let cols = 12; let col  = o % cols; let row  = Math.floor(o / cols); let s    = "";  if(     (row > 1 && (col == 3 || col == 8)) ||     (row == 6 && col >= 3 && col <= 8) ||     (row == 1 && col >= 5 && col <= 6) ){     s = "&#9787;"; }else{     s = ""; }  s;';
+};
+  document.getElementById("settorus0001").onclick = () => {
+    itext.value = 'let cols = 12; let col  = o % cols; let row  = floor(o / cols); let cx = (cols - 1) / 2; let cy = cx;  let dx = col - cx; let dy = row - cy;  let R  = 4.5; let d  = sqrt(dx*dx + dy*dy);  let s  = "";  if(d > 3.2 + sin(iu/40)*0.8 && d < 4.8 + sin(iu/40)*0.8) { s = "&#9787;";} else {     s = "<font color='red'>o</font>"; }  s;';        
+
+};
+  document.getElementById("setfunebraeye101").onclick = () => {
+    itext.value = 'let cols = 12; let col  = o % cols; let row  = floor(o / cols); let cx = (cols - 1) / 2; let cy = cx;  let dx = col - cx; let dy = row - cy;  let R  = 4.5; let d  = sqrt(dx*dx + dy*dy);  let s  = "";  if( (d*2741 % 12) < 6 ) { s = "&#9787;";} else {     s = "o"; }  s;'  
+;
+};
+  document.getElementById("setX1").onclick = () => {
     scodeX.value = "o*5 + window.innerWidth/2 - 160";
 };
 document.getElementById("setY1").onclick = () => {
@@ -564,8 +598,13 @@ mvx();
                                       <font onclick=''>
               Math shortcuts</font><br> 
             <div style='width:100%;' align='right'>
-              <a id="setmotion" cursor="pointer" onclick="animate();">Animate</a>
+              <a id="setmotion" style="cursor:pointer;" onclick="animate();">Animate</a>
               <script>
+                
+                document.getElementById("setslogo0000").onclick = () => {
+    itext.value='let R = 5; let d = sqrt(cos(o/9.2)*cos(o/9.2) + sin(o/9.2)*6); let s = "";  if (d <= R) {     s = "&#9787;";  } else {     s = ""; }  s;';
+            
+};
                 function animate(){
                   
 //eval(scodeY.value);
@@ -575,7 +614,7 @@ mvx();
         const n = document.getElementById(shape.value+_o);
         if(n) n.style.color =eval(clor.value);
       }
-                  setTimeout(animate, Number(dta.value) || 0);
+                  //setTimeout(animate, Number(dta.value) || 0);
                 }
 </script>
             </div>
