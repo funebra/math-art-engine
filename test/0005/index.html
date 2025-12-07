@@ -532,7 +532,7 @@ document.getElementById("setfunebraeye272").onclick = () => {
 document.getElementById("setfunebraeye271").onclick = () => {
   clor.value = '"rgb(" + (Math.abs(Math.cos(((o % 82) - Math.floor((o + 80) / 36)) / 8) * 120 + (fibonacci((o % 27)) % 120)) % 255) + ", 120, 120)"';
 };
-/*
+
 document.getElementById("setfunebraeye281").onclick = () => {
   itext.value = '"&#0149;"';
   scodeX.value = '(Funebra.wave("sine", o, 180, 180, 120)) + window.innerWidth/2 - (12*20)/2';
@@ -601,7 +601,7 @@ document.getElementById("setfunebraeye101").onclick = () => {
     'let s  = ""; ' +
     'if ((d * 2741) % 12 < 6) { s = "&#9787;"; } else { s = "o"; } s;';
 };
-*/
+
 document.getElementById("setX1").onclick = () => {
   scodeX.value = "o*5 + window.innerWidth/2 - 160";
 };
@@ -778,7 +778,7 @@ function stopAnimate(){
     function osc1(){ if(ca === 323){ if(cb > 1) cb -= 1; cz = cb; } if(cb === 1){ cb = 324; ca = 1; } setTimeout(osc1,200);} osc1();
 
     let bod = '';
-    let afcircles = 0;
+    let ofcircles = 0;
     function printit(){
       try{ pTool1 && pTool1(); }catch(_){}
       if(h < 1024){
