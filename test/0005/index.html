@@ -96,6 +96,7 @@
     .figure figcaption{margin-top:6px;color:var(--mute);font-size:13px}
     footer{margin:28px 0;color:var(--mute);font-size:12px}
     a{color:var(--fx2)}
+    a:hover{color:rgb(200, 200, 230);}
 
     /* Legacy panels remain hidden unless toggled */
     [data-export-ignore] { user-select: none; }
@@ -536,7 +537,7 @@
   document.getElementById("setfunebraeye281").onclick = () => {
       itext.value = '"&#0149;"';
     scodeX.value = '(Funebra.wave("sine",     o, 180,  180, 120)  )+ window.innerWidth/2 - (12*20)/2';
-    clor.value =  `"rgb("+   (Funebra.wave('sine',     o, 120,  32, 135))+","+   (Funebra.wave('triangle', o, 120,  64, 135))+","+   (Funebra.wave('square',   o, 120, 128, 135))+ ")"`;
+    clor.value =  '"rgb("+   (Funebra.wave(&quot;sine&quot;,     o, 120,  32, 135))+","+   (Funebra.wave(&quot;triangle&quot;, o, 120,  64, 135))+","+   (Funebra.wave(&quot;square&quot;,   o, 120, 128, 135))+ ")"';
 };
     document.getElementById("setlatinletter0002").onclick = () => {
     itext.value = 'let cols = 12; let col  = o % cols; let row  = floor(o / cols);  let s="";    if(      (col==3 && row>=1 && row<=10) ||       (row==1 && col>=3 && col<=6) ||       (row==10 && col>=3 && col<=8) ||      (row==5 && col>=3 && col<=7) ||      (col==6 && row>=2 && row<=4) ||  shape     (col==8 && row>=6 && row<=9) ||     !(col==7 && row==4) &&     !(col==7 && row==6) ){     s="B"; }else{     s=""; }  s;';
