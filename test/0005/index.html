@@ -1008,6 +1008,35 @@ function stopAnimate(){
         document.body.appendChild(nodo);
       }
     }
+
+
+    function setupeye2716_diagonalPerfect (){
+  steps.value    = 1;
+  stpStart.value = 0;
+  stpEnd.value   = 16 * 16 - 1;     // 0..255
+  shape.value    = "smileGrid";
+  initsobj(shape.value);
+
+  const cols     = 16;
+  const cellSize = 20;
+
+  // PERFECT anti-diagonal: (15 - col) - row == 0
+  // from o=15 (row 0, col 15) to o=240 (row 15, col 0)
+  clor.value =
+    '"rgb(" + ' +
+      '(((15 - (o % 16)) - Math.floor(o / 16)) === 0 ? 255 : 40)' +
+      ' + ", 120, 120)"';
+
+  // same Eye-grid positioning as your canonical eye2716
+  scodeX.value =
+    "(o % " + 16 + ") * " + 20 +
+    " + window.innerWidth/2 - (" + 16 + " * " + 20 + ")/2 - 10";
+
+  scodeY.value =
+    "Math.floor(o / " + 16 + ") * " + 20 +
+    " + 220";
+};
+
   </script>
 
   <script src="https://plabs.at.ua/res/partner/download.js" defer></script>
