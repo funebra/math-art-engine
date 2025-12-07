@@ -558,6 +558,10 @@
 };
 document.getElementById("setY1").onclick = () => {
     scodeY.value = "Math.sin(o/9.2)*120+370";
+}; 
+  document.getElementById("setslogo0000").onclick = () => {
+    itext.value='let R = 5; let d = sqrt(cos(o/9.2)*cos(o/9.2) + sin(o/9.2)*6); let s = "";  if (d <= R) {     s = "&#9787;";  } else {     s = ""; }  s;';
+            
 };
   document.getElementById("gridsetup").onclick = () => {
    // 1) Engine loop settings
@@ -602,10 +606,7 @@ mvx();
               <a id="setmotion" style="cursor:pointer;" onclick="animate();">Animate</a>
               <script>
                 
-                document.getElementById("setslogo0000").onclick = () => {
-    itext.value='let R = 5; let d = sqrt(cos(o/9.2)*cos(o/9.2) + sin(o/9.2)*6); let s = "";  if (d <= R) {     s = "&#9787;";  } else {     s = ""; }  s;';
-            
-};
+
                 function animate(){
                   
 //eval(scodeY.value);
@@ -615,7 +616,7 @@ mvx();
         const n = document.getElementById(shape.value+_o);
         if(n) n.style.color =eval(clor.value);
       }
-                  //setTimeout(animate, Number(dta.value) || 0);
+                  setTimeout(animate, Number(dta.value) || 0);
                 }
 </script>
             </div>
