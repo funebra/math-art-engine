@@ -570,11 +570,7 @@ mvx();
                   
 eval(scodeY.value);
  eval(scodeX.value);
-                  
-        for(let _o = Number(steps.value)||1; _o<Math.floor(Number(stpEnd.value)); _o+= (Number(steps.value)||1)){
-        const n = document.getElementById(shape.value+_o);
-        if(n) n.style.color =eval(clor.value);
-      }
+
                   setTimeout(animate, Number(dta.value));
                 }
 </script>
