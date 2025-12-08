@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Irony – FL Piano Roll (HTML v3)</title>
+<style>
+  body{
+    background:#111;
+    color:#f5f5f5;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    margin:0;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:24px;
+  }
+
+  h1{
+    margin:0;
+    font-size:1.6rem;
+    letter-spacing:0.03em;
+  }
+
+  .wrapper{
+    max-width:1100px;
+    width:100%;
+  }
+
+  /* BAR LABELS – 10 bars × 4 beats; padded left to match lane-label column */
+  .bar-labels{
+    width:860px;                 /* 60px labels + 40*20px grid */
+    padding-left:60px;           /* same as lane-label column */
+    display:grid;
+    grid-template-columns:repeat(40,20px);
+    margin:0 0 6px 0;
+    font-size:0.8rem;
+    color:#b9d5db;
+  }
+  .bar-labels div{
+    text-align:center;
+  }
+
+  /* PIANO ROLL BOX */
+  .piano-roll{
+    position:relative;
+    border-radius:10px;
+    overflow:hidden;
+    background:#22343a;
+    padding:16px 16px 18px 16px;
+    box-shadow:0 0 30px rgba(0,0,0,0.45);
+    width:860px;                 /* fixed to match bar-labels */
+    display:grid;
+    grid-template-columns:60px auto; /* labels + grid */
+    column-gap:4px;
+  }
+
+  /* lane labels column */
+  .lane-labels{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    font-size:0.7rem;
+    color:#9fbabf;
+    padding:4px 0;
+  }
+
+  /* main grid: 40 beats × 8 pitch lanes */
+  .grid{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(40,20px);
+    grid-template-rows:repeat(8,24px);
+    gap:0;
+    padding:4px 4px 4px 0;
+    /* ALL GRID LINES LIVE HERE, so they align exactly with cells */
+    background:
+      /* strong bar lines every 4 beats (80px) */
+      repeating-linear-gradient(
+        to right,
+        rgba(0,0,0,0.45) 0px,
+        rgba(0,0,0,0.45) 2px,
+        transparent 2px,
+        transparent 80px
+      ),
+      /* beat grid (20px) */
+      repeating-linear-gradient(
+        to right,
+        #2f454a 0px,
+        #2f454a 1px,
+        transparent 1px,
+        transparent 20px
+      ),
+      /* horizontal lanes (per pitch row) */
+      repeating-linear-gradient(
+        to bottom,
+        #2f454a 0px,
+        #2f454a 1px,
+        transparent 1px,
+        transparent 24px
+      );
+  }
+
+  .note{
+    border-radius:4px;
+    box-shadow:0 0 4px rgba(0,0,0,0.35);
+  }
+  .note.chord{  background:#55d46a; }   /* bright green – chord tones */
+  .note.bass{   background:#2ca555; }   /* darker green – bass roots  */
+  .note.melody{ background:#ffd85a; }   /* yellow – lead melody       */
+
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 18px;
+    margin-top:10px;
+    font-size:0.85rem;
+    color:#dbeff4;
+  }
+  .legend-item{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .legend-swatch{
+    width:16px;
+    height:10px;
+    border-radius:3px;
+  }
+
+  .explanation{
+    margin-top:18px;
+    font-size:0.9rem;
+    line-height:1.6;
+    color:#e2f2f7;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <h1>“The Irony” – FL-Style Piano Roll (HTML v3)</h1>
+  <p style="font-size:0.9rem;color:#c9dde2;margin-top:4px;">
+    10 bars, 4 beats per bar. Yellow = melody, green = chords &amp; bass.  
+    Note length is shown by how many beat-cells each block spans.
+  </p>
+
+  <!-- BAR NUMBERS (each label spans 4 beats) -->
+  <div class="bar-labels">
+    <div style="grid-column:1 / span 4;">1</div>
+    <div style="grid-column:5 / span 4;">2</div>
+    <div style="grid-column:9 / span 4;">3</div>
+    <div style="grid-column:13 / span 4;">4</div>
+    <div style="grid-column:17 / span 4;">5</div>
+    <div style="grid-column:21 / span 4;">6</div>
+    <div style="grid-column:25 / span 4;">7</div>
+    <div style="grid-column:29 / span 4;">8</div>
+    <div style="grid-column:33 / span 4;">9</div>
+    <div style="grid-column:37 / span 4;">10</div>
+  </div>
+
+  <!-- PIANO ROLL BOX -->
+  <div class="piano-roll">
+    <!-- lane labels: high → low -->
+    <div class="lane-labels">
+      <span>High Lead</span>
+      <span>Lead</span>
+      <span>Upper Chords</span>
+      <span>Chords</span>
+      <span>Lower Chords</span>
+      <span>Bass</span>
+      <span>Sub-Bass</span>
+      <span>Ghost</span>
+    </div>
+
+    <div class="grid">
+
+      <!-- MELODY – VERSE (bars 1–4) -->
+      <!-- bar1: beat2–3 (2 beats) -->
+      <div class="note melody" style="grid-column:2 / span 2; grid-row:2;"></div>
+      <!-- bar2: beat1–2 -->
+      <div class="note melody" style="grid-column:5 / span 2; grid-row:3;"></div>
+      <!-- bar3: step up then longer tail -->
+      <div class="note melody" style="grid-column:9 / span 1; grid-row:3;"></div>
+      <div class="note melody" style="grid-column:10 / span 2; grid-row:2;"></div>
+      <!-- bar4: short answer -->
+      <div class="note melody" style="grid-column:13 / span 2; grid-row:2;"></div>
+
+      <!-- MELODY – VERSE (bars 5–8) -->
+      <div class="note melody" style="grid-column:17 / span 2; grid-row:3;"></div>
+      <div class="note melody" style="grid-column:21 / span 2; grid-row:2;"></div>
+      <div class="note melody" style="grid-column:25 / span 1; grid-row:3;"></div>
+      <div class="note melody" style="grid-column:26 / span 2; grid-row:2;"></div>
+      <div class="note melody" style="grid-column:29 / span 2; grid-row:3;"></div>
+
+      <!-- MELODY – CHORUS HINT (bars 9–10) -->
+      <div class="note melody" style="grid-column:33 / span 1; grid-row:3;"></div>
+      <div class="note melody" style="grid-column:34 / span 2; grid-row:1;"></div>
+      <div class="note melody" style="grid-column:37 / span 1; grid-row:2;"></div>
+      <div class="note melody" style="grid-column:38 / span 2; grid-row:3;"></div>
+
+      <!-- CHORDS / BASS – VERSE -->
+      <!-- each chord lasts the full bar (4 beats) -->
+      <!-- Bars 1–4: G – Em – C – D -->
+      <div class="note bass"  style="grid-column:1  / span 4; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:1  / span 4; grid-row:5;"></div>
+
+      <div class="note bass"  style="grid-column:5  / span 4; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:5  / span 4; grid-row:4;"></div>
+
+      <div class="note bass"  style="grid-column:9  / span 4; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:9  / span 4; grid-row:4;"></div>
+
+      <div class="note bass"  style="grid-column:13 / span 4; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:13 / span 4; grid-row:5;"></div>
+
+      <!-- Bars 5–8: same progression repeated -->
+      <div class="note bass"  style="grid-column:17 / span 4; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:17 / span 4; grid-row:5;"></div>
+
+      <div class="note bass"  style="grid-column:21 / span 4; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:21 / span 4; grid-row:4;"></div>
+
+      <div class="note bass"  style="grid-column:25 / span 4; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:25 / span 4; grid-row:4;"></div>
+
+      <div class="note bass"  style="grid-column:29 / span 4; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:29 / span 4; grid-row:5;"></div>
+
+      <!-- Bars 9–10: Chorus shape (G – D – Em – C) -->
+      <div class="note bass"  style="grid-column:33 / span 2; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:33 / span 2; grid-row:4;"></div>
+
+      <div class="note bass"  style="grid-column:35 / span 2; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:35 / span 2; grid-row:5;"></div>
+
+      <div class="note bass"  style="grid-column:37 / span 2; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:37 / span 2; grid-row:4;"></div>
+
+      <div class="note bass"  style="grid-column:39 / span 2; grid-row:7;"></div>
+      <div class="note chord" style="grid-column:39 / span 2; grid-row:5;"></div>
+    </div>
+  </div>
+
+  <!-- LEGEND + EXPLANATION -->
+  <div class="legend">
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#ffd85a;"></span>
+      <span>Yellow = lead melody notes</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#55d46a;"></span>
+      <span>Bright green = chord tones</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#2ca555;"></span>
+      <span>Darker green = bass roots</span>
+    </div>
+  </div>
+
+  <div class="explanation">
+    <strong>How to read this like FL Studio:</strong><br>
+    ▸ Horizontal = time: 40 beat-cells (4 beats × 10 bars).<br>
+    ▸ Vertical = pitch lanes: higher rows ≈ higher notes.<br>
+    ▸ Note length is the number of beat-cells it spans  
+      (1 = quarter, 2 = half, 4 = whole bar).<br>
+    ▸ Verse (bars 1–8) uses <em>G – Em – C – D</em> twice, chords as long blocks, melody as shorter phrases.<br>
+    ▸ Bars 9–10 hint the chorus, tightening the chords and making the melody more active.<br>
+    ▸ In FL Studio, set tempo ≈ 90 BPM, drop these chords in the piano roll,
+      then copy the relative melody timing by eye.
+  </div>
+
+</div>
+</body>
+</html>
