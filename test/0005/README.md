@@ -1,4 +1,5 @@
-// 1) eye0256 setup
+---
+## // 1) eye0256 setup
  steps.value    = 1;
   stpStart.value = 0;
   stpEnd.value   = 16 * 16-1;
@@ -13,13 +14,14 @@
     "Math.floor(o / " + 16 + ") * " + 20 +
     " + 220";
     clor.value = '"rgb(" + (Math.cos(((15 - (o % 16)) - Math.floor(o / 16)) / 2) * 120 + 135) + ", 120, 120)"';
+-
+---
 
-
-// 1) Text
+## // 1) Text
 const gamez = funebraText("GAMEZ", { step: 12 });
 console.log("GAMEZ points:", gamez.length / 3);  // number of points
 
-// 2) Image sprite
+## // 2) Image sprite
 (async () => {
   window.fpHead = await funebraPixelsFromImage(
     "./2025-11-14_134226_.png",   // or "./2025-10-21_061658.png"
@@ -31,3 +33,5 @@ console.log("GAMEZ points:", gamez.length / 3);  // number of points
   );
   console.log("fpHead points:", fpHead.length / 3);
 })();
+-
+---
