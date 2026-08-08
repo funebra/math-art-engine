@@ -1,4 +1,4 @@
----
+
 ## // 1) eye0256 setup 
 -
  steps.value    = 1;
@@ -16,7 +16,7 @@
     " + 220";
     clor.value = '"rgb(" + (Math.cos(((15 - (o % 16)) - Math.floor(o / 16)) / 2) * 120 + 135) + ", 120, 120)"';
 -
----
+
 
 ## // 1) Text
 const gamez = funebraText("GAMEZ", { step: 12 });
@@ -36,4 +36,4 @@ console.log("GAMEZ points:", gamez.length / 3);  // number of points
   console.log("fpHead points:", fpHead.length / 3);
 })();
 -
----
+
