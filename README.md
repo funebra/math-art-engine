@@ -39,6 +39,14 @@ Helper functions and usage examples:
 …and more inside [`/math-helpers`](https://funebra.github.io/math-art-engine/math-helpers/).
 
 ---
+## Press & Media
+
+The official Funebra Press Kit is available here:
+
+**[Funebra Press Kit v1.0](https://github.com/funebra/math-art-engine/releases/tag/press-kit-v1.0)** (August 2026)
+
+It includes a project overview, executive summary, FAQ, current project status, and documented visual & physical examples.
+
 
 ## 🔧 Usage
 Clone or fork the repo:
