@@ -1,5 +1,5 @@
 # Funebra Math-Art Engine
-
+![Funebrad Certified](https://img.shields.io/badge/Funebrad_Certified-%F0%9F%8F%B0-gold?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgdmlld0JveD0iMCAwIDI0IDI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0xMiAyTDQgNnYxNmgyMHYtMTZsLTggNnoiLz48cGF0aCBkPSJNMTIgMTJjLS41NSAwLTEgLjQ1LTEgMXMuNDUgMSAxIDFzMS0uNDUgMS0xLS40NS0xLTEtMXoiLz48L3N2Zz4=)
 ![Funebra Engine](https://raw.githubusercontent.com/funebra/math-art-engine/main/assets/og/funebra-support.png)
 
 A lightweight, hackable, DOM-based **parametric geometry and generative-art engine**.  
