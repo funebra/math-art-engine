@@ -1,0 +1,232 @@
+{
+  "format": "funebra-bn-v0.2",
+  "source_photograph": "20170606_090825-_- LeLaDeres.jpg",
+  "source_immutable": true,
+  "invariant": "Enhancement may strengthen authored structure; it may not invent structure.",
+  "safeguard": "A relation is topological only. It does not authorize a drawn contour unless the contour is already an observed source mark.",
+  "points": [
+    {
+      "bn": "bn0",
+      "id": "BN_hair_L",
+      "x": 1.9,
+      "y": 5.1,
+      "type": "hair_contour",
+      "status": "observed",
+      "source": "blue pen + pencil",
+      "px": [
+        168,
+        292
+      ],
+      "observed_v0.1_grid": [
+        2.2,
+        5.8
+      ],
+      "contour_permission": "strengthen existing blue/pencil strokes only"
+    },
+    {
+      "bn": "bn1",
+      "id": "BN_eye_L",
+      "x": 4.4,
+      "y": 8.2,
+      "type": "eye_closed",
+      "status": "observed",
+      "source": "pencil",
+      "px": [
+        278,
+        438
+      ],
+      "observed_v0.1_grid": [
+        4.6,
+        8.4
+      ],
+      "contour_permission": "existing lid marks only"
+    },
+    {
+      "bn": "bn2",
+      "id": "BN_eye_R",
+      "x": 7.7,
+      "y": 8.0,
+      "type": "eye_closed",
+      "status": "observed",
+      "source": "pencil",
+      "px": [
+        428,
+        428
+      ],
+      "observed_v0.1_grid": [
+        8.1,
+        8.1
+      ],
+      "contour_permission": "existing lid marks only"
+    },
+    {
+      "bn": "bn3",
+      "id": "BN_nose",
+      "x": 5.6,
+      "y": 9.6,
+      "type": "nose",
+      "status": "observed",
+      "source": "pencil",
+      "px": [
+        332,
+        502
+      ],
+      "observed_v0.1_grid": [
+        5.8,
+        9.7
+      ],
+      "contour_permission": "existing nose marks only"
+    },
+    {
+      "bn": "bn4",
+      "id": "BN_lips",
+      "x": 5.7,
+      "y": 11.2,
+      "type": "lips",
+      "status": "observed",
+      "source": "pencil",
+      "px": [
+        338,
+        568
+      ],
+      "observed_v0.1_grid": [
+        5.9,
+        11.4
+      ],
+      "contour_permission": "existing lip outline only"
+    },
+    {
+      "bn": "bn5",
+      "id": "BN_jaw",
+      "x": 5.2,
+      "y": 13.5,
+      "type": "jaw_chin",
+      "status": "weak_implied",
+      "source": "light pencil",
+      "px": [
+        318,
+        682
+      ],
+      "observed_v0.1_grid": [
+        5.4,
+        13.6
+      ],
+      "contour_permission": "may strengthen existing light jaw stroke; may not invent a new jaw"
+    },
+    {
+      "bn": "bn6",
+      "id": "BN_necklace",
+      "x": 7.4,
+      "y": 16.6,
+      "type": "necklace",
+      "status": "observed",
+      "source": "pencil circles",
+      "px": [
+        408,
+        828
+      ],
+      "observed_v0.1_grid": [
+        7.8,
+        16.8
+      ],
+      "contour_permission": "existing bead and band marks only"
+    },
+    {
+      "bn": "bn7",
+      "id": "BN_hand",
+      "x": 11.0,
+      "y": 12.9,
+      "type": "hand_fingers",
+      "status": "observed",
+      "source": "pencil",
+      "px": [
+        612,
+        652
+      ],
+      "observed_v0.1_grid": [
+        11.2,
+        13.2
+      ],
+      "contour_permission": "existing finger/knuckle marks only"
+    },
+    {
+      "bn": "bn8",
+      "id": "BN_hair_R",
+      "x": 12.6,
+      "y": 6.8,
+      "type": "hair_contour",
+      "status": "observed",
+      "source": "pencil",
+      "px": [
+        708,
+        368
+      ],
+      "observed_v0.1_grid": [
+        12.4,
+        7.0
+      ],
+      "contour_permission": "existing right hair strokes only"
+    }
+  ],
+  "relations": [
+    {
+      "from": "bn0",
+      "to": "bn1",
+      "kind": "semantic_spine",
+      "draws_contour": false
+    },
+    {
+      "from": "bn1",
+      "to": "bn2",
+      "kind": "semantic_spine",
+      "draws_contour": false
+    },
+    {
+      "from": "bn2",
+      "to": "bn3",
+      "kind": "semantic_spine",
+      "draws_contour": false
+    },
+    {
+      "from": "bn3",
+      "to": "bn4",
+      "kind": "semantic_spine",
+      "draws_contour": false
+    },
+    {
+      "from": "bn4",
+      "to": "bn5",
+      "kind": "semantic_spine",
+      "draws_contour": false
+    },
+    {
+      "from": "bn5",
+      "to": "bn6",
+      "kind": "semantic_spine",
+      "draws_contour": false
+    },
+    {
+      "from": "bn6",
+      "to": "bn7",
+      "kind": "semantic_spine",
+      "draws_contour": false
+    },
+    {
+      "from": "bn7",
+      "to": "bn8",
+      "kind": "semantic_spine",
+      "draws_contour": false
+    }
+  ],
+  "spine": [
+    "BN_hair_L",
+    "BN_eye_L",
+    "BN_eye_R",
+    "BN_nose",
+    "BN_lips",
+    "BN_jaw",
+    "BN_necklace",
+    "BN_hand",
+    "BN_hair_R"
+  ]
+}
