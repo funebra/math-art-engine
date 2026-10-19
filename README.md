@@ -47,6 +47,11 @@ The official Funebra Press Kit is available here:
 
 It includes a project overview, executive summary, FAQ, current project status, and documented visual & physical examples.
 
+### AI-baseret vurdering
+**[FUNEBRA™ AI-vurdering v1.0](docs/FUNEBRA_AI_VURDERING_2026-10-19.md)** (19. oktober 2026) — **3,5 / 5 stjerner**
+
+En AI-baseret analytisk vurdering (ikke en kundeanmeldelse, certificering eller officiel OpenAI-vurdering).
+
 
 ## 🔧 Usage
 Clone or fork the repo:
