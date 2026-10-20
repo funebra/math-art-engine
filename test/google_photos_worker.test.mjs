@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import worker from "../services/google-photos-bn/src/index.mjs";
 
 const origin = "https://funebra.github.io";
-const sessionToken = "browser-session-token";
+const sessionToken = "browsersessiontoken";
 const tokenKey = value => createHash("sha256").update(value).digest("hex");
 
 class MemoryKV {
