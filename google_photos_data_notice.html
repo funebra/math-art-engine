@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funebra Google Photos import — data notice</title>
+<style>
+  body{max-width:760px;margin:40px auto;padding:0 20px;font:16px/1.55 system-ui,Arial;color:#18232b}
+  h1,h2{line-height:1.2} .draft{padding:12px;background:#fff2cc;border-left:4px solid #c98b00}
+</style>
+<body>
+<h1>Funebra Google Photos import — data notice</h1>
+<p class="draft"><strong>Prototype notice:</strong> Before enabling this integration for anyone beyond its operator, replace this notice with a complete privacy policy that identifies the responsible legal entity, contact details, retention terms, and applicable data rights. Google OAuth verification may also be required.</p>
+
+<h2>What you choose and what happens</h2>
+<p>When you select “Connect Google Photos,” Funebra requests the Google Photos Picker permission to create a selection session and receive the photo you choose. The integration is designed to import exactly one selected image at a time. It does not list or download the rest of your Google Photos library.</p>
+<p>The selected image bytes are sent over HTTPS to Funebra’s import service, stored in a private Cloudflare R2 bucket, and used by the Math-Art Engine to create pixel-based BN configurations. The import service also records the filename, image dimensions, SHA-256 hash, import time, and Picker provenance identifiers. The engine’s BN configuration contains sampled pixel coordinates and colors.</p>
+<p>Temporary Google access tokens are held by the import service only for the short-lived import session. The engine receives a separate short-lived session token. The image object remains in the private asset store until you delete it.</p>
+
+<h2>How to delete data</h2>
+<p>After importing, use “Delete imported source image” in the engine panel and confirm the deletion. A delete-only control key is kept locally in this browser so deletion remains available after the Google authorization session expires; it is not included in the exported BN configuration. Deletion removes the stored image bytes and asset record. A BN configuration already generated in the current browser remains available to export; delete that downloaded JSON file separately if you no longer want it. If you clear this browser’s local storage before deleting, contact the service operator with the asset ID from your BN export. An import that was interrupted before the asset was returned may leave a temporary Picker session until its short expiry.</p>
+
+<h2>Use limitations</h2>
+<p>Photos API data is used only to provide the user-selected image-to-BN import feature. The service is not a general-purpose photo gallery, does not build face clusters, and does not use imported photos to train or improve shared machine-learning models. Do not import photos you do not have permission to use.</p>
+
+<h2>Provider disclosure</h2>
+<p>Google Photos provides the selection and temporary download URL. Cloudflare provides the Worker and private R2 storage. Cloudflare documents AES-256 encryption at rest for R2 objects and Workers KV values. See the <a href="https://developers.cloudflare.com/r2/reference/data-security/">R2 data security documentation</a> and <a href="https://developers.cloudflare.com/kv/reference/data-security/">Workers KV data security documentation</a>.</p>
+<p>The operator must publish accurate contact details and a complete privacy policy before inviting other users to connect an account.</p>
+</body>
+</html>
