@@ -66,7 +66,7 @@ test("Picker session creation asks Google to allow only one selected item", asyn
   };
   try {
     const response = await worker.fetch(apiRequest("/api/picker-sessions", { method: "POST", body: {} }), env);
-    assert.equal(response.status, 201);
+    assert.equal(response.status, 201, JSON.stringify(await response.json()));
     assert.equal(requestedMaxItemCount, "1");
   } finally {
     globalThis.fetch = originalFetch;
@@ -76,7 +76,7 @@ test("Picker session creation asks Google to allow only one selected item", asyn
 test("oversized streamed image is rejected before it is stored", async () => {
   const { env, assets } = makeEnv();
   await authorize(env);
-  await env.PICKERS.put("picker/picker-1", JSON.stringify({
+  await env.PICKERS.put("picker:abc123", JSON.stringify({
     googleSessionId: "google-session-1",
     owner: tokenKey(sessionToken),
   }));
@@ -114,8 +114,8 @@ test("oversized streamed image is rejected before it is stored", async () => {
     throw new Error(`Unexpected fetch: ${url}`);
   };
   try {
-    const response = await worker.fetch(apiRequest("/api/picker-sessions/picker-1/import", { method: "POST", body: {} }), env);
-    assert.equal(response.status, 413);
+    const response = await worker.fetch(apiRequest("/api/picker-sessions/abc123/import", { method: "POST", body: {} }), env);
+    assert.equal(response.status, 413, JSON.stringify(await response.clone().json()));
     assert.equal((await response.json()).error, "image_exceeds_25_mib_limit");
     assert.ok(streamedBytes <= 26 * 1024 * 1024);
     assert.equal(cancelled, true);
