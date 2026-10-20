@@ -91,7 +91,7 @@
     <li><strong>Delete the source asset:</strong> Use “Delete imported source image” in the engine panel and confirm. The Worker deletes the R2 object and its asset record.</li>
     <li>Deleting the source asset does not remove BN configurations already downloaded or saved elsewhere. Delete those files separately if you no longer want them.</li>
     <li>If you clear browser storage before deleting, contact the operator with the asset ID from your BN export so the asset can be located.</li>
-    <li>The Google Picker session is deleted after a successful import. If an import is abandoned, Google’s session expires according to the expiry returned by Google; the Worker’s local Picker-session mapping expires after 15 minutes.</li>
+    <li>After the photo is downloaded and stored, the Worker requests deletion of the Google Picker session. If Google does not confirm deletion, the session remains subject to Google’s expiry. If an import is abandoned, Google’s session expires according to its expiry; the Worker’s local Picker-session mapping expires after 15 minutes.</li>
     <li>You may contact the operator to request access to or deletion of data associated with your import. Applicable data-protection rights and complaint routes depend on the operator’s confirmed role and your jurisdiction.</li>
   </ul>
 
