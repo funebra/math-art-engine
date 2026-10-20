@@ -67,14 +67,25 @@ async function authStart(request, env) {
     access_type: "online",
     include_granted_scopes: "true",
   });
-  return Response.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`, 302);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
+      "Set-Cookie": `gp_oauth_state=${state}; Max-Age=600; Path=/oauth/callback; Secure; HttpOnly; SameSite=Lax`,
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 async function oauthCallback(request, env) {
   const url = new URL(request.url);
   const state = url.searchParams.get("state");
   const code = url.searchParams.get("code");
-  if (!state || !code || !(await env.FLOWS.get(`state:${state}`))) return new Response("Invalid or expired OAuth state.", { status: 400 });
+  const cookieState = (request.headers.get("Cookie") || "").split(";").map(part => part.trim()).find(part => part.startsWith("gp_oauth_state="))?.slice("gp_oauth_state=".length);
+  const clearStateCookie = "gp_oauth_state=; Max-Age=0; Path=/oauth/callback; Secure; HttpOnly; SameSite=Lax";
+  if (!state || !code || state !== cookieState || !(await env.FLOWS.get(`state:${state}`))) {
+    return new Response("Invalid or expired OAuth state.", { status: 400, headers: { "Set-Cookie": clearStateCookie, "Cache-Control": "no-store" } });
+  }
   await env.FLOWS.delete(`state:${state}`);
 
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -89,28 +100,29 @@ async function oauthCallback(request, env) {
     }),
   });
   const tokenData = await tokenResponse.json().catch(() => ({}));
-  if (!tokenResponse.ok || !tokenData.access_token) return new Response("Google authorization exchange failed.", { status: 502 });
-  if (!(tokenData.scope || "").split(" ").includes(PICKER_SCOPE)) return new Response("Google Photos Picker scope was not granted.", { status: 403 });
+  if (!tokenResponse.ok || !tokenData.access_token) return new Response("Google authorization exchange failed.", { status: 502, headers: { "Set-Cookie": clearStateCookie } });
+  if (!(tokenData.scope || "").split(" ").includes(PICKER_SCOPE)) return new Response("Google Photos Picker scope was not granted.", { status: 403, headers: { "Set-Cookie": clearStateCookie } });
 
   const sessionToken = randomToken();
   const tokenKey = await sha256Hex(sessionToken);
   const ttl = Math.max(60, Math.min(SESSION_TTL, Number(tokenData.expires_in) - 60 || SESSION_TTL));
-  await env.TOKENS.put(tokenKey, JSON.stringify({ accessToken: tokenData.access_token }), { expirationTtl: ttl });
+  const expiresAt = Date.now() + ttl * 1000;
+  await env.TOKENS.put(tokenKey, JSON.stringify({ accessToken: tokenData.access_token, expiresAt }), { expirationTtl: ttl });
   const handoffCode = randomToken(24);
-  await env.FLOWS.put(`handoff:${handoffCode}`, sessionToken, { expirationTtl: 90 });
+  await env.FLOWS.put(`handoff:${handoffCode}`, JSON.stringify({ sessionToken, expiresAt }), { expirationTtl: 90 });
   const destination = new URL(env.FRONTEND_URL);
   destination.hash = new URLSearchParams({ google_photos_handoff: handoffCode }).toString();
-  return Response.redirect(destination.toString(), 302);
+  return new Response(null, { status: 302, headers: { Location: destination.toString(), "Set-Cookie": clearStateCookie, "Cache-Control": "no-store" } });
 }
 
 async function exchangeHandoff(request, env, cors) {
   const { handoffCode } = await request.json();
   if (typeof handoffCode !== "string" || !/^[a-f0-9]{48}$/.test(handoffCode)) return json({ error: "invalid_handoff" }, 400, cors);
   const key = `handoff:${handoffCode}`;
-  const sessionToken = await env.FLOWS.get(key);
-  if (!sessionToken) return json({ error: "handoff_expired" }, 401, cors);
+  const handoffData = await env.FLOWS.get(key, "json");
+  if (!handoffData?.sessionToken) return json({ error: "handoff_expired" }, 401, cors);
   await env.FLOWS.delete(key);
-  return json({ sessionToken, expiresAt: Date.now() + SESSION_TTL * 1000 }, 200, cors);
+  return json(handoffData, 200, cors);
 }
 
 async function createPickerSession(auth, env, cors) {
