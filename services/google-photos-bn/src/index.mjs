@@ -43,6 +43,43 @@ async function googleFetch(url, token, init = {}) {
   return response;
 }
 
+async function readLimitedBytes(response, limit) {
+  const declaredLength = Number(response.headers.get("Content-Length") || 0);
+  if (declaredLength > limit) {
+    await response.body?.cancel();
+    throw new Error("image_exceeds_25_mib_limit");
+  }
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const buffer = await response.arrayBuffer();
+    if (buffer.byteLength > limit) throw new Error("image_exceeds_25_mib_limit");
+    return new Uint8Array(buffer);
+  }
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > limit) {
+        await reader.cancel();
+        throw new Error("image_exceeds_25_mib_limit");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 async function readToken(request, env) {
   const match = /^Bearer ([A-Za-z0-9]+)$/.exec(request.headers.get("Authorization") || "");
   if (!match) return null;
@@ -128,7 +165,7 @@ async function exchangeHandoff(request, env, cors) {
 
 async function createPickerSession(auth, env, cors) {
   const response = await googleFetch("https://photospicker.googleapis.com/v1/sessions", auth.data.accessToken, {
-    method: "POST", body: "{}",
+    method: "POST", body: JSON.stringify({ pickingConfig: { maxItemCount: "1" } }),
   });
   const session = await response.json();
   const sessionId = crypto.randomUUID();
@@ -162,8 +199,12 @@ async function importPhoto(auth, env, sessionId, cors) {
   const imageResponse = await googleFetch(contentUrl, auth.data.accessToken);
   const contentType = imageResponse.headers.get("Content-Type") || media.mimeType || "application/octet-stream";
   if (!contentType.startsWith("image/")) return json({ error: "selected_item_is_not_an_image" }, 415, cors);
-  const bytes = await imageResponse.arrayBuffer();
-  if (bytes.byteLength > MAX_IMAGE_BYTES) return json({ error: "image_exceeds_25_mib_limit" }, 413, cors);
+  let bytes;
+  try { bytes = await readLimitedBytes(imageResponse, MAX_IMAGE_BYTES); }
+  catch (error) {
+    if (error?.message === "image_exceeds_25_mib_limit") return json({ error: "image_exceeds_25_mib_limit" }, 413, cors);
+    throw error;
+  }
 
   const assetId = crypto.randomUUID();
   const contentHash = `sha256:${await sha256Hex(bytes)}`;
@@ -191,9 +232,16 @@ async function importPhoto(auth, env, sessionId, cors) {
     httpMetadata: { contentType },
     customMetadata: { assetId, contentHash, filename: asset.filename, width: String(asset.width), height: String(asset.height) },
   });
-  await env.FLOWS.put(`asset:${assetId}`, JSON.stringify(asset));
+  try {
+    await env.FLOWS.put(`asset:${assetId}`, JSON.stringify(asset));
+  } catch (error) {
+    await env.ASSETS.delete(asset.storageKey).catch(() => {});
+    throw error;
+  }
   try {
     await googleFetch(`https://photospicker.googleapis.com/v1/sessions/${encodeURIComponent(picker.googleSessionId)}`, auth.data.accessToken, { method: "DELETE" });
+  } catch {
+    // Google expires abandoned sessions; a failed cleanup request must not strand the imported asset.
   } finally {
     await env.PICKERS.delete(pickerKey);
   }
