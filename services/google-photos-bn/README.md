@@ -12,11 +12,11 @@ The worker requests only `photospicker.mediaitems.readonly`, accepts exactly one
 
 1. Choose a custom domain you control for the app's OAuth identity and Worker callback (for example, `photos-api.<your-domain>/oauth/callback`). Google requires verification of domains used for the OAuth homepage, privacy policy, redirect URIs, and JavaScript origins. Host the app homepage and privacy policy on the same verified domain; the repository's shared `github.io` and default `workers.dev` hostnames are not substitutes for a domain you own. Enable the Google Photos Picker API and configure the consent screen for the Picker scope.
 2. Create a Google OAuth 2.0 **Web application** client and register `https://photos-api.<your-verified-domain>/oauth/callback` as its redirect URI.
-2. Create three private Workers KV namespaces (`FLOWS`, `TOKENS`, `PICKERS`) and one private R2 bucket.
-3. Copy `wrangler.toml.example` to `wrangler.toml`, fill in the resource IDs, and set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and `FRONTEND_URL` in the Worker environment. Keep the client secret out of this repository.
-4. Deploy the Worker. In the engine’s Google Photos → ImageBN panel, set its HTTPS Worker URL, then connect and select one photo.
-5. Add a verification URL and user-facing disclosure to the Google OAuth consent configuration before asking other people to authorize the app.
-6. Review `privacy.html` and verify the formal controller identity, legal basis, processor terms, data locations, retention, and data-rights/contact details before enabling external users. The policy is a prototype document, not a completed legal review.
+3. Create three private Workers KV namespaces (`FLOWS`, `TOKENS`, `PICKERS`) and one private R2 bucket.
+4. Copy `wrangler.toml.example` to `wrangler.toml`, fill in the resource IDs, and set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and `FRONTEND_URL` in the Worker environment. Keep the client secret out of this repository.
+5. Deploy the Worker. In the engine’s Google Photos → ImageBN panel, set its HTTPS Worker URL, then connect and select one photo.
+6. Add a verification URL and user-facing disclosure to the Google OAuth consent configuration before asking other people to authorize the app.
+7. Review `privacy.html` and verify the formal controller identity, legal basis, processor terms, data locations, retention, and data-rights/contact details before enabling external users. The policy is a prototype document, not a completed legal review.
 
 ## Endpoints
 
