@@ -101,7 +101,7 @@ test("oversized streamed image is rejected before it is stored", async () => {
       let chunks = 0;
       const body = new ReadableStream({
         pull(controller) {
-          if (chunks === 26) { controller.close(); return; }
+          if (chunks === 26) return;
           const chunk = new Uint8Array(1024 * 1024);
           chunks += 1;
           streamedBytes += chunk.byteLength;
