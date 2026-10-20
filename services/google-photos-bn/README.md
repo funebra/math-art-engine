@@ -6,7 +6,7 @@ This service adds a user-selected Google Photos import path for the existing sta
 
 `Google Photos Picker → short-lived Worker session → R2 source asset → ImageBN configuration → exported JSON`
 
-The worker requests only `photospicker.mediaitems.readonly`, accepts exactly one selected photo per import, downloads it while the Picker `baseUrl` is valid, calculates SHA-256, writes the bytes to R2, and deletes the Picker session. The browser receives an asset record and authenticated content path; it never receives the Google base URL or Google bearer token.
+The worker requests only `photospicker.mediaitems.readonly`, accepts exactly one selected photo per import, downloads it while the Picker `baseUrl` is valid, calculates SHA-256, writes the bytes to R2, and deletes the Picker session. The browser receives an asset record and authenticated content path; it never receives the Google base URL or Google bearer token. A delete-only control key is returned once and kept locally by the engine so users can remove a stored asset even after the short-lived Google session expires. That key is not included in BN configuration exports.
 
 ## Required setup
 
@@ -34,7 +34,7 @@ The current browser adapter exports the configuration JSON. It does not write in
 
 ## Notes
 
-- Temporary Google access tokens are held only in KV with a short TTL. The browser session token is held in `sessionStorage`.
-- R2 objects are private; API reads and deletion require the same active app session that performed the import. The object itself is retained until deleted. A future user-account and asset-access flow is needed to retrieve stored assets from a later browser session.
+- Temporary Google access tokens are held only in KV with a short TTL. The browser session token is held in `sessionStorage`. Cloudflare documents AES-256 encryption at rest for both R2 objects and Workers KV values.
+- R2 objects are private; API reads require the active app session that performed the import. The object itself is retained until deleted. A future user-account and asset-access flow is needed to retrieve stored assets from a later browser session.
 - The Worker enforces a 25 MiB image limit and a single-photo import. The frontend caps each point configuration at 20,000 points.
 - Before connecting production accounts, confirm that the complete end use complies with Google’s Photos API User Data and Developer Policy. Do not create face clusters or a general-purpose photo-gallery substitute.
