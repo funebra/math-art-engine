@@ -201,16 +201,19 @@ function buildPanel() {
       const asset = await jsonRequest(`${api}/api/picker-sessions/${encodeURIComponent(picker.sessionId)}/import`, {
         method: "POST", token: auth.token, body: "{}",
       });
-      const imageResponse = await fetch(`${api}${asset.contentPath}`, { headers: { Authorization: `Bearer ${auth.token}` } });
-      if (!imageResponse.ok) throw new Error(`Could not read imported asset (HTTP ${imageResponse.status}).`);
-      importedBlob = await imageResponse.blob();
+      // Persist deletion control immediately so a later content-fetch or canvas failure
+      // cannot leave the user without a way to remove the durable source asset.
       currentAsset = asset;
       const controls = readAssetControls().filter(item => item.assetId !== asset.assetId);
       controls.push({ assetId: asset.assetId, filename: asset.filename, deleteToken: asset.deleteToken });
       localStorage.setItem(ASSET_CONTROL_KEY, JSON.stringify(controls.slice(-20)));
       selectedAssetControl = controls.at(-1);
-      configurations.length = 0;
       deleteButton.hidden = false;
+
+      const imageResponse = await fetch(`${api}${asset.contentPath}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+      if (!imageResponse.ok) throw new Error(`Could not read imported asset (HTTP ${imageResponse.status}).`);
+      importedBlob = await imageResponse.blob();
+      configurations.length = 0;
       await createConfiguration();
     } catch (error) {
       popup?.close();
