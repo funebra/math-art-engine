@@ -10,6 +10,7 @@ const asset = {
   contentHash: "sha256:test",
   importedAt: "2026-10-20T00:00:00.000Z",
   provenance: { source: "google-photos-picker", pickerMediaItemId: "picked-1", sessionId: "session-1" },
+  deleteToken: "delete-only-secret",
 };
 
 test("builds sequential ImageBN IDs without changing the source asset", () => {
@@ -22,6 +23,7 @@ test("builds sequential ImageBN IDs without changing the source asset", () => {
   assert.equal(config.points[0].x, 0);
   assert.equal(config.points[0].y, 0);
   assert.equal(config.assetId, asset.assetId);
+  assert.equal(JSON.stringify(config).includes("delete-only-secret"), false);
   assert.deepEqual(asset, before);
 });
 
