@@ -1,0 +1,25 @@
+name = "funebra-google-photos-bn"
+main = "src/index.mjs"
+compatibility_date = "2026-10-20"
+
+[[kv_namespaces]]
+binding = "FLOWS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[[kv_namespaces]]
+binding = "PICKERS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "REPLACE_WITH_PRIVATE_R2_BUCKET_NAME"
+
+# Set these as encrypted Worker secrets or environment variables in Cloudflare.
+# GOOGLE_CLIENT_ID
+# GOOGLE_CLIENT_SECRET
+# GOOGLE_REDIRECT_URI=https://<worker-host>/oauth/callback
+# FRONTEND_URL=https://funebra.github.io/math-art-engine/
