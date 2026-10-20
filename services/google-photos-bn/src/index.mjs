@@ -1,6 +1,7 @@
 const PICKER_SCOPE = "https://www.googleapis.com/auth/photospicker.mediaitems.readonly";
 const SESSION_TTL = 3300;
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+const ALLOW_HEADERS = "Authorization, Content-Type, X-Funebra-Asset-Delete-Key";
 
 function randomToken(bytes = 32) {
   const value = crypto.getRandomValues(new Uint8Array(bytes));
@@ -24,7 +25,7 @@ function corsHeaders(request, env) {
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Headers": ALLOW_HEADERS,
     "Access-Control-Max-Age": "600",
     "Vary": "Origin",
   };
@@ -167,6 +168,7 @@ async function importPhoto(auth, env, sessionId, cors) {
   const assetId = crypto.randomUUID();
   const contentHash = `sha256:${await sha256Hex(bytes)}`;
   const importedAt = new Date().toISOString();
+  const deleteToken = randomToken();
   const dimensions = media.mediaFileMetadata || {};
   const asset = {
     assetId,
@@ -178,6 +180,7 @@ async function importPhoto(auth, env, sessionId, cors) {
     provenance: { source: "google-photos-picker", pickerMediaItemId: picked.id, sessionId: picker.googleSessionId },
     contentPath: `/api/assets/${assetId}/content`,
     ownerTokenKey: auth.key,
+    deleteTokenHash: await sha256Hex(deleteToken),
     storageKey: `assets/${assetId}/source`,
   };
   if (!Number.isInteger(asset.width) || !Number.isInteger(asset.height) || asset.width < 1 || asset.height < 1) {
@@ -194,13 +197,24 @@ async function importPhoto(auth, env, sessionId, cors) {
   } finally {
     await env.PICKERS.delete(pickerKey);
   }
-  const { ownerTokenKey, storageKey, ...publicAsset } = asset;
+  const { ownerTokenKey, deleteTokenHash, storageKey, ...publicAsset } = asset;
+  publicAsset.deleteToken = deleteToken;
   return json(publicAsset, 201, cors);
 }
 
 async function assetRoute(request, auth, env, assetId, action, cors) {
   const asset = await env.FLOWS.get(`asset:${assetId}`, "json");
-  if (!asset || asset.ownerTokenKey !== auth.key) return json({ error: "asset_not_found" }, 404, cors);
+  if (!asset) return json({ error: "asset_not_found" }, 404, cors);
+  if (request.method === "DELETE" && action === "") {
+    const providedKey = request.headers.get("X-Funebra-Asset-Delete-Key") || "";
+    const keyMatches = providedKey && (await sha256Hex(providedKey)) === asset.deleteTokenHash;
+    const sessionMatches = auth?.key === asset.ownerTokenKey;
+    if (!keyMatches && !sessionMatches) return json({ error: "asset_delete_not_authorized" }, 403, cors);
+    await env.ASSETS.delete(asset.storageKey);
+    await env.FLOWS.delete(`asset:${assetId}`);
+    return new Response(null, { status: 204, headers: cors });
+  }
+  if (!auth || asset.ownerTokenKey !== auth.key) return json({ error: "asset_not_found" }, 404, cors);
   if (action === "content" && request.method === "GET") {
     const object = await env.ASSETS.get(asset.storageKey);
     if (!object) return json({ error: "asset_bytes_missing" }, 404, cors);
@@ -213,11 +227,6 @@ async function assetRoute(request, auth, env, assetId, action, cors) {
   if (action === "" && request.method === "GET") {
     const { ownerTokenKey, storageKey, ...publicAsset } = asset;
     return json(publicAsset, 200, cors);
-  }
-  if (action === "" && request.method === "DELETE") {
-    await env.ASSETS.delete(asset.storageKey);
-    await env.FLOWS.delete(`asset:${assetId}`);
-    return new Response(null, { status: 204, headers: cors });
   }
   return json({ error: "not_found" }, 404, cors);
 }
@@ -236,13 +245,14 @@ export default {
 
     try {
       if (url.pathname === "/api/auth/exchange" && request.method === "POST") return await exchangeHandoff(request, env, cors);
+      const assetMatch = /^\/api\/assets\/([0-9a-f-]+)(\/content)?$/.exec(url.pathname);
+      if (assetMatch && request.method === "DELETE") return await assetRoute(request, null, env, assetMatch[1], assetMatch[2] ? "content" : "", cors);
       const auth = await readToken(request, env);
       if (!auth) return json({ error: "session_required" }, 401, cors);
       if (url.pathname === "/api/picker-sessions" && request.method === "POST") return await createPickerSession(auth, env, cors);
       const pickerMatch = /^\/api\/picker-sessions\/([0-9a-f-]+)(\/import)?$/.exec(url.pathname);
       if (pickerMatch && !pickerMatch[2] && request.method === "GET") return await pickerStatus(auth, env, pickerMatch[1], cors);
       if (pickerMatch && pickerMatch[2] && request.method === "POST") return await importPhoto(auth, env, pickerMatch[1], cors);
-      const assetMatch = /^\/api\/assets\/([0-9a-f-]+)(\/content)?$/.exec(url.pathname);
       if (assetMatch) return await assetRoute(request, auth, env, assetMatch[1], assetMatch[2] ? "content" : "", cors);
       return json({ error: "not_found" }, 404, cors);
     } catch (error) {
