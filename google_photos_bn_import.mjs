@@ -3,6 +3,7 @@ import { buildImageBNConfiguration } from "./google_photos_bn_core.mjs";
 const API_KEY = "funebra.googlePhotos.apiBase";
 const SESSION_KEY = "funebra.googlePhotos.session";
 const NEXT_BN_KEY = "funebra.imagebn.nextIndex";
+const ASSET_CONTROL_KEY = "funebra.googlePhotos.assetControls";
 const DEFAULT_START = 9; // F-0011 owns bn0…bn8; ImageBN stays a separate registry.
 
 function el(tag, attrs = {}, children = []) {
@@ -19,6 +20,11 @@ function el(tag, attrs = {}, children = []) {
 function readSession() {
   try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); }
   catch { return null; }
+}
+
+function readAssetControls() {
+  try { return JSON.parse(localStorage.getItem(ASSET_CONTROL_KEY) || "[]"); }
+  catch { return []; }
 }
 
 function clearHandoffFromUrl() {
@@ -61,16 +67,29 @@ function buildPanel() {
   const strideInput = el("input", { type: "number", min: "1", step: "1", value: "8", "aria-label": "Sampling stride in source pixels" });
   const maxInput = el("input", { type: "number", min: "1", max: "20000", step: "100", value: "5000", "aria-label": "Maximum BN points" });
   const status = el("div", { "data-status": "" });
-  const exportButton = el("button", { type: "button", text: "Export BN configuration" });
+  const exportButton = el("button", { type: "button", text: "Export BN configurations" });
   exportButton.hidden = true;
   const connectButton = el("button", { type: "button", text: "Connect Google Photos" });
   const importButton = el("button", { type: "button", text: "Import selected photo" });
+  const regenerateButton = el("button", { type: "button", text: "Create another BN configuration" });
+  regenerateButton.hidden = true;
+  const deleteButton = el("button", { type: "button", text: "Delete imported source image" });
+  deleteButton.hidden = true;
+  const consent = el("input", { type: "checkbox", "aria-label": "I agree to import the selected photo into Funebra's private asset storage" });
+  consent.style.width = "auto";
+  const disclosure = el("p", { style: { margin: "8px 0", color: "#e5e9ed" } });
+  disclosure.append(document.createTextNode("Google will let you choose one photo. Funebra sends that photo to its private Cloudflare R2 storage to create pixel-based BN configurations. The original stays stored until you delete it below. No other library photos are accessed. "));
+  disclosure.append(el("a", { href: "./google_photos_data_notice.html", target: "_blank", rel: "noopener", text: "Read the data notice and deletion steps" }));
+  const consentLabel = el("label", { style: { display: "flex", gap: "7px", alignItems: "flex-start", color: "#fff" } }, [
+    consent,
+    el("span", { text: "I agree to import the photo I select and store it as described above." }),
+  ]);
   const panel = el("section", { id: "funebraGooglePhotosBN", "aria-label": "Google Photos to BN import" }, [
     el("strong", { text: "Google Photos → ImageBN" }),
     el("label", { text: "Import service URL" }), apiInput,
     el("label", { text: "Sample stride (source pixels)" }), strideInput,
     el("label", { text: "Maximum points" }), maxInput,
-    connectButton, importButton, exportButton, status,
+    disclosure, consentLabel, connectButton, importButton, regenerateButton, deleteButton, exportButton, status,
   ]);
   document.head.append(style);
   document.body.append(panel);
@@ -81,21 +100,81 @@ function buildPanel() {
     localStorage.setItem(API_KEY, value);
     return value;
   };
+  const savedControls = readAssetControls();
+  let selectedAssetControl = savedControls.at(-1) || null;
+  let importedBlob = null;
+  let currentAsset = null;
+  const configurations = [];
+  if (selectedAssetControl) deleteButton.hidden = false;
   const setStatus = value => { status.textContent = value; };
+  if (selectedAssetControl) setStatus(`Saved source asset available for deletion: ${selectedAssetControl.filename}.`);
 
   connectButton.addEventListener("click", () => {
-    try { location.href = `${getApi()}/auth/start`; }
+    try {
+      if (!consent.checked) throw new Error("Read the data notice and check consent before connecting Google Photos.");
+      location.href = `${getApi()}/auth/start`;
+    }
     catch (error) { setStatus(error.message); }
   });
 
   exportButton.addEventListener("click", () => {
-    const value = window.FunebraImageBN?.configuration;
-    if (!value) return;
+    if (!configurations.length) return;
+    const value = { format: "funebra-image-bn-config-bundle-v0.1", configurations };
     const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
     const href = URL.createObjectURL(blob);
-    const link = el("a", { href, download: `funebra-image-bn-${value.configurationId}.json` });
+    const link = el("a", { href, download: `funebra-image-bn-${currentAsset.assetId}.json` });
     link.click();
     URL.revokeObjectURL(href);
+  });
+
+  async function createConfiguration() {
+    if (!currentAsset || !importedBlob) throw new Error("Import a photo first.");
+    const bitmap = await createImageBitmap(importedBlob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width; canvas.height = bitmap.height;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(bitmap, 0, 0);
+    bitmap.close?.();
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const startIndex = Math.max(DEFAULT_START, Number(localStorage.getItem(NEXT_BN_KEY) || DEFAULT_START));
+    const configuration = buildImageBNConfiguration({
+      asset: currentAsset,
+      rgba: pixels,
+      stride: Number(strideInput.value || 8),
+      maxPoints: Number(maxInput.value || 5000),
+      startIndex,
+    });
+    localStorage.setItem(NEXT_BN_KEY, String(configuration.nextBNIndex));
+    configurations.push(configuration);
+    window.FunebraImageBN = { asset: currentAsset, configuration, configurations: structuredClone(configurations) };
+    exportButton.hidden = false;
+    regenerateButton.hidden = false;
+    setStatus(`Configuration ${configurations.length}: ${currentAsset.filename} (${currentAsset.width}×${currentAsset.height}).\n${configuration.points.length} points, ${configuration.points[0]?.bn || "no visible pixels"}…${configuration.points.at(-1)?.bn || ""}. Source-pixel coordinates.\nF-0011 RegistryBN and PlotBN were not modified.`);
+  }
+
+  regenerateButton.addEventListener("click", async () => {
+    try { await createConfiguration(); }
+    catch (error) { setStatus(`Configuration failed: ${error.message}`); }
+  });
+
+  deleteButton.addEventListener("click", async () => {
+    const asset = window.FunebraImageBN?.asset || selectedAssetControl;
+    if (!asset?.assetId || !asset?.deleteToken) return;
+    if (!window.confirm(`Permanently delete the imported source image “${asset.filename}” from the Funebra asset store? The exported BN configuration will remain.`)) return;
+    try {
+      const api = getApi();
+      await fetch(`${api}/api/assets/${encodeURIComponent(asset.assetId)}`, {
+        method: "DELETE", headers: { "X-Funebra-Asset-Delete-Key": asset.deleteToken },
+      }).then(async response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      });
+      const remaining = readAssetControls().filter(item => item.assetId !== asset.assetId);
+      localStorage.setItem(ASSET_CONTROL_KEY, JSON.stringify(remaining));
+      selectedAssetControl = remaining.at(-1) || null;
+      if (window.FunebraImageBN?.asset?.assetId === asset.assetId) window.FunebraImageBN.assetDeleted = true;
+      deleteButton.hidden = !selectedAssetControl;
+      setStatus("The imported source image and its asset record were deleted. Your in-memory BN configuration remains available to export.");
+    } catch (error) { setStatus(`Delete failed: ${error.message}`); }
   });
 
   importButton.addEventListener("click", async () => {
@@ -124,25 +203,15 @@ function buildPanel() {
       });
       const imageResponse = await fetch(`${api}${asset.contentPath}`, { headers: { Authorization: `Bearer ${auth.token}` } });
       if (!imageResponse.ok) throw new Error(`Could not read imported asset (HTTP ${imageResponse.status}).`);
-      const blob = await imageResponse.blob();
-      const bitmap = await createImageBitmap(blob);
-      const canvas = document.createElement("canvas");
-      canvas.width = bitmap.width; canvas.height = bitmap.height;
-      const context = canvas.getContext("2d", { willReadFrequently: true });
-      context.drawImage(bitmap, 0, 0);
-      bitmap.close?.();
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-      const startIndex = Math.max(DEFAULT_START, Number(localStorage.getItem(NEXT_BN_KEY) || DEFAULT_START));
-      const configuration = buildImageBNConfiguration({
-        asset, rgba: pixels,
-        stride: Number(strideInput.value || 8),
-        maxPoints: Number(maxInput.value || 5000),
-        startIndex,
-      });
-      localStorage.setItem(NEXT_BN_KEY, String(configuration.nextBNIndex));
-      window.FunebraImageBN = { asset, configuration };
-      exportButton.hidden = false;
-      setStatus(`Imported ${asset.filename} (${asset.width}×${asset.height}).\n${configuration.points.length} points, ${configuration.points[0]?.bn || "no visible pixels"}…${configuration.points.at(-1)?.bn || ""}. Source pixels retained as coordinates.\nF-0011 RegistryBN and PlotBN were not modified.`);
+      importedBlob = await imageResponse.blob();
+      currentAsset = asset;
+      const controls = readAssetControls().filter(item => item.assetId !== asset.assetId);
+      controls.push({ assetId: asset.assetId, filename: asset.filename, deleteToken: asset.deleteToken });
+      localStorage.setItem(ASSET_CONTROL_KEY, JSON.stringify(controls.slice(-20)));
+      selectedAssetControl = controls.at(-1);
+      configurations.length = 0;
+      deleteButton.hidden = false;
+      await createConfiguration();
     } catch (error) {
       popup?.close();
       setStatus(`Import failed: ${error.message}`);
