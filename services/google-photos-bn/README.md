@@ -15,6 +15,7 @@ The worker requests only `photospicker.mediaitems.readonly`, accepts exactly one
 3. Copy `wrangler.toml.example` to `wrangler.toml`, fill in the resource IDs, and set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and `FRONTEND_URL` in the Worker environment. Keep the client secret out of this repository.
 4. Deploy the Worker. In the engine’s Google Photos → ImageBN panel, set its HTTPS Worker URL, then connect and select one photo.
 5. Add a verification URL and user-facing disclosure to the Google OAuth consent configuration before asking other people to authorize the app.
+6. Review `privacy.html` and verify the formal controller identity, legal basis, processor terms, data locations, retention, and data-rights/contact details before enabling external users. The policy is a prototype document, not a completed legal review.
 
 ## Endpoints
 
@@ -34,7 +35,7 @@ The current browser adapter exports the configuration JSON. It does not write in
 
 ## Notes
 
-- Temporary Google access tokens are held only in KV with a short TTL. The browser session token is held in `sessionStorage`. Cloudflare documents AES-256 encryption at rest for both R2 objects and Workers KV values.
+- Google OAuth access tokens are held in KV until their TTL expires, no later than 55 minutes after authorization; they are not deleted immediately after import. The browser session token is held in `sessionStorage`. Cloudflare documents encryption at rest for R2 objects and Workers KV values.
 - R2 objects are private; API reads require the active app session that performed the import. The object itself is retained until deleted. A future user-account and asset-access flow is needed to retrieve stored assets from a later browser session.
 - The Worker enforces a 25 MiB image limit and a single-photo import. The frontend caps each point configuration at 20,000 points.
 - Before connecting production accounts, confirm that the complete end use complies with Google’s Photos API User Data and Developer Policy. Do not create face clusters or a general-purpose photo-gallery substitute.
