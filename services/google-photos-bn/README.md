@@ -10,7 +10,8 @@ The worker requests only `photospicker.mediaitems.readonly`, accepts exactly one
 
 ## Required setup
 
-1. Create a Google OAuth 2.0 **Web application** client. Register `https://<worker-host>/oauth/callback` as its redirect URI. Enable the Google Photos Picker API and configure the consent screen for the Picker scope.
+1. Choose a custom domain you control for the app's OAuth identity and Worker callback (for example, `photos-api.<your-domain>/oauth/callback`). Google requires verification of domains used for the OAuth homepage, privacy policy, redirect URIs, and JavaScript origins. Host the app homepage and privacy policy on the same verified domain; the repository's shared `github.io` and default `workers.dev` hostnames are not substitutes for a domain you own. Enable the Google Photos Picker API and configure the consent screen for the Picker scope.
+2. Create a Google OAuth 2.0 **Web application** client and register `https://photos-api.<your-verified-domain>/oauth/callback` as its redirect URI.
 2. Create three private Workers KV namespaces (`FLOWS`, `TOKENS`, `PICKERS`) and one private R2 bucket.
 3. Copy `wrangler.toml.example` to `wrangler.toml`, fill in the resource IDs, and set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and `FRONTEND_URL` in the Worker environment. Keep the client secret out of this repository.
 4. Deploy the Worker. In the engine’s Google Photos → ImageBN panel, set its HTTPS Worker URL, then connect and select one photo.
