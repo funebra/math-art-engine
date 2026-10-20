@@ -6,7 +6,7 @@ This service adds a user-selected Google Photos import path for the existing sta
 
 `Google Photos Picker → short-lived Worker session → R2 source asset → ImageBN configuration → exported JSON`
 
-The worker requests only `photospicker.mediaitems.readonly`, accepts exactly one selected photo per import, downloads it while the Picker `baseUrl` is valid, calculates SHA-256, writes the bytes to R2, and deletes the Picker session. The browser receives an asset record and authenticated content path; it never receives the Google base URL or Google bearer token. A delete-only control key is returned once and kept locally by the engine so users can remove a stored asset even after the short-lived Google session expires. That key is not included in BN configuration exports.
+The worker requests only `photospicker.mediaitems.readonly`, accepts exactly one selected photo per import, downloads it while the Picker `baseUrl` is valid, calculates SHA-256, writes the bytes to R2, and requests deletion of the Picker session. If Google does not confirm deletion, the session remains subject to Google's expiry. The browser receives an asset record and authenticated content path; it never receives the Google base URL or Google bearer token. A delete-only control key is returned once and kept locally by the engine so users can remove a stored asset even after the short-lived Google session expires. That key is not included in BN configuration exports.
 
 ## Required setup
 
