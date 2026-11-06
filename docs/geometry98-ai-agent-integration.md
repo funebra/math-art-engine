@@ -76,7 +76,9 @@ API usage is separate from a ChatGPT subscription. Before enabling live requests
 
 ## Deployment target check
 
-The source repo identifies https://funebra.github.io/math-art-engine/ as its live demo. The user's current Geometry98 page is https://plabsfill.com/engine/geometry98/. Confirm which deployment should receive this feature and whether both pages should share the same adapter before implementation or publication.
+**Confirmed target for this request:** https://plabsfill.com/engine/geometry98/, whose active source file is `engine/geometry98/index.htm` in the pLabs Control Panel File Manager. The `page01` panel in that file currently contains the visitor counter and Play Music control; add the Geometry98 chat/login entry there.
+
+The repository's GitHub Pages demo at https://funebra.github.io/math-art-engine/ is a separate deployment. Do not publish to it as a substitute for the plabsfill.com page. The current plabsfill source file has been inspected in its signed-in File Manager, but not changed.
 
 ## Delivery stages
 
