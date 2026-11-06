@@ -326,8 +326,10 @@ export default {
       }
     }
     if (url.pathname === "/api/auth/status" && request.method === "GET") {
+      const missing = configError(env);
+      if (missing.length) return json({ signedIn: false, ready: false }, 503, cors(request, env));
       const session = await sessionFor(request, env);
-      return json({ signedIn: !!session, email: session && session.email }, session ? 200 : 401, cors(request, env));
+      return json({ signedIn: !!session, email: session && session.email, ready: true }, session ? 200 : 401, cors(request, env));
     }
     if (url.pathname === "/api/auth/logout" && request.method === "POST") {
       return json({ signedOut: true }, 200, { ...cors(request, env), "set-cookie": clearCookie(SESSION_COOKIE) });
