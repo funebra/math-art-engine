@@ -17,7 +17,7 @@ function json(data, status = 200, headers = {}) {
 function b64u(bytes) {
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+  return btoa(s).replaceAll("=", "").replaceAll("+", "-").replaceAll("/", "_");
 }
 function decodeB64u(s) {
   const normalized = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -42,10 +42,7 @@ async function readSignedCookie(request, name, secret) {
   const token = found.slice(name.length + 1);
   const parts = token.split(".");
   if (parts.length !== 2) return null;
-  const expected = await hmac(secret, parts[0]);
   const actual = decodeB64u(parts[1]);
-  if (actual.length !== expected.length || !crypto.subtle.timingSafeEqual) {
-    // Workers do not expose Node's timingSafeEqual; verify with WebCrypto below.
   }
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
   if (!await crypto.subtle.verify("HMAC", key, actual, new TextEncoder().encode(parts[0]))) return null;
@@ -54,6 +51,11 @@ async function readSignedCookie(request, name, secret) {
     if (!payload || payload.exp < Math.floor(Date.now() / 1000)) return null;
     return payload;
   } catch { return null; }
+}
+function redirect(url, cookieValues = [], extra = {}) {
+  const headers = new Headers({ location: url, "cache-control": "no-store", ...extra });
+  for (const value of cookieValues) headers.append("set-cookie", value);
+  return new Response(null, { status: 302, headers });
 }
 function cookie(name, value, maxAge) {
   return name + "=" + value + "; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=" + maxAge;
@@ -226,22 +228,24 @@ async function ledger(env, action, data) {
 }
 async function apiScene(request, env) {
   const session = await sessionFor(request, env);
-  if (!session) return json({ error: "Sign in with ChatGPT to use Geometry98 AI." }, 401);
+  if (!session) return json({ error: "Sign in with ChatGPT to use Geometry98 AI." }, 401, cors(request, env));
   const missing = configError(env);
-  if (missing.length) return json({ error: "AI service is not configured.", missing }, 503);
-  const length = Number(request.headers.get("Content-Length") || "0");
-  if (length > MAX_BODY_BYTES) return json({ error: "Request too large." }, 413);
+  if (missing.length) return json({ error: "AI service is not configured.", missing }, 503, cors(request, env));
+  const ch = cors(request, env);
+  let raw;
+  try { raw = await request.text(); } catch { return json({ error: "Invalid request body." }, 400, ch); }
+  if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) return json({ error: "Request too large." }, 413, ch);
   let body;
-  try { body = await request.json(); } catch { return json({ error: "Invalid JSON request." }, 400); }
+  try { body = JSON.parse(raw); } catch { return json({ error: "Invalid JSON request." }, 400, ch); }
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
   const maxPrompt = integer(env.MAX_PROMPT_CHARS, 1200, 100, 2000);
-  if (!prompt || prompt.length > maxPrompt) return json({ error: "Enter a prompt up to " + maxPrompt + " characters." }, 400);
+  if (!prompt || prompt.length > maxPrompt) return json({ error: "Enter a prompt up to " + maxPrompt + " characters." }, 400, ch);
   const promptBytes = new TextEncoder().encode(prompt).length;
   const maxInput = integer(env.MAX_INPUT_BYTES, 8000, 1000, 20000);
-  if (promptBytes > maxInput) return json({ error: "Prompt exceeds the configured byte limit." }, 413);
+  if (promptBytes > maxInput) return json({ error: "Prompt exceeds the configured byte limit." }, 413, ch);
   const inputRate = integer(env.OPENAI_INPUT_MICRO_USD_PER_1M, -1, 1, 1_000_000_000);
   const outputRate = integer(env.OPENAI_OUTPUT_MICRO_USD_PER_1M, -1, 1, 1_000_000_000);
-  if (inputRate < 0 || outputRate < 0) return json({ error: "Model pricing is not configured." }, 503);
+  if (inputRate < 0 || outputRate < 0) return json({ error: "Model pricing is not configured." }, 503, ch);
   const maxOutput = integer(env.MAX_OUTPUT_TOKENS, 500, 100, 800);
   // Reserve using the full configured input byte ceiling plus max output tokens before calling the paid API.
   const reserve = costMicroUsd(maxInput + 900, inputRate) + costMicroUsd(maxOutput, outputRate);
@@ -250,7 +254,7 @@ async function apiScene(request, env) {
   const limit = integer(env.MAX_REQUESTS_PER_MINUTE, 5, 1, 30);
   const reservation = await ledger(env, "reserve", { id, user: session.sub, reserve, cap, limit });
   const reserved = await reservation.json();
-  if (!reservation.ok) return json({ error: reserved.error || "Monthly AI budget limit reached.", usage: reserved }, 429);
+  if (!reservation.ok) return json({ error: reserved.error || "Monthly AI budget limit reached.", usage: reserved }, 429, ch);
   try {
     const result = await openAiResponse(prompt, env);
     const usage = result.usage;
@@ -259,11 +263,11 @@ async function apiScene(request, env) {
       : reserve;
     const settled = await ledger(env, "settle", { id, actual });
     const meter = await settled.json();
-    if (!settled.ok) return json({ error: "Usage could not be recorded; the AI result is withheld.", usage: meter }, 503);
-    return json({ artificial: result.plan, usage: meter }, 200, cors(request, env));
+    if (!settled.ok) return json({ error: "Usage could not be recorded; the AI result is withheld.", usage: meter }, 503, ch);
+    return json({ artificial: result.plan, usage: meter }, 200, ch);
   } catch (error) {
     await ledger(env, "release", { id }).catch(() => {});
-    return json({ error: error instanceof Error ? error.message : "AI request failed." }, 502, cors(request, env));
+    return json({ error: error instanceof Error ? error.message : "AI request failed." }, 502, ch);
   }
 }
 
@@ -276,25 +280,26 @@ export default {
       return json({ ok: missing.length === 0, configured: missing.length === 0, missing });
     }
     if (url.pathname === "/auth/openai/start" && request.method === "GET") {
-      if (configError(env).some(x => x !== "OPENAI_API_KEY" && !x.startsWith("OPENAI_") )) return json({ error: "Authentication is not configured." }, 503);
+      if (!env.OPENAI_OAUTH_CLIENT_ID || !env.SESSION_ENCRYPTION_SECRET) return json({ error: "Authentication is not configured." }, 503);
       try {
         const meta = await discovery(env);
         const state = b64u(crypto.getRandomValues(new Uint8Array(24)));
         const nonce = b64u(crypto.getRandomValues(new Uint8Array(24)));
         const verifier = b64u(crypto.getRandomValues(new Uint8Array(32)));
         const challenge = b64u(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
-        const redirect = "https://" + new URL(request.url).host + "/auth/openai/callback";
-        const tx = await signCookie({ state, nonce, verifier, redirect, exp: Math.floor(Date.now() / 1000) + TX_SECONDS }, env.SESSION_ENCRYPTION_SECRET);
+        if (!env.WORKER_ORIGIN) throw new Error("WORKER_ORIGIN is not configured");
+        const redirectUrl = env.WORKER_ORIGIN.replace(/\/$/, "") + "/auth/openai/callback";
+        const tx = await signCookie({ state, nonce, verifier, redirect: redirectUrl, exp: Math.floor(Date.now() / 1000) + TX_SECONDS }, env.SESSION_ENCRYPTION_SECRET);
         const auth = new URL(meta.authorization_endpoint);
         auth.searchParams.set("client_id", env.OPENAI_OAUTH_CLIENT_ID);
         auth.searchParams.set("response_type", "code");
-        auth.searchParams.set("redirect_uri", redirect);
+        auth.searchParams.set("redirect_uri", redirectUrl);
         auth.searchParams.set("scope", "openid profile email");
         auth.searchParams.set("state", state);
         auth.searchParams.set("nonce", nonce);
         auth.searchParams.set("code_challenge", challenge);
         auth.searchParams.set("code_challenge_method", "S256");
-        return Response.redirect(auth.toString(), 302, { headers: { "set-cookie": cookie(TX_COOKIE, tx, TX_SECONDS), "cache-control": "no-store" } });
+        return redirect(auth.toString(), [cookie(TX_COOKIE, tx, TX_SECONDS)]);
       } catch {
         return json({ error: "Could not start ChatGPT sign-in." }, 503);
       }
@@ -314,9 +319,7 @@ export default {
         if (!tokenResponse.ok || !tokenBody.id_token) throw new Error("Token exchange failed");
         const claims = await verifyIdToken(tokenBody.id_token, tx.nonce, env, meta);
         const sessionToken = await signCookie({ sub: claims.sub, email: typeof claims.email === "string" ? claims.email : null, exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS }, env.SESSION_ENCRYPTION_SECRET);
-        return Response.redirect(env.APP_ORIGIN + "/engine/geometry98/?ai=connected", 302, {
-          headers: { "set-cookie": [cookie(SESSION_COOKIE, sessionToken, SESSION_SECONDS), clearCookie(TX_COOKIE)], "cache-control": "no-store", "referrer-policy": "no-referrer" }
-        });
+        return redirect(env.APP_ORIGIN + "/engine/geometry98/?ai=connected", [cookie(SESSION_COOKIE, sessionToken, SESSION_SECONDS), clearCookie(TX_COOKIE)], { "referrer-policy": "no-referrer" });
       } catch {
         return new Response("ChatGPT sign-in failed validation. Please try again.", { status: 502, headers: { "set-cookie": clearCookie(TX_COOKIE), "cache-control": "no-store" } });
       }
