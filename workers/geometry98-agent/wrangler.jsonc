@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "geometry98-ai-agent",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-06",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "ai.plabsfill.com",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "APP_ORIGIN": "https://plabsfill.com",
+    "WORKER_ORIGIN": "https://ai.plabsfill.com",
+    "OPENAI_ISSUER": "https://auth.openai.com",
+    "OPENAI_MODEL": "",
+    "OPENAI_INPUT_MICRO_USD_PER_1M": "",
+    "OPENAI_OUTPUT_MICRO_USD_PER_1M": "",
+    "MONTHLY_CAP_MICRO_USD": "5000000",
+    "MAX_PROMPT_CHARS": "1200",
+    "MAX_INPUT_BYTES": "8000",
+    "MAX_OUTPUT_TOKENS": "500",
+    "MAX_REQUESTS_PER_MINUTE": "5"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "USAGE_LEDGER",
+        "class_name": "UsageLedger"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["UsageLedger"]
+    }
+  ]
+}
