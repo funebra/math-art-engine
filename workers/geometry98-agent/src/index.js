@@ -43,7 +43,6 @@ async function readSignedCookie(request, name, secret) {
   const parts = token.split(".");
   if (parts.length !== 2) return null;
   const actual = decodeB64u(parts[1]);
-  }
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
   if (!await crypto.subtle.verify("HMAC", key, actual, new TextEncoder().encode(parts[0]))) return null;
   try {
@@ -248,11 +247,13 @@ async function apiScene(request, env) {
   if (inputRate < 0 || outputRate < 0) return json({ error: "Model pricing is not configured." }, 503, ch);
   const maxOutput = integer(env.MAX_OUTPUT_TOKENS, 500, 100, 800);
   // Reserve using the full configured input byte ceiling plus max output tokens before calling the paid API.
-  const reserve = costMicroUsd(maxInput + 900, inputRate) + costMicroUsd(maxOutput, outputRate);
+  const reserve = costMicroUsd(maxInput + 5000, inputRate) + costMicroUsd(maxOutput, outputRate);
   const id = crypto.randomUUID();
   const cap = integer(env.MONTHLY_CAP_MICRO_USD, CAP_DEFAULT_MICRO_USD, 1000, CAP_DEFAULT_MICRO_USD);
   const limit = integer(env.MAX_REQUESTS_PER_MINUTE, 5, 1, 30);
-  const reservation = await ledger(env, "reserve", { id, user: session.sub, reserve, cap, limit });
+  const identityHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(session.sub));
+  const userKey = b64u(new Uint8Array(identityHash));
+  const reservation = await ledger(env, "reserve", { id, user: userKey, reserve, cap, limit });
   const reserved = await reservation.json();
   if (!reservation.ok) return json({ error: reserved.error || "Monthly AI budget limit reached.", usage: reserved }, 429, ch);
   try {
