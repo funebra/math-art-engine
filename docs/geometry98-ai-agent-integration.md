@@ -64,6 +64,12 @@ The repository's documented demo is static GitHub Pages. A browser-only page can
 
 The browser should show when a request will use the configured AI provider and should not send the current scene or conversation history unless needed and clearly disclosed.
 
+## Login and paid activation
+
+**Selected direction:** add a “Sign in with ChatGPT” option to page01 for user identity, then enable Geometry98 AI requests through a FUNEBRA-owned, server-side API project. The signed-in user should see the AI feature as available once authentication and service health are confirmed. Sign-in alone must not trigger a model request or create a charge; a chargeable request happens only when the user submits a prompt.
+
+ChatGPT sign-in does not itself provide API inference access or authorize API charges. The server-side FUNEBRA API project supplies inference, and its API usage is billed separately from ChatGPT subscriptions. The API credential must stay in a server secret, never in the page. A hard monthly usage cap, rate limit, and visible usage notice must be configured before requests are enabled. Keep the feature disabled if those settings or the API credential are missing.
+
 ## Cost controls
 
 API usage is separate from a ChatGPT subscription. Before enabling live requests, choose the provider/model, add a monthly or per-user usage cap, and surface estimated/request usage in the UI. Keep the model configurable so the engine can run local deterministic templates for simple built-in shapes without making an API call.
