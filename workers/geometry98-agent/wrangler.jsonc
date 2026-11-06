@@ -12,6 +12,7 @@
   ],
   "vars": {
     "APP_ORIGIN": "https://plabsfill.com",
+    "WORKER_ORIGIN": "https://ai.plabsfill.com",
     "OPENAI_ISSUER": "https://auth.openai.com",
     "OPENAI_MODEL": "",
     "OPENAI_INPUT_MICRO_USD_PER_1M": "",
