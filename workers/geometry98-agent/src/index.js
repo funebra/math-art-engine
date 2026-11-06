@@ -347,13 +347,19 @@ export class UsageLedger {
     this.ctx = ctx;
     this.sql = ctx.storage.sql;
     this.sql.exec("CREATE TABLE IF NOT EXISTS month_usage (month TEXT PRIMARY KEY, settled INTEGER NOT NULL DEFAULT 0, reserved INTEGER NOT NULL DEFAULT 0)");
-    this.sql.exec("CREATE TABLE IF NOT EXISTS reservations (id TEXT PRIMARY KEY, month TEXT NOT NULL, amount INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS reservations (id TEXT PRIMARY KEY, month TEXT NOT NULL, amount INTEGER NOT NULL, created_at INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS rate_buckets (user_key TEXT NOT NULL, minute INTEGER NOT NULL, count INTEGER NOT NULL, PRIMARY KEY(user_key, minute))");
   }
   async fetch(request) {
     const action = new URL(request.url).pathname.slice(1);
     const data = await request.json();
     const month = new Date().toISOString().slice(0, 7);
+    // Reclaim abandoned pre-call reservations after an interrupted request.
+    this.ctx.storage.transactionSync(() => {
+      const cutoff = Date.now() - 60 * 60 * 1000;
+      this.sql.exec("DELETE FROM reservations WHERE created_at < ?", cutoff);
+      this.sql.exec("UPDATE month_usage SET reserved=COALESCE((SELECT SUM(amount) FROM reservations WHERE reservations.month=month_usage.month),0)");
+    });
     if (action === "reserve") {
       let result = { ok: false, error: "Monthly AI budget limit reached." };
       this.ctx.storage.transactionSync(() => {
@@ -369,7 +375,7 @@ export class UsageLedger {
         this.sql.exec("INSERT INTO month_usage(month, settled, reserved) VALUES(?, 0, 0) ON CONFLICT(month) DO NOTHING", month);
         const usage = this.sql.exec("SELECT settled, reserved FROM month_usage WHERE month = ?", month).toArray()[0];
         if (usage.settled + usage.reserved + data.reserve > data.cap) return;
-        this.sql.exec("INSERT INTO reservations(id, month, amount) VALUES(?, ?, ?)", data.id, month, data.reserve);
+        this.sql.exec("INSERT INTO reservations(id, month, amount, created_at) VALUES(?, ?, ?, ?)", data.id, month, data.reserve, Date.now());
         this.sql.exec("UPDATE month_usage SET reserved = reserved + ? WHERE month = ?", data.reserve, month);
         result = { ok: true, month, settledMicroUsd: usage.settled, reservedMicroUsd: usage.reserved + data.reserve, capMicroUsd: data.cap };
       });
