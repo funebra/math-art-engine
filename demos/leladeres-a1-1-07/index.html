@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101218">
+<title>LeLaDeres A1.1.07 · Geometry98 trace candidate</title>
+<style>
+:root{color-scheme:dark;--bg:#101218;--panel:#080a12;--ink:#eff0ff;--muted:#afb0c4;--accent:#c6c5ec;--border:#292b38}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1200px;margin:auto;padding:18px 20px 28px}.eyebrow{font-size:12px;color:#c3c4d6;margin:0 0 12px}h1{font-size:clamp(21px,3vw,32px);line-height:1.15;margin:0 0 8px}p{margin:0;color:var(--muted)}
+.lede{max-width:850px;margin-bottom:18px}.notice{display:inline-flex;gap:7px;align-items:center;border:1px solid #64617c;border-radius:999px;color:#e6e3ff;padding:4px 10px;font-size:12px;margin:0 0 15px}
+.views{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.view-card{min-width:0;background:var(--panel);border:1px solid #171923}.view-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid #171923}.view-head h2{font-size:13px;font-weight:550;margin:0}.canvas{height:min(62vw,500px);min-height:290px;position:relative;overflow:hidden;background:#080a12;touch-action:pan-y}.point{position:absolute;border-radius:50%;background:#c6c5df;opacity:.94;pointer-events:none}
+.caption{font-size:12px;color:#bfc0d2;padding:9px 12px;min-height:37px}.controls{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}input[type=range]{width:112px;accent-color:#c6c5df}.meta{margin-top:14px;padding:12px 14px;border:1px solid var(--border);color:var(--muted);font-size:12px}.meta strong{color:var(--ink);font-weight:550}.error{color:#ffb6b6}
+@media(max-width:700px){main{padding:15px 12px 24px}.views{grid-template-columns:1fr}.canvas{height:78vw;min-height:280px;max-height:440px}.view-head{align-items:flex-start;flex-wrap:wrap}}
+</style>
+</head>
+<body><main>
+<p class="eyebrow">FUNEBRA™ · Geometry98 · LeLaDeres</p>
+<div class="notice">Review candidate · A1.1.07</div>
+<h1>LeLaDeres — raster trace reproduction</h1>
+<p class="lede">A fixed-order BN point trace derived from the supplied front projection. The left view keeps the source front projection; the right view applies a 22° illustrative yaw to the same points.</p>
+<section class="views" aria-label="LeLaDeres point cloud views">
+ <article class="view-card"><header class="view-head"><h2>Front projection</h2><span class="controls">source view</span></header><div class="canvas" id="front" role="img" aria-label="Front projection of the LeLaDeres point trace"></div><div class="caption">Fixed BN order · raster-derived positions</div></article>
+ <article class="view-card"><header class="view-head"><h2>Illustrative yaw</h2><label class="controls">Yaw <input id="yaw" type="range" min="0" max="40" value="22"><output id="angle">22°</output></label></header><div class="canvas" id="yawView" role="img" aria-label="Yaw projection of the same LeLaDeres point trace"></div><div class="caption">zHint contributes to x rotation only; it is not measured depth.</div></article>
+</section>
+<div class="meta" id="status">Loading trace…</div>
+</main>
+<script>
+(() => {
+ const status=document.getElementById('status'), yawControl=document.getElementById('yaw'), angleOut=document.getElementById('angle');
+ const containers=[document.getElementById('front'),document.getElementById('yawView')];
+ let points=[], nodes=[];
+ function decode(b64,count){const bin=atob(b64),v=new DataView(Uint8Array.from(bin,c=>c.charCodeAt(0)).buffer),out=[];for(let i=0;i<count;i++){const o=i*6;out.push({x:v.getInt16(o,true)/100,y:v.getInt16(o+2,true)/100,z:v.getInt16(o+4,true)/1000})}return out}
+ function fit(){if(!points.length)return;const box=containers[0].getBoundingClientRect(),cx=box.width/2,cy=box.height/2,scale=Math.min(box.width/425,box.height/415)*.94,theta=Number(yawControl.value)*Math.PI/180;angleOut.value=yawControl.value+'°';angleOut.textContent=yawControl.value+'°';
+  for(let i=0;i<points.length;i++){const p=points[i],x=p.x*Math.cos(theta)+p.z*Math.sin(theta),y=p.y;const coords=[[p.x,p.y],[x,y]];for(let j=0;j<2;j++){const el=nodes[j][i],c=containers[j].getBoundingClientRect();el.style.left=(c.width/2+coords[j][0]*scale)+'px';el.style.top=(c.height/2+coords[j][1]*scale)+'px'}}
+ }
+ fetch('./trace-data.json').then(r=>{if(!r.ok)throw Error('Could not load trace data ('+r.status+')');return r.json()}).then(d=>{points=decode(d.points,d.pointCount);for(let j=0;j<2;j++){const frag=document.createDocumentFragment();nodes[j]=[];for(let i=0;i<points.length;i++){const el=document.createElement('i');el.className='point';el.style.width='1.7px';el.style.height='1.7px';frag.appendChild(el);nodes[j].push(el)}containers[j].appendChild(frag)}status.innerHTML='<strong>'+d.pointCount.toLocaleString()+' BN points</strong> · source: '+d.source+' · crop '+d.crop.width+' × '+d.crop.height+' px · SHA-256 '+d.sourceSha256+'<br>'+d.depthNote;fit();}).catch(e=>{status.classList.add('error');status.textContent=e.message});
+ yawControl.addEventListener('input',fit);new ResizeObserver(fit).observe(containers[0]);
+})();
+</script>
+</body></html>
