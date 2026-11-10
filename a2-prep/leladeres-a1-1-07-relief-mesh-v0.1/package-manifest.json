@@ -1,5 +1,5 @@
 {
-  "package": "FUNEBRA\u2122 LeLaDeres A1.1.07 Relief Mesh Candidate",
+  "package": "FUNEBRA™ LeLaDeres A1.1.07 Relief Mesh Candidate",
   "branchStatus": "A2-prep only",
   "files": {
     "yaw22-600.json": {
@@ -29,6 +29,10 @@
     "geometry98-native-mesh-render.js": {
       "bytes": 5717,
       "sha256": "03cd7b9eaed420bbf786e0bc5cc88f41d39457e73f367c6eff6ef5eeb6f24cf9"
+    },
+    "geometry98-3d-rotation-demo.html": {
+      "bytes": 32674,
+      "sha256": "65ff999a6d9eee4bf3ee7a4204680290701fe8165bbf1d1066380f1a4d289393"
     }
   }
 }
