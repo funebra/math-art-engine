@@ -25,6 +25,10 @@
     "requirements.txt": {
       "bytes": 24,
       "sha256": "6bd31e587c06276bf231cec25395b5d4a0b1e38c4d2b00813b2dd96aad14f17a"
+    },
+    "geometry98-native-mesh-render.js": {
+      "bytes": 4545,
+      "sha256": "122c6d72d07bf41c0e4c139a14729969c6a46bfcdd15f2cccf669efbe874cec2"
     }
   }
 }
