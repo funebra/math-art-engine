@@ -20,10 +20,13 @@ The surface is intentionally **not watertight**. The retained triangle set has 6
 ## Files
 
 - `yaw22-600.json` — frozen, ordered derived input values for reproducibility.
-- `build_relief_mesh.py` — constructor; requires Python 3.10+, NumPy, and SciPy.
+- `build_relief_mesh.py` — offline OBJ constructor; requires Python 3.10+, NumPy, and SciPy.
+- `geometry98-native-mesh-render.js` — dependency-free browser sampler for native PaintV..X; no Three.js, Canvas, or OBJ library.
 - `leladeres_a1_1_07_relief_candidate.obj` — derived open relief surface.
 - `mesh-metadata.json` — construction parameters and scope labels.
 
 ## Rebuild
+
+The browser renderer is plain JavaScript and consumes the OBJ text; it has no external runtime dependencies. The SciPy requirement applies only to rebuilding the triangulated OBJ.
 
 From this directory, run `python3 build_relief_mesh.py`. The builder refuses unexpected sample counts/projections, duplicate XY points, and non-finite values.
