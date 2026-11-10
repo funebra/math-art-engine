@@ -1,0 +1,30 @@
+{
+  "package": "FUNEBRA\u2122 LeLaDeres A1.1.07 Relief Mesh Candidate",
+  "branchStatus": "A2-prep only",
+  "files": {
+    "yaw22-600.json": {
+      "bytes": 68994,
+      "sha256": "6919446fa1c907e7a1d8ab21944f017238fc6c3adfcc68ff6067e5f7da9a9080"
+    },
+    "build_relief_mesh.py": {
+      "bytes": 3206,
+      "sha256": "02627239f6678298b03932674997c64f6bc133cc8390cd4d2415b81f18cfc1e2"
+    },
+    "leladeres_a1_1_07_relief_candidate.obj": {
+      "bytes": 29031,
+      "sha256": "812ecf5fe3fca7d5dc857b9030bc5a67d65c58c800a51ed801abc5883b0f2c83"
+    },
+    "mesh-metadata.json": {
+      "bytes": 665,
+      "sha256": "922e1f99acb04abcdb47244482b7fe63b810682daa641b903159ac2e0c1d021b"
+    },
+    "README.md": {
+      "bytes": 1979,
+      "sha256": "d1944583bfe404d6fd04c27ebd4b4f81516dbd8471dd07f89dcc983ba9edb5aa"
+    },
+    "requirements.txt": {
+      "bytes": 24,
+      "sha256": "6bd31e587c06276bf231cec25395b5d4a0b1e38c4d2b00813b2dd96aad14f17a"
+    }
+  }
+}
