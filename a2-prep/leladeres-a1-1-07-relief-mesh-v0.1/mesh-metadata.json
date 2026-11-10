@@ -1,0 +1,17 @@
+{
+  "status": "A2-prep / derived / illustrative / non-measured",
+  "canonicalImpact": "none; no write-back to source trace, A0-A1.2 chain, or F-0009 registry",
+  "input": "yaw22-600.json",
+  "sourcePointCount": 8193,
+  "sampleCount": 600,
+  "projection": "Geometry98 yaw22",
+  "height": "zHint - median(zHint); illustrative only; not measured depth or physical scale",
+  "triangulation": "SciPy Delaunay in XY, then reject faces whose longest edge exceeds cutoff",
+  "maxTriangleEdgePx": 18.0,
+  "candidateTriangleCount": 1169,
+  "retainedFaceCount": 643,
+  "verticesWritten": 600,
+  "watertight": false,
+  "reversible": true,
+  "builder": "build_relief_mesh.py"
+}
