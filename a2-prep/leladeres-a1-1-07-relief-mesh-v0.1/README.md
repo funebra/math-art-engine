@@ -27,6 +27,6 @@ The surface is intentionally **not watertight**. The retained triangle set has 6
 
 ## Rebuild
 
-The browser renderer is plain JavaScript and consumes the OBJ text; it has no external runtime dependencies. The SciPy requirement applies only to rebuilding the triangulated OBJ.
+The browser renderer is plain JavaScript and consumes the OBJ text; it has no external runtime dependencies. It provisions missing BN point elements with the Geometry98 `printit()` node pattern, so streams can exceed the page’s initial 600-node pool. `restore()` removes the extra nodes created by that install. The SciPy requirement applies only to rebuilding the triangulated OBJ.
 
 From this directory, run `python3 build_relief_mesh.py`. The builder refuses unexpected sample counts/projections, duplicate XY points, and non-finite values.
