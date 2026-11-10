@@ -24,9 +24,10 @@ The surface is intentionally **not watertight**. The retained triangle set has 6
 - `geometry98-native-mesh-render.js` — dependency-free browser sampler for native PaintV..X; no Three.js, Canvas, or OBJ library.
 - `leladeres_a1_1_07_relief_candidate.obj` — derived open relief surface.
 - `mesh-metadata.json` — construction parameters and scope labels.
+- `geometry98-3d-rotation-demo.html` — standalone Canvas 2D rotation preview with the yaw22 sample and retained faces embedded; no external dependencies.
 
 ## Rebuild
 
-The browser renderer is plain JavaScript and consumes the OBJ text; it has no external runtime dependencies. It provisions missing BN point elements with the Geometry98 `printit()` node pattern, so streams can exceed the page’s initial 600-node pool. `restore()` removes the extra nodes created by that install. The SciPy requirement applies only to rebuilding the triangulated OBJ.
+The browser renderer is plain JavaScript and consumes the OBJ text; it has no external runtime dependencies. The standalone rotation preview embeds the frozen 600-point sample and 643 retained faces for offline viewing. Its canvas rotates the illustrative relief for inspection; it does not change the Geometry98 page or source trace. It provisions missing BN point elements with the Geometry98 `printit()` node pattern, so streams can exceed the page’s initial 600-node pool. `restore()` removes the extra nodes created by that install. The SciPy requirement applies only to rebuilding the triangulated OBJ.
 
 From this directory, run `python3 build_relief_mesh.py`. The builder refuses unexpected sample counts/projections, duplicate XY points, and non-finite values.
