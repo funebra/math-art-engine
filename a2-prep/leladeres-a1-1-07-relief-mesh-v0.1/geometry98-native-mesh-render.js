@@ -93,6 +93,33 @@
     };
   }
 
+  // Extend Geometry98's existing BN DOM pool using the legacy printit() node
+  // shape. The page's original printit loop is commonly initialized to 600;
+  // this helper creates only missing BN IDs needed by a derived stream.
+  function provisionBNPoints(count, doc = root.document) {
+    const target = Math.floor(Number(count));
+    if (!(target > 0)) throw Error("BN point count must be positive");
+    const panel = doc.getElementById("pScreen");
+    if (!panel) throw Error("Geometry98 pScreen is unavailable");
+    const created = [];
+    for (let index = 1; index <= target; index++) {
+      if (doc.getElementById(`bn${index}`)) continue;
+      const point = doc.createElement("div");
+      point.id = `bn${index}`;
+      point.style.position = "absolute";
+      point.style.cursor = "pointer";
+      point.dataset.funebraA2MeshTemporary = "true";
+      panel.appendChild(point);
+      created.push(point);
+    }
+    return {
+      createdCount: created.length,
+      removeCreated() {
+        for (const point of created) point.remove();
+      }
+    };
+  }
+
   function install(batch, doc = root.document) {
     const ids = ["steps", "stpStart", "stpEnd", "scodeX", "scodeY", "scodeZ"];
     const fields = Object.fromEntries(ids.map(id => {
@@ -101,6 +128,7 @@
       return [id, el];
     }));
     const previous = Object.fromEntries(ids.map(id => [id, fields[id].value]));
+    const pool = provisionBNPoints(batch.count, doc);
     fields.steps.value = String(batch.steps);
     fields.stpStart.value = String(batch.start);
     fields.stpEnd.value = String(batch.end);
@@ -115,9 +143,10 @@
       },
       restore() {
         for (const id of ids) fields[id].value = previous[id];
+        pool.removeCreated();
       }
     };
   }
 
-  root.FunebraA2MeshNative = { parseOBJ, wireframePoints, stipplePoints, paintVxBatch, install };
+  root.FunebraA2MeshNative = { parseOBJ, wireframePoints, stipplePoints, paintVxBatch, provisionBNPoints, install };
 })(window);
