@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Funebra Google Photos import — data notice</title>
+  <style>
+    body{max-width:760px;margin:40px auto;padding:0 20px 50px;font:16px/1.55 system-ui,Arial;color:#18232b}
+    h1,h2{line-height:1.2}.draft{padding:12px;background:#fff2cc;border-left:4px solid #c98b00}
+    a{color:#0969da}
+  </style>
+</head>
+<body>
+<h1>Funebra Google Photos import — data notice</h1>
+<p class="draft"><strong>Prototype status:</strong> The import service is not deployed. The operator must verify the formal controller identity, applicable legal basis, processor terms and storage locations before inviting external users.</p>
+
+<h2>What happens to the photo you select</h2>
+<p>Google Photos Picker lets you select one photo. The Worker downloads that photo, stores its bytes in a private Cloudflare R2 bucket, and records filename, dimensions, SHA-256 hash, import time, and Picker provenance. The Math-Art Engine then reads the image in your browser and generates pixel-based BN configurations. Other photos in your library are not imported.</p>
+<p>The Google OAuth access token stays in the Worker’s short-lived KV record and expires no later than 55 minutes after authorization. The temporary Google media URL is not sent to the static engine. The image and asset record remain stored until you delete them.</p>
+
+<h2>Delete the imported source</h2>
+<p>Use “Delete imported source image” in the engine panel and confirm. This removes the stored image and asset record. A delete-only key is kept in this browser so you can delete the asset after the Google session expires; it is not included in exported BN files. Any BN JSON files you already exported remain under your control and must be deleted separately.</p>
+<p>For full details about data, retention, providers, rights, and contact, read the <a href="./privacy.html">Funebra Privacy Policy</a>.</p>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Funebra Math-Art Engine — Privacy Policy</title>
+  <style>
+    body{max-width:760px;margin:40px auto;padding:0 20px 60px;font:16px/1.55 system-ui,-apple-system,Arial,sans-serif;color:#18232b;background:#fff}
+    h1,h2{line-height:1.25}h1{font-size:1.75rem;margin-bottom:.25rem}h2{font-size:1.25rem;margin-top:2rem}
+    .meta{color:#5a6b75;font-size:.95rem;margin-bottom:1.5rem}
+    .draft{padding:12px 14px;background:#fff2cc;border-left:4px solid #c98b00;margin:1.25rem 0}
+    table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.95rem}
+    th,td{border:1px solid #d0d7de;padding:8px 10px;text-align:left;vertical-align:top}th{background:#f6f8fa}
+    a{color:#0969da}code{background:#f6f8fa;padding:.1em .35em;border-radius:3px;font-size:.9em}
+  </style>
+</head>
+<body>
+  <h1>Funebra Math-Art Engine — Privacy Policy</h1>
+  <p class="meta">Google Photos import feature<br><strong>Effective date:</strong> 20 October 2026</p>
+
+  <div class="draft">
+    <strong>Prototype status:</strong> This page documents the current prototype, which is not yet deployed. Before inviting external users, the operator must confirm the controller’s formal identity, applicable legal basis, data-processing terms and storage locations, and publish those verified details here. Google OAuth review or verification may also be required.
+  </div>
+
+  <p>This policy describes how pLabs Entertainment (“Funebra”, “we”, “the app”) handles data when you use the optional Google Photos import feature. The contact details currently supplied for the operator appear in section 10.</p>
+
+  <h2>1. What the feature does</h2>
+  <p>The feature lets you use Google Photos Picker to select exactly one photo for an import. Funebra uses that selected photo to create pixel-based BN (point) configurations in the Math-Art Engine. You can create more than one configuration from the imported image.</p>
+  <p>The feature does not list or import other library photos, create face clusters or perform facial recognition, train shared machine-learning models with imported photos, or operate a general-purpose photo gallery.</p>
+
+  <h2>2. Data processed and retention</h2>
+  <table>
+    <thead><tr><th>Data</th><th>Purpose</th><th>Where and how long it is kept</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Bytes of the single photo you select</td>
+        <td>Let the engine read pixels and generate BN configurations</td>
+        <td>Private Cloudflare R2 storage until you delete the asset</td>
+      </tr>
+      <tr>
+        <td>Filename, width, height, SHA-256 content hash, import time, Picker media-item ID and Picker session ID</td>
+        <td>Asset identity, integrity check and source provenance</td>
+        <td>Cloudflare Workers KV asset record until you delete the asset</td>
+      </tr>
+      <tr>
+        <td>Google OAuth access token</td>
+        <td>Create, poll, retrieve and delete the Picker session and download the selected photo</td>
+        <td>Cloudflare Workers KV for the active import session; it expires automatically no later than 55 minutes after authorization. It is not deleted immediately after a successful import.</td>
+      </tr>
+      <tr>
+        <td>Funebra session token and one-time OAuth handoff code</td>
+        <td>Authenticate the browser to the import service</td>
+        <td>The token is held in browser session storage and expires with its server-side token record (no later than 55 minutes); the one-time handoff record expires after 90 seconds or its first use.</td>
+      </tr>
+      <tr>
+        <td>Delete-only control key and its SHA-256 verifier</td>
+        <td>Authorize later deletion of the image</td>
+        <td>The raw key is kept in this browser’s local storage; its verifier is kept with the asset record until deletion. The raw key is not included in BN exports.</td>
+      </tr>
+      <tr>
+        <td>Generated BN configurations and sampled pixel coordinates/colors</td>
+        <td>Let you inspect and export the image-derived point configuration</td>
+        <td>Generated in the browser. Exported JSON files are stored wherever you choose to save them and remain under your control.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>We do not request or store your Google account name or email through this feature. The selected image is downloaded by the Worker using Google’s temporary media URL, which is not sent to the static engine.</p>
+
+  <h2>3. How we use the data</h2>
+  <ul>
+    <li>Download the one photo you chose and store it as a private source asset.</li>
+    <li>Return that stored image to your browser so the Math-Art Engine can sample pixels and create ImageBN configurations.</li>
+    <li>Record the asset metadata and provenance described above and provide a way to delete the stored asset.</li>
+  </ul>
+  <p>The image-derived configurations are generated in the browser. They are not uploaded to the import service by this prototype. If you export a configuration, the downloaded file may contain the source asset ID and provenance, pixel coordinates and sampled colors; it does not contain the image bytes or delete-only key.</p>
+
+  <h2>4. Storage and security</h2>
+  <ul>
+    <li>Image bytes are stored in a private Cloudflare R2 bucket; asset and short-lived session records are stored in Cloudflare Workers KV.</li>
+    <li>Cloudflare documents encryption at rest for R2 objects and Workers KV values. Data is transmitted over HTTPS.</li>
+    <li>The engine does not receive the Google bearer token or temporary Google media URL. It receives a separate short-lived Funebra session token and the selected image bytes.</li>
+    <li>Reading the stored image requires the active session that imported it. The delete-only key can authorize deletion after that session expires.</li>
+  </ul>
+
+  <h2>5. Providers and sharing</h2>
+  <p>Google Photos provides the user selection and temporary download access. Cloudflare provides the Worker service, KV and R2 storage. The selected image is transmitted from Google to the Worker and stored in R2; it is also returned to your browser for BN generation. We do not sell imported photos or use them for advertising.</p>
+  <p>Before external launch, the operator will verify and describe applicable provider terms, data-processing roles, and storage locations. This prototype does not send imported images to other analytics, advertising, or machine-learning services.</p>
+
+  <h2>6. Deletion and data rights</h2>
+  <ul>
+    <li><strong>Delete the source asset:</strong> Use “Delete imported source image” in the engine panel and confirm. The Worker deletes the R2 object and its asset record.</li>
+    <li>Deleting the source asset does not remove BN configurations already downloaded or saved elsewhere. Delete those files separately if you no longer want them.</li>
+    <li>If you clear browser storage before deleting, contact the operator with the asset ID from your BN export so the asset can be located.</li>
+    <li>After the photo is downloaded and stored, the Worker requests deletion of the Google Picker session. If Google does not confirm deletion, the session remains subject to Google’s expiry. If an import is abandoned, Google’s session expires according to its expiry; the Worker’s local Picker-session mapping expires after 15 minutes.</li>
+    <li>You may contact the operator to request access to or deletion of data associated with your import. Applicable data-protection rights and complaint routes depend on the operator’s confirmed role and your jurisdiction.</li>
+  </ul>
+
+  <h2>7. Google Photos API use</h2>
+  <p>Funebra requests only the <code>https://www.googleapis.com/auth/photospicker.mediaitems.readonly</code> scope. Photos API data is used only to provide the user-selected image-to-BN import. The feature does not create face clusters or a general-purpose photo gallery. The in-app disclosure appears before the Google authorization request. See Google’s <a href="https://developers.google.com/photos/support/api-policy">Photos API User Data and Developer Policy</a>.</p>
+
+  <h2>8. Children</h2>
+  <p>This prototype is not directed to children under 13 (or the applicable age in your jurisdiction). Do not import photos unless you have permission and authority to use them.</p>
+
+  <h2>9. Changes</h2>
+  <p>This policy must be updated if the feature’s data practices change. The effective date at the top will be revised when the policy is updated.</p>
+
+  <h2>10. Contact</h2>
+  <p>For privacy questions or deletion requests:</p>
+  <p><strong>Operator listed for this prototype:</strong> pLabs Entertainment, Kantarelvej 4, 9300 Sæby, Denmark<br>
+  <strong>Email:</strong> <a href="mailto:funebra@plabsfill.com">funebra@plabsfill.com</a></p>
+  <p>The operator should confirm that this is the correct formal controller identity and address before accepting external users.</p>
+
+  <hr>
+  <p><small>Cloudflare security references: <a href="https://developers.cloudflare.com/r2/reference/data-security/">R2 data security</a> and <a href="https://developers.cloudflare.com/kv/reference/data-security/">Workers KV data security</a>.</small></p>
+</body>
+</html>
